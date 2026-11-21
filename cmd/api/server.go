@@ -213,6 +213,51 @@ func getClaims(r *http.Request) *auth.Claims {
 	return nil
 }
 
+func (s *Server) adminOnly(next http.HandlerFunc) http.HandlerFunc {
+	return s.authRequired(func(w http.ResponseWriter, r *http.Request) {
+		claims := getClaims(r)
+		if claims == nil || claims.Role != protocol.RoleSuperAdmin {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"error": "forbidden: SuperAdmin permission required",
+			})
+			return
+		}
+		next(w, r)
+	})
+}
+
+func (s *Server) orgAdminOnly(next http.HandlerFunc) http.HandlerFunc {
+	return s.authRequired(func(w http.ResponseWriter, r *http.Request) {
+		claims := getClaims(r)
+		if claims == nil || (claims.Role != protocol.RoleSuperAdmin && claims.Role != protocol.RoleOrgAdmin) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"error": "forbidden: Administrator permission required",
+			})
+			return
+		}
+		next(w, r)
+	})
+}
+
+func (s *Server) writeRequired(next http.HandlerFunc) http.HandlerFunc {
+	return s.authRequired(func(w http.ResponseWriter, r *http.Request) {
+		claims := getClaims(r)
+		if claims != nil && claims.Role == protocol.RoleViewer {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"error": "forbidden: read-only viewer role cannot perform modification actions",
+			})
+			return
+		}
+		next(w, r)
+	})
+}
+
 func (s *Server) registerRoutes() {
 	// Health & Status (Public)
 	s.mux.HandleFunc("GET /healthz", s.handleHealthz)
@@ -224,20 +269,20 @@ func (s *Server) registerRoutes() {
 
 	// Compute Nodes (Protected)
 	s.mux.HandleFunc("GET /api/v1/nodes", s.authRequired(s.handleListNodes))
-	s.mux.HandleFunc("POST /api/v1/nodes/register", s.authRequired(s.handleRegisterNode))
+	s.mux.HandleFunc("POST /api/v1/nodes/register", s.adminOnly(s.handleRegisterNode))
 
 	// -------------------------------------------------------------
 	// Podman Desktop Features: Container Provisioning & Lifecycle (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/containers", s.authRequired(s.handleListContainers))
-	s.mux.HandleFunc("POST /api/v1/containers", s.authRequired(s.handleRunContainer))
+	s.mux.HandleFunc("POST /api/v1/containers", s.writeRequired(s.handleRunContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}", s.authRequired(s.handleInspectContainer))
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/start", s.authRequired(s.handleStartContainer))
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/stop", s.authRequired(s.handleStopContainer))
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/restart", s.authRequired(s.handleRestartContainer))
-	s.mux.HandleFunc("DELETE /api/v1/containers/{id}", s.authRequired(s.handleRemoveContainer))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/start", s.writeRequired(s.handleStartContainer))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/stop", s.writeRequired(s.handleStopContainer))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/restart", s.writeRequired(s.handleRestartContainer))
+	s.mux.HandleFunc("DELETE /api/v1/containers/{id}", s.writeRequired(s.handleRemoveContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/logs", s.authRequired(s.handleContainerLogs))
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/exec", s.authRequired(s.handleExecContainer))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/exec", s.writeRequired(s.handleExecContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/top", s.authRequired(s.handleTopContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/stats", s.authRequired(s.handleStatsContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/containerfile", s.authRequired(s.handleContainerfile))
@@ -247,14 +292,14 @@ func (s *Server) registerRoutes() {
 	// Podman Desktop Features: Pod Provisioning & Lifecycle (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/pods", s.authRequired(s.handleListPods))
-	s.mux.HandleFunc("POST /api/v1/pods", s.authRequired(s.handleCreatePod))
+	s.mux.HandleFunc("POST /api/v1/pods", s.writeRequired(s.handleCreatePod))
 	s.mux.HandleFunc("GET /api/v1/pods/{id}", s.authRequired(s.handleInspectPod))
-	s.mux.HandleFunc("POST /api/v1/pods/{id}/start", s.authRequired(s.handleStartPod))
-	s.mux.HandleFunc("POST /api/v1/pods/{id}/stop", s.authRequired(s.handleStopPod))
-	s.mux.HandleFunc("POST /api/v1/pods/{id}/restart", s.authRequired(s.handleRestartPod))
-	s.mux.HandleFunc("DELETE /api/v1/pods/{id}", s.authRequired(s.handleRemovePod))
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/start", s.writeRequired(s.handleStartPod))
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/stop", s.writeRequired(s.handleStopPod))
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/restart", s.writeRequired(s.handleRestartPod))
+	s.mux.HandleFunc("DELETE /api/v1/pods/{id}", s.writeRequired(s.handleRemovePod))
 	s.mux.HandleFunc("GET /api/v1/pods/{id}/kube", s.authRequired(s.handleGenerateKube))
-	s.mux.HandleFunc("POST /api/v1/pods/kube/play", s.authRequired(s.handlePlayKube))
+	s.mux.HandleFunc("POST /api/v1/pods/kube/play", s.writeRequired(s.handlePlayKube))
 	s.mux.HandleFunc("GET /api/v1/pods/{id}/top", s.authRequired(s.handleTopPod))
 	s.mux.HandleFunc("GET /api/v1/pods/{id}/logs", s.authRequired(s.handlePodLogs))
 
@@ -262,87 +307,87 @@ func (s *Server) registerRoutes() {
 	// Podman Desktop Features: Image Management (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/images", s.authRequired(s.handleListImages))
-	s.mux.HandleFunc("POST /api/v1/images/pull", s.authRequired(s.handlePullImage))
-	s.mux.HandleFunc("POST /api/v1/images/build", s.authRequired(s.handleBuildImage))
-	s.mux.HandleFunc("DELETE /api/v1/images/{id}", s.authRequired(s.handleRemoveImage))
+	s.mux.HandleFunc("POST /api/v1/images/pull", s.writeRequired(s.handlePullImage))
+	s.mux.HandleFunc("POST /api/v1/images/build", s.writeRequired(s.handleBuildImage))
+	s.mux.HandleFunc("DELETE /api/v1/images/{id}", s.writeRequired(s.handleRemoveImage))
 
 	// -------------------------------------------------------------
 	// Podman Desktop Features: Runtime Networks & Volumes (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/podman/networks", s.authRequired(s.handleListPodmanNetworks))
-	s.mux.HandleFunc("POST /api/v1/podman/networks", s.authRequired(s.handleCreatePodmanNetwork))
-	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id}", s.authRequired(s.handleRemovePodmanNetwork))
+	s.mux.HandleFunc("POST /api/v1/podman/networks", s.writeRequired(s.handleCreatePodmanNetwork))
+	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id}", s.writeRequired(s.handleRemovePodmanNetwork))
 
 	s.mux.HandleFunc("GET /api/v1/podman/volumes", s.authRequired(s.handleListPodmanVolumes))
-	s.mux.HandleFunc("POST /api/v1/podman/volumes", s.authRequired(s.handleCreatePodmanVolume))
-	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.authRequired(s.handleRemovePodmanVolume))
+	s.mux.HandleFunc("POST /api/v1/podman/volumes", s.writeRequired(s.handleCreatePodmanVolume))
+	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.writeRequired(s.handleRemovePodmanVolume))
 
 	// -------------------------------------------------------------
 	// Podman Desktop Features: Secret Management (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/podman/secrets", s.authRequired(s.handleListPodmanSecrets))
-	s.mux.HandleFunc("POST /api/v1/podman/secrets", s.authRequired(s.handleCreatePodmanSecret))
+	s.mux.HandleFunc("POST /api/v1/podman/secrets", s.writeRequired(s.handleCreatePodmanSecret))
 	s.mux.HandleFunc("GET /api/v1/podman/secrets/{id}", s.authRequired(s.handleInspectPodmanSecret))
-	s.mux.HandleFunc("DELETE /api/v1/podman/secrets/{id}", s.authRequired(s.handleRemovePodmanSecret))
+	s.mux.HandleFunc("DELETE /api/v1/podman/secrets/{id}", s.writeRequired(s.handleRemovePodmanSecret))
 
 	// -------------------------------------------------------------
 	// Organization & Multi-Tenant Management (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/organizations", s.authRequired(s.handleListOrganizations))
-	s.mux.HandleFunc("POST /api/v1/organizations", s.authRequired(s.handleCreateOrganization))
+	s.mux.HandleFunc("POST /api/v1/organizations", s.adminOnly(s.handleCreateOrganization))
 	s.mux.HandleFunc("GET /api/v1/organizations/{id}", s.authRequired(s.handleGetOrganization))
-	s.mux.HandleFunc("PUT /api/v1/organizations/{id}", s.authRequired(s.handleUpdateOrganization))
-	s.mux.HandleFunc("DELETE /api/v1/organizations/{id}", s.authRequired(s.handleDeleteOrganization))
+	s.mux.HandleFunc("PUT /api/v1/organizations/{id}", s.adminOnly(s.handleUpdateOrganization))
+	s.mux.HandleFunc("DELETE /api/v1/organizations/{id}", s.adminOnly(s.handleDeleteOrganization))
 
 	// -------------------------------------------------------------
 	// User Management & RBAC Roles (Protected)
 	// -------------------------------------------------------------
-	s.mux.HandleFunc("GET /api/v1/users", s.authRequired(s.handleListUsers))
-	s.mux.HandleFunc("POST /api/v1/users", s.authRequired(s.handleCreateUser))
-	s.mux.HandleFunc("GET /api/v1/users/{id}", s.authRequired(s.handleGetUser))
-	s.mux.HandleFunc("PUT /api/v1/users/{id}", s.authRequired(s.handleUpdateUser))
-	s.mux.HandleFunc("POST /api/v1/users/{id}/password", s.authRequired(s.handleResetUserPassword))
-	s.mux.HandleFunc("DELETE /api/v1/users/{id}", s.authRequired(s.handleDeleteUser))
+	s.mux.HandleFunc("GET /api/v1/users", s.orgAdminOnly(s.handleListUsers))
+	s.mux.HandleFunc("POST /api/v1/users", s.orgAdminOnly(s.handleCreateUser))
+	s.mux.HandleFunc("GET /api/v1/users/{id}", s.orgAdminOnly(s.handleGetUser))
+	s.mux.HandleFunc("PUT /api/v1/users/{id}", s.orgAdminOnly(s.handleUpdateUser))
+	s.mux.HandleFunc("POST /api/v1/users/{id}/password", s.orgAdminOnly(s.handleResetUserPassword))
+	s.mux.HandleFunc("DELETE /api/v1/users/{id}", s.orgAdminOnly(s.handleDeleteUser))
 	s.mux.HandleFunc("GET /api/v1/rbac/roles", s.authRequired(s.handleListRBACRoles))
 
 	// Tenants & Projects (Protected)
 	s.mux.HandleFunc("GET /api/v1/tenants", s.authRequired(s.handleListTenants))
-	s.mux.HandleFunc("POST /api/v1/tenants", s.authRequired(s.handleCreateTenant))
+	s.mux.HandleFunc("POST /api/v1/tenants", s.writeRequired(s.handleCreateTenant))
 	s.mux.HandleFunc("GET /api/v1/projects", s.authRequired(s.handleListProjects))
-	s.mux.HandleFunc("POST /api/v1/projects", s.authRequired(s.handleCreateProject))
+	s.mux.HandleFunc("POST /api/v1/projects", s.writeRequired(s.handleCreateProject))
 
 	// VPC & Storage Repositories (Protected)
 	s.mux.HandleFunc("GET /api/v1/vpcs", s.authRequired(s.handleListVPCs))
-	s.mux.HandleFunc("POST /api/v1/vpcs", s.authRequired(s.handleCreateVPC))
+	s.mux.HandleFunc("POST /api/v1/vpcs", s.writeRequired(s.handleCreateVPC))
 	s.mux.HandleFunc("GET /api/v1/subnets", s.authRequired(s.handleListSubnets))
-	s.mux.HandleFunc("POST /api/v1/subnets", s.authRequired(s.handleCreateSubnet))
+	s.mux.HandleFunc("POST /api/v1/subnets", s.writeRequired(s.handleCreateSubnet))
 	s.mux.HandleFunc("GET /api/v1/volumes", s.authRequired(s.handleListVolumes))
-	s.mux.HandleFunc("POST /api/v1/volumes", s.authRequired(s.handleCreateVolume))
+	s.mux.HandleFunc("POST /api/v1/volumes", s.writeRequired(s.handleCreateVolume))
 
 	// Workloads & Deployments (Protected)
 	s.mux.HandleFunc("GET /api/v1/workloads", s.authRequired(s.handleListWorkloads))
-	s.mux.HandleFunc("POST /api/v1/deployments", s.authRequired(s.handleCreateDeployment))
-	s.mux.HandleFunc("POST /api/v1/deployments/{workload}/rollback", s.authRequired(s.handleRollback))
+	s.mux.HandleFunc("POST /api/v1/deployments", s.writeRequired(s.handleCreateDeployment))
+	s.mux.HandleFunc("POST /api/v1/deployments/{workload}/rollback", s.writeRequired(s.handleRollback))
 
 	// Database & WAL Management (Protected)
-	s.mux.HandleFunc("GET /api/v1/database/status", s.authRequired(s.handleDBStatus))
-	s.mux.HandleFunc("POST /api/v1/database/checkpoint", s.authRequired(s.handleDBCheckpoint))
-	s.mux.HandleFunc("POST /api/v1/database/backup", s.authRequired(s.handleDBBackup))
+	s.mux.HandleFunc("GET /api/v1/database/status", s.adminOnly(s.handleDBStatus))
+	s.mux.HandleFunc("POST /api/v1/database/checkpoint", s.adminOnly(s.handleDBCheckpoint))
+	s.mux.HandleFunc("POST /api/v1/database/backup", s.adminOnly(s.handleDBBackup))
 
 	// Background Jobs & Audit (Protected)
 	s.mux.HandleFunc("GET /api/v1/jobs", s.authRequired(s.handleListJobs))
 	s.mux.HandleFunc("GET /api/v1/audit", s.authRequired(s.handleListAudit))
 
 	// Build & Deploy Workflow Engine (Protected)
-	s.mux.HandleFunc("POST /api/v1/workflows/run", s.authRequired(s.handleRunWorkflow))
+	s.mux.HandleFunc("POST /api/v1/workflows/run", s.writeRequired(s.handleRunWorkflow))
 	s.mux.HandleFunc("GET /api/v1/workflows/runs", s.authRequired(s.handleListWorkflowRuns))
 	s.mux.HandleFunc("GET /api/v1/workflows/runs/{id}", s.authRequired(s.handleGetWorkflowRun))
-	s.mux.HandleFunc("DELETE /api/v1/workflows/runs/{id}", s.authRequired(s.handleDeleteWorkflowRun))
-	s.mux.HandleFunc("POST /api/v1/workflows/runs/{id}/rerun", s.authRequired(s.handleRerunWorkflow))
+	s.mux.HandleFunc("DELETE /api/v1/workflows/runs/{id}", s.writeRequired(s.handleDeleteWorkflowRun))
+	s.mux.HandleFunc("POST /api/v1/workflows/runs/{id}/rerun", s.writeRequired(s.handleRerunWorkflow))
 
 	// Webhooks & Milestone
 	s.mux.HandleFunc("POST /api/v1/webhooks/progit", s.handleProGitWebhook)
-	s.mux.HandleFunc("POST /api/v1/milestone/run", s.authRequired(s.handleRunMilestone))
+	s.mux.HandleFunc("POST /api/v1/milestone/run", s.adminOnly(s.handleRunMilestone))
 
 	// Static Web UI Console (Podman Desktop + Sovereign Cloud)
 	s.mux.Handle("/", web.Handler())
@@ -1290,6 +1335,19 @@ func (s *Server) handleRegisterNode(w http.ResponseWriter, r *http.Request) {
 // -------------------------------------------------------------
 
 func (s *Server) handleListOrganizations(w http.ResponseWriter, r *http.Request) {
+	claims := getClaims(r)
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
+		// Non-SuperAdmin: only return user's assigned organization
+		if claims.TenantID != "" {
+			org, err := s.tenantSvc.GetOrganization(r.Context(), claims.TenantID)
+			if err == nil && org != nil {
+				respondJSON(w, http.StatusOK, []*protocol.Tenant{org})
+				return
+			}
+		}
+		respondJSON(w, http.StatusOK, []*protocol.Tenant{})
+		return
+	}
 	list, err := s.tenantSvc.ListOrganizations(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1414,7 +1472,11 @@ func (s *Server) handleDeleteOrganization(w http.ResponseWriter, r *http.Request
 // -------------------------------------------------------------
 
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
+	claims := getClaims(r)
 	tenantID := r.URL.Query().Get("tenant_id")
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
+		tenantID = claims.TenantID
+	}
 	role := r.URL.Query().Get("role")
 	list, err := s.authSvc.ListUsers(r.Context(), tenantID, role)
 	if err != nil {
@@ -1444,12 +1506,20 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "username, email, and password are required", http.StatusBadRequest)
 		return
 	}
+
+	claims := getClaims(r)
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
+		req.TenantID = claims.TenantID
+		if req.Role == protocol.RoleSuperAdmin {
+			req.Role = protocol.RoleDeveloper
+		}
+	}
+
 	u, err := s.authSvc.CreateUserWithOrg(r.Context(), req.Username, req.Email, req.Password, req.Role, req.TenantID, req.DisplayName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	claims := s.checkAuth(r)
 	actor := "admin"
 	if claims != nil {
 		actor = claims.Username
@@ -1480,12 +1550,25 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	claims := getClaims(r)
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
+		targetUser, err := s.authSvc.GetUser(r.Context(), id)
+		if err != nil || targetUser == nil || targetUser.TenantID != claims.TenantID || targetUser.Role == protocol.RoleSuperAdmin {
+			http.Error(w, "forbidden: cannot modify user outside your organization", http.StatusForbidden)
+			return
+		}
+		req.TenantID = claims.TenantID
+		if req.Role == protocol.RoleSuperAdmin {
+			req.Role = targetUser.Role
+		}
+	}
+
 	u, err := s.authSvc.UpdateUser(r.Context(), id, req.Role, req.TenantID, req.Status, req.DisplayName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	claims := s.checkAuth(r)
 	actor := "admin"
 	if claims != nil {
 		actor = claims.Username
@@ -1512,11 +1595,20 @@ func (s *Server) handleResetUserPassword(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "password must be at least 6 characters", http.StatusBadRequest)
 		return
 	}
+
+	claims := getClaims(r)
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
+		targetUser, err := s.authSvc.GetUser(r.Context(), id)
+		if err != nil || targetUser == nil || targetUser.TenantID != claims.TenantID {
+			http.Error(w, "forbidden: cannot reset password for user outside your organization", http.StatusForbidden)
+			return
+		}
+	}
+
 	if err := s.authSvc.ResetPassword(r.Context(), id, pw); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	claims := s.checkAuth(r)
 	actor := "admin"
 	if claims != nil {
 		actor = claims.Username
@@ -1527,11 +1619,19 @@ func (s *Server) handleResetUserPassword(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	claims := s.checkAuth(r)
+	claims := getClaims(r)
 	if claims != nil && claims.UserID == id {
 		http.Error(w, "cannot delete your own active administrator account", http.StatusForbidden)
 		return
 	}
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
+		targetUser, err := s.authSvc.GetUser(r.Context(), id)
+		if err != nil || targetUser == nil || targetUser.TenantID != claims.TenantID || targetUser.Role == protocol.RoleSuperAdmin {
+			http.Error(w, "forbidden: cannot delete user outside your organization", http.StatusForbidden)
+			return
+		}
+	}
+
 	if err := s.authSvc.DeleteUser(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
