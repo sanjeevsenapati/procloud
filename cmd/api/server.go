@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -435,38 +436,110 @@ func (s *Server) handleExecContainer(w http.ResponseWriter, r *http.Request) {
 		Command []string `json:"command"`
 		Cmd     []string `json:"cmd"`
 		Raw     string   `json:"raw"`
+		Shell   string   `json:"shell"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"error":     "invalid request body",
+			"output":    "Error: invalid request body",
+			"exit_code": 1,
+		})
 		return
 	}
+
+	// Pre-flight check: Container state
+	inspect, inspectErr := s.runtime.InspectContainer(r.Context(), id)
+	if inspectErr == nil && inspect != nil {
+		state := strings.ToLower(inspect.Status)
+		if state != "running" && !inspect.Running {
+			cName := inspect.Name
+			if cName == "" {
+				cName = id
+			}
+			respondJSON(w, http.StatusOK, map[string]interface{}{
+				"error":     fmt.Sprintf("container '%s' is not running (state: %s)", cName, inspect.Status),
+				"output":    fmt.Sprintf("Error: cannot open shell session in container '%s' because it is not running (State: %s).\nPlease click 'Start Container' to launch it.", cName, inspect.Status),
+				"state":     inspect.Status,
+				"exit_code": 125,
+			})
+			return
+		}
+	}
+
+	rawCmd := strings.TrimSpace(req.Raw)
 	var command []string
+
 	if len(req.Command) > 0 {
 		command = req.Command
 	} else if len(req.Cmd) > 0 {
 		command = req.Cmd
-	} else if strings.TrimSpace(req.Raw) != "" {
-		command = []string{"sh", "-c", req.Raw}
+	} else if rawCmd != "" {
+		shell := strings.TrimSpace(req.Shell)
+		if shell == "" {
+			shell = "/bin/sh"
+		}
+		command = []string{shell, "-c", rawCmd}
 	} else {
-		http.Error(w, "command array or raw string is required", http.StatusBadRequest)
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"error":     "command is required",
+			"output":    "Error: no command provided",
+			"exit_code": 1,
+		})
 		return
 	}
+
 	out, err := s.runtime.ExecContainer(r.Context(), id, command)
-	if err != nil {
-		// Try fallback directly if sh -c failed and raw was provided
-		if req.Raw != "" {
-			parts := strings.Fields(req.Raw)
+
+	// Fallback strategy if shell binary wasn't found in container image
+	if err != nil && rawCmd != "" {
+		// If /bin/bash or chosen shell failed with executable not found, try /bin/sh
+		if req.Shell != "" && req.Shell != "/bin/sh" {
+			if fbOut, fbErr := s.runtime.ExecContainer(r.Context(), id, []string{"/bin/sh", "-c", rawCmd}); fbErr == nil {
+				out = fbOut
+				err = nil
+				command = []string{"/bin/sh", "-c", rawCmd}
+			}
+		}
+		// If still failing, try "sh" without path
+		if err != nil {
+			if fbOut, fbErr := s.runtime.ExecContainer(r.Context(), id, []string{"sh", "-c", rawCmd}); fbErr == nil {
+				out = fbOut
+				err = nil
+				command = []string{"sh", "-c", rawCmd}
+			}
+		}
+		// If still failing, try direct command invocation (e.g. ls -la)
+		if err != nil {
+			parts := strings.Fields(rawCmd)
 			if len(parts) > 0 {
 				if fbOut, fbErr := s.runtime.ExecContainer(r.Context(), id, parts); fbErr == nil {
-					respondJSON(w, http.StatusOK, map[string]string{"output": fbOut})
-					return
+					out = fbOut
+					err = nil
+					command = parts
 				}
 			}
 		}
-		http.Error(w, fmt.Sprintf("%v: %s", err, out), http.StatusInternalServerError)
-		return
 	}
-	respondJSON(w, http.StatusOK, map[string]string{"output": out})
+
+	exitCode := 0
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+		exitCode = 1
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		}
+		if strings.TrimSpace(out) == "" {
+			out = errStr
+		}
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"output":    out,
+		"error":     errStr,
+		"exit_code": exitCode,
+		"command":   command,
+	})
 }
 
 func (s *Server) handleTopContainer(w http.ResponseWriter, r *http.Request) {

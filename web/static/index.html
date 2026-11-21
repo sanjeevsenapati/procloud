@@ -2298,10 +2298,15 @@
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
                             <span>Interactive Container Exec Shell</span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-primary btn-sm" onclick="openActualShellModal()" title="Open actual interactive shell in macOS Terminal / Host">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                                <span>Open Actual Shell</span>
+                            </button>
                             <select id="cd-term-shell" class="form-input" style="width:auto; padding:2px 8px; font-size:11px;">
+                                <option value="/bin/bash" selected>/bin/bash</option>
                                 <option value="/bin/sh">/bin/sh</option>
-                                <option value="/bin/bash">/bin/bash</option>
+                                <option value="/bin/ash">/bin/ash</option>
                             </select>
                             <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="toggleCdTerminalTheme()">
                                 <span id="cd-term-theme-label">Light View</span>
@@ -2311,14 +2316,41 @@
                         </div>
                     </div>
 
-                    <div class="term-container dark-terminal" id="cd-term-box" style="height: 420px; border-radius: 0 0 8px 8px;">
-                        <div class="term-output" id="cd-term-output">
-                            <div style="color:var(--pg-text-muted); font-style:italic;">Connected to container console. Enter shell commands below.</div>
+                    <!-- Stopped Container Warning Banner -->
+                    <div id="cd-term-stopped-alert" style="display:none; background:#fff1f2; border-bottom:1px solid #fecdd3; padding:10px 16px; align-items:center; justify-content:space-between; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:8px; color:#be123c; font-size:12px; font-weight:600;">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span id="cd-term-stopped-msg">Container is stopped. Start container to run interactive commands.</span>
                         </div>
-                        <div class="term-input-row">
-                            <span class="term-prompt">sh-5.2#</span>
+                        <button class="btn btn-emerald btn-sm" onclick="startCurrentContainerFromTerm()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span>Start Container</span>
+                        </button>
+                    </div>
+
+                    <div class="term-container dark-terminal" id="cd-term-box" style="height: 440px; border-radius: 0 0 8px 8px;">
+                        <div class="term-output" id="cd-term-output">
+                            <div style="color:var(--pg-text-muted); font-style:italic;">Connected to container console. Shell session active.</div>
+                        </div>
+
+                        <!-- Quick Exec Chips Bar -->
+                        <div class="term-quick-bar" style="display:flex; gap:6px; padding:6px 14px; background:rgba(15,23,42,0.7); border-top:1px solid rgba(255,255,255,0.08); flex-wrap:wrap; align-items:center;">
+                            <span style="font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Quick:</span>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('ls -la')">ls -la</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('pwd')">pwd</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('ps aux')">ps aux</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('cat /etc/os-release')">os-release</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('df -h')">df -h</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('env')">env</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('whoami')">whoami</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('uptime')">uptime</button>
+                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px; margin-left:auto; color:#f87171; border-color:#7f1d1d;" onclick="clearCdTerminal()">Clear</button>
+                        </div>
+
+                        <div class="term-prompt-line">
+                            <span class="term-prompt" id="cd-term-prompt-label">root@container:~#</span>
                             <input type="text" id="cd-term-input" class="term-input" placeholder="Type command (e.g. ls -la, ps aux, cat /etc/os-release)..." onkeydown="handleCdTermKey(event)">
-                            <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="runCdTerminalCommand()">Exec</button>
+                            <button id="cd-term-exec-btn" class="btn btn-primary" style="padding: 4px 12px; font-size: 11px;" onclick="runCdTerminalCommand()">Exec</button>
                         </div>
                     </div>
                 </div>
@@ -3263,6 +3295,71 @@ spec:
                     <input type="text" id="term-input" class="term-input" placeholder="Type shell command..." onkeydown="handleTerminalKey(event)">
                     <button class="btn btn-primary" style="padding: 4px 12px; font-size:11px;" onclick="execTerminalCommand()">Run</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Open Actual Shell (Native Terminal & Host CLI) -->
+    <div id="actual-shell-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 640px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" style="color:var(--pg-blue-600);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                    <span>Open Actual Host Shell: <span id="actual-shell-target-name" style="font-family:'JetBrains Mono',monospace;">...</span></span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('actual-shell-modal')">&times;</div>
+            </div>
+            <div style="padding: 4px 0 16px 0; font-size: 13px; color: var(--pg-text-secondary); line-height: 1.5;">
+                To run an interactive native TTY session with full cursor control, auto-completion, <code style="color:var(--pg-blue-600);">vim</code>/<code style="color:var(--pg-blue-600);">nano</code>, and top, copy and execute these commands in your host terminal (macOS Terminal, iTerm2, VS Code, or Warp):
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <div style="font-size: 11px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; margin-bottom: 6px; display:flex; justify-content:space-between;">
+                    <span>1. Interactive Bash Shell (Recommended)</span>
+                    <span style="font-weight:400; color:var(--pg-text-muted);">Ubuntu, Debian, Fedora, RHEL</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="actual-shell-cmd-bash" class="form-input" style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; background:#f8fafc;" readonly>
+                    <button class="btn btn-primary btn-sm" onclick="copyActualShellCmd('bash')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <div style="font-size: 11px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; margin-bottom: 6px; display:flex; justify-content:space-between;">
+                    <span>2. Standard POSIX Sh Shell (Universal Fallback)</span>
+                    <span style="font-weight:400; color:var(--pg-text-muted);">Alpine, BusyBox, Minimal</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="actual-shell-cmd-sh" class="form-input" style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; background:#f8fafc;" readonly>
+                    <button class="btn btn-primary btn-sm" onclick="copyActualShellCmd('sh')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 18px;">
+                <div style="font-size: 11px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; margin-bottom: 6px; display:flex; justify-content:space-between;">
+                    <span>3. Direct Podman Attach (Attach to Main Process)</span>
+                    <span style="font-weight:400; color:var(--pg-text-muted);">Stdout / Stdin of PID 1</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="actual-shell-cmd-attach" class="form-input" style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; background:#f8fafc;" readonly>
+                    <button class="btn btn-primary btn-sm" onclick="copyActualShellCmd('attach')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items:center; pt: 8px; border-top: 1px solid var(--pg-border-subtle);">
+                <div style="font-size: 11px; color: var(--pg-text-muted);">
+                    Tip: Press <kbd style="background:#f1f5f9; padding:2px 5px; border-radius:4px; border:1px solid #cbd5e1; font-family:'JetBrains Mono',monospace;">Ctrl+P, Ctrl+Q</kbd> to detach without stopping container.
+                </div>
+                <button class="btn" onclick="closeModal('actual-shell-modal')">Close</button>
             </div>
         </div>
     </div>
@@ -5729,6 +5826,15 @@ spec:
 
             // Raw inspect
             document.getElementById('cd-raw-content').innerText = c.raw_inspect || JSON.stringify(c, null, 2);
+
+            // Update terminal prompt and stopped alert state
+            const promptLabel = document.getElementById('cd-term-prompt-label');
+            if (promptLabel) {
+                promptLabel.innerText = `root@${name}:~# `;
+            }
+            if (typeof checkCdTerminalState === 'function') {
+                checkCdTerminalState();
+            }
         }
 
         function switchContainerSubTab(subTab) {
@@ -5751,6 +5857,7 @@ spec:
                 const liveToggle = document.getElementById('cd-logs-live-toggle');
                 if (liveToggle && liveToggle.checked) startCdLogsPolling();
             } else if (subTab === 'terminal') {
+                if (typeof checkCdTerminalState === 'function') checkCdTerminalState();
                 const termInput = document.getElementById('cd-term-input');
                 if (termInput) setTimeout(() => termInput.focus(), 100);
             } else if (subTab === 'top') {
@@ -5880,47 +5987,139 @@ spec:
             }
         }
 
-        async function runCdTerminalCommand() {
+        function execQuickCdTerm(cmd) {
+            runCdTerminalCommand(cmd);
+        }
+
+        async function runCdTerminalCommand(overrideCmd) {
             if (!currentContainerDetails) return;
             const input = document.getElementById('cd-term-input');
-            const cmd = input.value.trim();
+            const cmd = (overrideCmd !== undefined ? overrideCmd : input.value).trim();
             if (!cmd) return;
 
-            cdTermHistory.push(cmd);
-            cdTermHistoryIdx = -1;
-            input.value = '';
+            if (overrideCmd === undefined) {
+                cdTermHistory.push(cmd);
+                cdTermHistoryIdx = -1;
+                input.value = '';
+            }
+
+            // Built-in 'clear' / 'cls' support
+            if (cmd.toLowerCase() === 'clear' || cmd.toLowerCase() === 'cls') {
+                clearCdTerminal();
+                return;
+            }
 
             const outBox = document.getElementById('cd-term-output');
+            const promptText = (document.getElementById('cd-term-prompt-label') || {}).innerText || 'root@container:~# ';
             const promptLine = document.createElement('div');
-            promptLine.innerHTML = `<span style="color:var(--pg-blue-500);font-weight:700;">sh-5.2#</span> <span style="color:#ffffff;">${escapeHtml(cmd)}</span>`;
+            promptLine.innerHTML = `<span style="color:var(--pg-blue-500);font-weight:700;">${escapeHtml(promptText)}</span><span style="color:#ffffff;">${escapeHtml(cmd)}</span>`;
             outBox.appendChild(promptLine);
 
             try {
-                const shell = document.getElementById('cd-term-shell').value || '/bin/sh';
+                const shell = document.getElementById('cd-term-shell').value || '/bin/bash';
                 const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/exec`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ raw: cmd, shell: shell })
                 });
-                const data = await res.json();
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (jsonErr) {
+                    const rawTxt = await res.text();
+                    data = { output: rawTxt || '(No output)' };
+                }
+
                 const respLine = document.createElement('pre');
                 respLine.style.margin = '4px 0 10px 0';
                 respLine.style.whiteSpace = 'pre-wrap';
                 respLine.style.fontFamily = "'JetBrains Mono', monospace";
-                respLine.style.color = '#e2e8f0';
-                respLine.innerText = data.output || '(No output)';
+                respLine.style.lineHeight = '1.45';
+
+                if (data.exit_code && data.exit_code !== 0 && (!data.output || data.output.startsWith('Error:'))) {
+                    respLine.style.color = '#f87171';
+                    respLine.innerText = data.output || data.error || `Command exited with status ${data.exit_code}`;
+                } else {
+                    respLine.style.color = '#e2e8f0';
+                    respLine.innerText = data.output || '(Command finished with no output)';
+                }
+
                 outBox.appendChild(respLine);
                 outBox.scrollTop = outBox.scrollHeight;
             } catch (e) {
                 const errLine = document.createElement('div');
                 errLine.style.color = 'var(--pg-rose)';
-                errLine.innerText = 'Command execution failed: ' + e.message;
+                errLine.style.margin = '4px 0 10px 0';
+                errLine.style.fontFamily = "'JetBrains Mono', monospace";
+                errLine.innerText = 'Command execution error: ' + (e.message || e);
                 outBox.appendChild(errLine);
+                outBox.scrollTop = outBox.scrollHeight;
             }
         }
 
+        function checkCdTerminalState() {
+            if (!currentContainerDetails) return;
+            const isRunning = currentContainerDetails.status === 'running' || currentContainerDetails.running;
+            const alertEl = document.getElementById('cd-term-stopped-alert');
+            const msgEl = document.getElementById('cd-term-stopped-msg');
+            const termInput = document.getElementById('cd-term-input');
+
+            if (!isRunning) {
+                if (alertEl) alertEl.style.display = 'flex';
+                const stateStr = currentContainerDetails.status || (currentContainerDetails.state ? currentContainerDetails.state.status : 'stopped');
+                if (msgEl) msgEl.innerText = `Container is currently not running (State: ${stateStr}). Start container to run interactive commands.`;
+                if (termInput) termInput.placeholder = 'Container is stopped. Click "Start Container" to enable shell...';
+            } else {
+                if (alertEl) alertEl.style.display = 'none';
+                if (termInput) termInput.placeholder = 'Type command (e.g. ls -la, ps aux, cat /etc/os-release)...';
+            }
+        }
+
+        async function startCurrentContainerFromTerm() {
+            if (!currentContainerDetails) return;
+            const id = currentContainerDetails.id;
+            const name = currentContainerDetails.name || id;
+            showToast(`Starting container '${name}'...`, 'info');
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(id)}/start`, { method: 'POST' });
+                if (res.ok) {
+                    showToast(`Container '${name}' started successfully! Shell ready.`, 'success');
+                    await refreshCurrentContainerDetails();
+                    checkCdTerminalState();
+                    const termInput = document.getElementById('cd-term-input');
+                    if (termInput) termInput.focus();
+                } else {
+                    showToast('Failed to start container: ' + await res.text(), 'error');
+                }
+            } catch (e) {
+                showToast('Error starting container: ' + e.message, 'error');
+            }
+        }
+
+        function openActualShellModal() {
+            if (!currentContainerDetails) return;
+            const name = currentContainerDetails.name || currentContainerDetails.id;
+            document.getElementById('actual-shell-target-name').innerText = name;
+            document.getElementById('actual-shell-cmd-bash').value = `podman exec -it ${name} /bin/bash`;
+            document.getElementById('actual-shell-cmd-sh').value = `podman exec -it ${name} /bin/sh`;
+            document.getElementById('actual-shell-cmd-attach').value = `podman attach ${name}`;
+            openModal('actual-shell-modal');
+        }
+
+        function copyActualShellCmd(type) {
+            let elId = 'actual-shell-cmd-bash';
+            if (type === 'sh') elId = 'actual-shell-cmd-sh';
+            else if (type === 'attach') elId = 'actual-shell-cmd-attach';
+            const cmd = document.getElementById(elId).value;
+            navigator.clipboard.writeText(cmd).then(() => {
+                showToast(`Copied to clipboard: ${cmd}`, 'success');
+            });
+        }
+
         function clearCdTerminal() {
-            document.getElementById('cd-term-output').innerHTML = '<div style="color:var(--pg-text-muted);font-style:italic;">Terminal cleared.</div>';
+            const outBox = document.getElementById('cd-term-output');
+            outBox.innerHTML = '<div style="color:var(--pg-text-muted);font-style:italic;">Terminal cleared. Shell session ready.</div>';
         }
 
         function copyCdTerminalOutput() {
