@@ -841,11 +841,11 @@
             <div id="auth-view-login">
                 <div class="form-group">
                     <label class="form-label">Username</label>
-                    <input type="text" id="main-login-username" class="form-input" placeholder="admin" value="admin">
+                    <input type="text" id="main-login-username" class="form-input" placeholder="admin" value="admin" onkeydown="if(event.key==='Enter') doMainLogin()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" id="main-login-password" class="form-input" placeholder="••••••••" value="admin123">
+                    <input type="password" id="main-login-password" class="form-input" placeholder="••••••••" value="admin123" onkeydown="if(event.key==='Enter') doMainLogin()">
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -863,15 +863,15 @@
             <div id="auth-view-register" style="display: none;">
                 <div class="form-group">
                     <label class="form-label">Username</label>
-                    <input type="text" id="main-reg-username" class="form-input" placeholder="e.g. devops-lead">
+                    <input type="text" id="main-reg-username" class="form-input" placeholder="e.g. devops-lead" onkeydown="if(event.key==='Enter') doMainRegister()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" id="main-reg-email" class="form-input" placeholder="user@procloud.io">
+                    <input type="email" id="main-reg-email" class="form-input" placeholder="user@procloud.io" onkeydown="if(event.key==='Enter') doMainRegister()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" id="main-reg-password" class="form-input" placeholder="••••••••">
+                    <input type="password" id="main-reg-password" class="form-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') doMainRegister()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Role</label>
@@ -1830,7 +1830,6 @@ spec:
 
     <script>
         let currentTab = 'dashboard';
-        let activeContainerForLogs = '';
 
         // Global key shortcut '/' for search
         window.addEventListener('keydown', (e) => {
@@ -3081,7 +3080,7 @@ spec:
         // Click outside modal dialog to dismiss
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-overlay')) {
-                if (e.target.id === 'auth-modal' && !authToken) return;
+                if (e.target.id === 'auth-modal' && !getAuthToken()) return;
                 closeModal(e.target.id);
             }
         });
@@ -3091,11 +3090,83 @@ spec:
             if (e.key === 'Escape') {
                 const openModals = document.querySelectorAll('.modal-overlay.open');
                 openModals.forEach(m => {
-                    if (m.id === 'auth-modal' && !authToken) return;
+                    if (m.id === 'auth-modal' && !getAuthToken()) return;
                     closeModal(m.id);
                 });
             }
         });
+
+        function toggleAuthTab(tab) {
+            if (tab === 'login') {
+                document.getElementById('auth-login-form').style.display = 'block';
+                document.getElementById('auth-register-form').style.display = 'none';
+                document.getElementById('tab-login-btn').className = 'btn btn-primary';
+                document.getElementById('tab-register-btn').className = 'btn';
+            } else {
+                document.getElementById('auth-login-form').style.display = 'none';
+                document.getElementById('auth-register-form').style.display = 'block';
+                document.getElementById('tab-login-btn').className = 'btn';
+                document.getElementById('tab-register-btn').className = 'btn btn-primary';
+            }
+        }
+
+        async function submitLogin() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            if (!u || !p) {
+                showToast('Username and password are required', 'error');
+                return;
+            }
+            try {
+                const res = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('procloud_token', data.token);
+                    localStorage.setItem('procloud_user', JSON.stringify(data.user));
+                    closeModal('auth-modal');
+                    showAppScreen(data.user);
+                    showToast('Signed in successfully!', 'success');
+                } else {
+                    const txt = await res.text();
+                    showToast('Login failed: ' + (txt || 'Invalid credentials'), 'error');
+                }
+            } catch (e) {
+                showToast('Login error: ' + e.message, 'error');
+            }
+        }
+
+        async function submitRegister() {
+            const u = document.getElementById('reg-username').value.trim();
+            const e = document.getElementById('reg-email').value.trim();
+            const p = document.getElementById('reg-password').value.trim();
+            const r = document.getElementById('reg-role').value;
+            if (!u || !e || !p) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+            try {
+                const res = await fetch('/api/v1/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, email: e, password: p, role: r })
+                });
+                if (res.ok) {
+                    showToast('Account created! Logging in...', 'success');
+                    document.getElementById('login-username').value = u;
+                    document.getElementById('login-password').value = p;
+                    await submitLogin();
+                } else {
+                    const txt = await res.text();
+                    showToast('Registration failed: ' + txt, 'error');
+                }
+            } catch (err) {
+                showToast('Registration error: ' + err.message, 'error');
+            }
+        }
 
         // ProGit Themed Toast Notification System
         function showToast(message, type = 'info') {
