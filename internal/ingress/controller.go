@@ -51,6 +51,7 @@ func (c *Controller) RemoveRoute(ctx context.Context, appName string) error {
 	defer c.mu.Unlock()
 
 	delete(c.routes, appName)
+	_ = os.Remove(filepath.Join(c.confDir, fmt.Sprintf("%s.conf", appName)))
 	return c.generateAndReload(ctx)
 }
 
