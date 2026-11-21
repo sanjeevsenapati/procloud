@@ -132,6 +132,11 @@ func (m *MockRuntime) RemoveImage(ctx context.Context, idOrTag string, force boo
 	defer m.mu.Unlock()
 
 	delete(m.Images, idOrTag)
+	for k, v := range m.Images {
+		if v.ID == idOrTag || fmt.Sprintf("%s:%s", v.Repository, v.Tag) == idOrTag {
+			delete(m.Images, k)
+		}
+	}
 	return nil
 }
 

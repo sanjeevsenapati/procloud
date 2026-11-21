@@ -584,6 +584,12 @@
             background: #f0f7ff;
             color: var(--pg-text);
         }
+        table.pg-table tr.selected-img-row td {
+            background: #eff6ff !important;
+        }
+        table.pg-table tr.selected-img-row:hover td {
+            background: #e0f0fe !important;
+        }
 
         /* Status Pills */
         .pill {
@@ -3270,10 +3276,35 @@
                         <button class="btn btn-primary btn-sm rbac-write-only" onclick="openModal('pull-image-modal')">+ Pull Image</button>
                     </div>
                 </div>
+                <!-- Bulk Selection & Action Bar -->
+                <div id="img-bulk-actions-bar" style="display:none; padding:10px 16px; background:#eff6ff; border-bottom:1px solid var(--pg-border); align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span style="font-weight:700; font-size:13px; color:var(--pg-blue-700); display:inline-flex; align-items:center; gap:6px;">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--pg-blue-600);"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><polyline points="9 11 12 14 22 4"/></svg>
+                            <span id="img-selected-count">0</span> image(s) selected
+                        </span>
+                        <button class="btn btn-sm" onclick="clearImageSelection()" style="padding:4px 10px; font-size:12px;">Deselect All</button>
+                        <button class="btn btn-sm" onclick="selectDanglingImages()" style="padding:4px 10px; font-size:12px;" title="Select all images with &lt;none&gt; tag or untagged build artifacts">Select Dangling (&lt;none&gt;)</button>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;" class="rbac-write-only">
+                        <label style="font-size:12px; font-weight:600; color:var(--pg-text-secondary); display:inline-flex; align-items:center; gap:6px; cursor:pointer;" title="Force remove images (-f)">
+                            <input type="checkbox" id="img-bulk-force" checked style="cursor:pointer; accent-color:var(--pg-blue-600);">
+                            <span>Force (-f)</span>
+                        </label>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSelectedImages()" style="background:var(--pg-rose); color:#ffffff; border-color:var(--pg-rose); display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:6px 14px;">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            <span id="img-bulk-delete-btn-text">Delete Selected</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div style="overflow-x:auto;">
                     <table class="pg-table">
                         <thead>
                             <tr>
+                                <th style="width:40px; text-align:center; padding-left:12px; padding-right:6px;">
+                                    <input type="checkbox" id="img-select-all" onchange="toggleSelectAllImages(this.checked)" title="Select/Deselect all filtered images" style="cursor:pointer; width:15px; height:15px; accent-color:var(--pg-blue-600);">
+                                </th>
                                 <th class="sortable" onclick="sortImages('repo')" title="Click to sort by Repository">
                                     <div class="th-content"><span>Repository</span><span class="sort-indicator" id="sort-img-repo"></span></div>
                                 </th>
@@ -3293,7 +3324,7 @@
                             </tr>
                         </thead>
                         <tbody id="images-table">
-                            <tr><td colspan="6" style="text-align:center;">Loading images...</td></tr>
+                            <tr><td colspan="7" style="text-align:center;">Loading images...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -6382,11 +6413,13 @@ spec:
         }
 
         // ==========================================
-        // 3. IMAGES
+        // 3. IMAGES (with Multi-Selection & Bulk Delete)
         // ==========================================
         let allImages = [];
         let imgSortKey = 'repo';
         let imgSortDir = 'asc';
+        let selectedImageMap = new Map();
+        let lastFilteredImages = [];
 
         function sortImages(key) {
             if (imgSortKey === key) {
@@ -6396,6 +6429,185 @@ spec:
                 imgSortDir = 'asc';
             }
             filterAndRenderImages();
+        }
+
+        function getImageRowKey(img) {
+            return `${img.id || ''}::${img.repository || ''}::${img.tag || ''}`;
+        }
+
+        function getImageDeleteTarget(img) {
+            const isDangling = (!img.repository || img.repository === '<none>') || (!img.tag || img.tag === '<none>');
+            if (isDangling || !img.repository || !img.tag) {
+                return img.id;
+            }
+            return `${img.repository}:${img.tag}`;
+        }
+
+        function getImageDisplayLabel(img) {
+            const isDangling = (!img.repository || img.repository === '<none>') || (!img.tag || img.tag === '<none>');
+            if (isDangling || !img.repository || !img.tag) {
+                return `Untagged (${(img.id || '').substring(0, 12)})`;
+            }
+            return `${img.repository}:${img.tag}`;
+        }
+
+        function toggleSelectAllImages(checked) {
+            if (!lastFilteredImages) return;
+            if (checked) {
+                lastFilteredImages.forEach(img => {
+                    const key = getImageRowKey(img);
+                    selectedImageMap.set(key, {
+                        id: img.id,
+                        repo: img.repository,
+                        tag: img.tag,
+                        target: getImageDeleteTarget(img),
+                        label: getImageDisplayLabel(img)
+                    });
+                });
+            } else {
+                lastFilteredImages.forEach(img => {
+                    const key = getImageRowKey(img);
+                    selectedImageMap.delete(key);
+                });
+            }
+            filterAndRenderImages();
+        }
+
+        function toggleImageSelection(key, checked) {
+            if (checked) {
+                const img = allImages.find(i => getImageRowKey(i) === key);
+                if (img) {
+                    selectedImageMap.set(key, {
+                        id: img.id,
+                        repo: img.repository,
+                        tag: img.tag,
+                        target: getImageDeleteTarget(img),
+                        label: getImageDisplayLabel(img)
+                    });
+                }
+            } else {
+                selectedImageMap.delete(key);
+            }
+            filterAndRenderImages();
+        }
+
+        function clearImageSelection() {
+            selectedImageMap.clear();
+            const selectAll = document.getElementById('img-select-all');
+            if (selectAll) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            }
+            filterAndRenderImages();
+        }
+
+        function selectDanglingImages() {
+            let added = 0;
+            allImages.forEach(img => {
+                const isDangling = (!img.repository || img.repository === '<none>') || (!img.tag || img.tag === '<none>');
+                if (isDangling) {
+                    const key = getImageRowKey(img);
+                    selectedImageMap.set(key, {
+                        id: img.id,
+                        repo: img.repository,
+                        tag: img.tag,
+                        target: img.id,
+                        label: getImageDisplayLabel(img)
+                    });
+                    added++;
+                }
+            });
+            filterAndRenderImages();
+            if (added > 0) {
+                showToast(`Selected ${added} dangling / untagged image(s)`, 'info');
+            } else {
+                showToast('No dangling images found', 'info');
+            }
+        }
+
+        function updateImageSelectionUI() {
+            const count = selectedImageMap.size;
+            const bar = document.getElementById('img-bulk-actions-bar');
+            const countLabel = document.getElementById('img-selected-count');
+            const deleteBtnText = document.getElementById('img-bulk-delete-btn-text');
+            const selectAllCheckbox = document.getElementById('img-select-all');
+
+            if (countLabel) countLabel.innerText = count;
+            if (deleteBtnText) deleteBtnText.innerText = count > 0 ? `Delete Selected (${count})` : 'Delete Selected';
+            if (bar) {
+                bar.style.display = count > 0 ? 'flex' : 'none';
+            }
+
+            if (selectAllCheckbox && lastFilteredImages && lastFilteredImages.length > 0) {
+                const allSelected = lastFilteredImages.every(img => selectedImageMap.has(getImageRowKey(img)));
+                const someSelected = lastFilteredImages.some(img => selectedImageMap.has(getImageRowKey(img)));
+                selectAllCheckbox.checked = allSelected;
+                selectAllCheckbox.indeterminate = !allSelected && someSelected;
+            } else if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        }
+
+        function deleteSelectedImages() {
+            const count = selectedImageMap.size;
+            if (count === 0) {
+                showToast('No images selected', 'warning');
+                return;
+            }
+
+            const items = Array.from(selectedImageMap.values());
+            const targets = Array.from(new Set(items.map(v => v.target)));
+            const sampleLabels = items.slice(0, 3).map(v => v.label).join(', ') + (count > 3 ? ` and ${count - 3} more` : '');
+            const isForce = document.getElementById('img-bulk-force')?.checked ?? true;
+
+            promptConfirmAction({
+                action: 'delete',
+                itemType: `${count} Image${count === 1 ? '' : 's'}`,
+                name: sampleLabels,
+                id: targets.slice(0, 2).join(', '),
+                warning: `Permanently delete ${count} selected container image(s) from local Podman storage?`,
+                onConfirm: async () => {
+                    try {
+                        showToast(`Deleting ${count} image(s)...`, 'info');
+                        const res = await authFetch('/api/v1/images/bulk-delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ids: targets, force: isForce })
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            const deletedCount = (data.deleted || []).length;
+                            const failedCount = (data.failed || []).length;
+
+                            if (failedCount === 0) {
+                                showToast(`Successfully deleted ${deletedCount} image(s)!`, 'success');
+                            } else if (deletedCount > 0) {
+                                showToast(`Deleted ${deletedCount} image(s). ${failedCount} could not be removed (in-use).`, 'warning');
+                            } else {
+                                const errDetail = data.failed[0]?.error || 'Unknown error';
+                                showToast(`Failed to delete images: ${errDetail}`, 'error');
+                            }
+                        } else {
+                            // Fallback if bulk endpoint error
+                            let deletedCount = 0;
+                            for (const t of targets) {
+                                try {
+                                    const r = await authFetch(`/api/v1/images/${encodeURIComponent(t)}?force=${isForce}`, { method: 'DELETE' });
+                                    if (r.ok) deletedCount++;
+                                } catch (_) {}
+                            }
+                            showToast(`Deleted ${deletedCount} of ${count} images`, 'info');
+                        }
+                    } catch (err) {
+                        showToast('Error deleting images: ' + err.message, 'error');
+                    } finally {
+                        clearImageSelection();
+                        fetchImages();
+                    }
+                }
+            });
         }
 
         function filterAndRenderImages() {
@@ -6426,33 +6638,53 @@ spec:
                 return compareValues(valA, valB, imgSortDir);
             });
 
+            lastFilteredImages = filtered;
+
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No images found matching the filter criteria.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No images found matching the filter criteria.</td></tr>';
+                updateImageSelectionUI();
                 return;
             }
 
-            tbody.innerHTML = filtered.map(img => `
-                <tr>
+            tbody.innerHTML = filtered.map(img => {
+                const key = getImageRowKey(img);
+                const isSelected = selectedImageMap.has(key);
+                const repoTag = (img.repository && img.tag) ? `${img.repository}:${img.tag}` : (img.id || '');
+                const isDangling = (!img.repository || img.repository === '<none>') && (!img.tag || img.tag === '<none>');
+                const tagDisplay = isDangling
+                    ? '<span class="pill pill-slate" style="font-size:11px;">untagged</span>'
+                    : `<span class="pill pill-blue">${escapeHtml(img.tag)}</span>`;
+
+                return `
+                <tr class="${isSelected ? 'selected-img-row' : ''}">
+                    <td style="text-align:center; padding-left:12px; padding-right:6px;">
+                        <input type="checkbox" class="img-row-select" onchange="toggleImageSelection('${escapeHtml(key)}', this.checked)" ${isSelected ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:var(--pg-blue-600);">
+                    </td>
                     <td><strong>${escapeHtml(img.repository)}</strong></td>
-                    <td><span class="pill pill-blue">${escapeHtml(img.tag)}</span></td>
+                    <td>${tagDisplay}</td>
                     <td><code style="color:var(--pg-blue-600);">${escapeHtml(img.id)}</code></td>
                     <td>${escapeHtml(img.size)}</td>
                     <td>${img.created ? new Date(img.created).toLocaleDateString() : 'n/a'}</td>
                     <td>
                         <div class="table-actions">
                             ${canWrite() ? `
-                            <button class="btn btn-sm btn-outline-emerald" title="Run Container from Image" onclick="quickRunImage('${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
+                            ${!isDangling ? `
+                            <button class="btn btn-sm btn-outline-emerald" title="Run Container from Image" onclick="quickRunImage('${escapeHtml(repoTag)}')">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                                 <span>Run</span>
                             </button>
-                            <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Image" onclick="removeImage('${img.id}', '${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
+                            ` : ''}
+                            <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Image" onclick="removeImage('${img.id}', '${escapeHtml(repoTag)}')">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             </button>
                             ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
                         </div>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
+
+            updateImageSelectionUI();
         }
 
         async function fetchImages() {
@@ -6461,11 +6693,20 @@ spec:
                 allImages = await res.json() || [];
                 const badge = document.getElementById('tab-badge-images');
                 if (badge) badge.innerText = allImages.length;
+
+                // Retain only selected keys that still exist
+                const validKeys = new Set(allImages.map(getImageRowKey));
+                for (const k of selectedImageMap.keys()) {
+                    if (!validKeys.has(k)) {
+                        selectedImageMap.delete(k);
+                    }
+                }
+
                 filterAndRenderImages();
             } catch (err) {
                 console.error('fetchImages error:', err);
                 const tbody = document.getElementById('images-table');
-                if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load images: ${escapeHtml(err.message)}</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load images: ${escapeHtml(err.message)}</td></tr>`;
             }
         }
 
@@ -7031,6 +7272,7 @@ spec:
         }
 
         function removeImage(id, repoTag) {
+            const target = (repoTag && repoTag !== '<none>:<none>') ? repoTag : id;
             promptConfirmAction({
                 action: 'delete',
                 itemType: 'Image',
@@ -7038,8 +7280,18 @@ spec:
                 id: id,
                 warning: 'The image will be purged from local container image storage.',
                 onConfirm: async () => {
-                    await authFetch(`/api/v1/images/${id}?force=true`, { method: 'DELETE' });
-                    showToast(`Image '${repoTag || id}' deleted`, 'success');
+                    const res = await authFetch(`/api/v1/images/${encodeURIComponent(target)}?force=true`, { method: 'DELETE' });
+                    if (res.ok) {
+                        showToast(`Image '${repoTag || id}' deleted`, 'success');
+                    } else {
+                        showToast(`Failed to delete image: ${await res.text()}`, 'error');
+                    }
+                    for (const [k, v] of selectedImageMap.entries()) {
+                        if (v.id === id || v.target === target) {
+                            selectedImageMap.delete(k);
+                        }
+                    }
+                    updateImageSelectionUI();
                     fetchImages();
                 }
             });

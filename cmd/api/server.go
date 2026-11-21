@@ -309,6 +309,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/images", s.authRequired(s.handleListImages))
 	s.mux.HandleFunc("POST /api/v1/images/pull", s.writeRequired(s.handlePullImage))
 	s.mux.HandleFunc("POST /api/v1/images/build", s.writeRequired(s.handleBuildImage))
+	s.mux.HandleFunc("POST /api/v1/images/bulk-delete", s.writeRequired(s.handleBulkRemoveImages))
 	s.mux.HandleFunc("DELETE /api/v1/images/{id}", s.writeRequired(s.handleRemoveImage))
 
 	// -------------------------------------------------------------
@@ -1135,6 +1136,60 @@ func (s *Server) handleBuildImage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type BulkDeleteImagesRequest struct {
+	IDs   []string `json:"ids"`
+	Force bool     `json:"force"`
+}
+
+type BulkDeleteImagesResponse struct {
+	Deleted []string          `json:"deleted"`
+	Failed  []BulkDeleteError `json:"failed"`
+}
+
+type BulkDeleteError struct {
+	ID    string `json:"id"`
+	Error string `json:"error"`
+}
+
+func (s *Server) handleBulkRemoveImages(w http.ResponseWriter, r *http.Request) {
+	var req BulkDeleteImagesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		http.Error(w, "no image IDs provided", http.StatusBadRequest)
+		return
+	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+
+	deleted := make([]string, 0)
+	failed := make([]BulkDeleteError, 0)
+
+	for _, id := range req.IDs {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if err := s.runtime.RemoveImage(r.Context(), id, req.Force); err != nil {
+			failed = append(failed, BulkDeleteError{ID: id, Error: err.Error()})
+		} else {
+			deleted = append(deleted, id)
+			s.auditSvc.Log(r.Context(), actor, "IMAGE_DELETE", "Image", id, r.RemoteAddr, fmt.Sprintf("Removed image %s (force=%v)", id, req.Force))
+		}
+	}
+
+	respondJSON(w, http.StatusOK, BulkDeleteImagesResponse{
+		Deleted: deleted,
+		Failed:  failed,
+	})
+}
+
 func (s *Server) handleRemoveImage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	force := r.URL.Query().Get("force") == "true"
@@ -1142,6 +1197,11 @@ func (s *Server) handleRemoveImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "IMAGE_DELETE", "Image", id, r.RemoteAddr, fmt.Sprintf("Removed image %s (force=%v)", id, force))
 	respondJSON(w, http.StatusOK, map[string]string{"message": "image removed", "id": id})
 }
 
