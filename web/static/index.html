@@ -691,19 +691,169 @@
         .form-input {
             width: 100%;
             background: #ffffff;
-            border: 1px solid #cbd5e1;
+            border: 1px solid #bfdbfe;
             padding: 9px 12px;
-            border-radius: 7px;
+            border-radius: 8px;
             color: var(--pg-text);
             font-size: 13px;
             font-family: inherit;
-            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.04);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .form-input:hover {
+            border-color: #93c5fd;
         }
         .form-input:focus {
             outline: none;
             border-color: var(--pg-blue-600);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
             background: #ffffff;
+        }
+
+        /* ProGit Unified Custom Select / Dropdown Theme */
+        select,
+        select.form-input,
+        .form-select {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            width: 100%;
+            background-color: #ffffff !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: calc(100% - 12px) center !important;
+            background-size: 14px 14px !important;
+            border: 1px solid #bfdbfe !important;
+            border-radius: 8px !important;
+            padding: 9px 38px 9px 12px !important;
+            color: var(--pg-text) !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            font-family: inherit !important;
+            line-height: 1.5 !important;
+            cursor: pointer !important;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.04) !important;
+            transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease !important;
+        }
+
+        select:hover,
+        select.form-input:hover,
+        .form-select:hover {
+            border-color: var(--pg-blue-500) !important;
+            background-color: #f8faff !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231d4ed8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08) !important;
+        }
+
+        select:focus,
+        select.form-input:focus,
+        .form-select:focus {
+            outline: none !important;
+            border-color: var(--pg-blue-600) !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
+        }
+
+        select:disabled,
+        select.form-input:disabled,
+        .form-select:disabled {
+            background-color: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed !important;
+            opacity: 0.78 !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+        }
+
+        /* Compact selects for toolbars, table filters, log tails, shell picker */
+        select.form-input-sm,
+        select.select-sm,
+        select[style*="font-size:11px"],
+        select[style*="font-size:12px"][style*="width:auto"],
+        select[style*="padding:2px"],
+        select[style*="padding:3px"],
+        select[style*="padding:4px"] {
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+            padding-left: 9px !important;
+            padding-right: 26px !important;
+            font-size: 11px !important;
+            border-radius: 6px !important;
+            background-size: 12px 12px !important;
+            background-position: calc(100% - 8px) center !important;
+            height: 28px !important;
+        }
+
+        /* Custom Dropdown Option styling */
+        select option {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            padding: 8px 12px !important;
+            font-size: 13px !important;
+            font-family: inherit !important;
+            font-weight: 500 !important;
+        }
+
+        select option:checked {
+            background-color: #eff6ff !important;
+            color: var(--pg-blue-600) !important;
+            font-weight: 600 !important;
+        }
+
+        select optgroup {
+            background-color: #f8fafc !important;
+            color: var(--pg-blue-700) !important;
+            font-weight: 700 !important;
+            font-size: 11px !important;
+            padding: 6px 10px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* Active Organization Context Selector in Header */
+        #org-selector-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 3px 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.05);
+            transition: all 0.2s ease;
+        }
+        #org-selector-container:hover {
+            border-color: #93c5fd;
+            background: #e0edff;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.10);
+        }
+        #active-org-select {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            background-color: transparent !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231d4ed8' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 2px center !important;
+            background-size: 11px 11px !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 0 18px 0 2px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #1d4ed8 !important;
+            font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+            outline: none !important;
+            cursor: pointer !important;
+            box-shadow: none !important;
+            height: auto !important;
+            width: auto !important;
+        }
+        #active-org-select:disabled {
+            background-image: none !important;
+            padding-right: 0 !important;
+            cursor: default !important;
+            opacity: 0.95 !important;
         }
 
         .code-view {
@@ -2446,7 +2596,7 @@
                     <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding: 10px 16px; background:var(--pg-card); border-bottom:1px solid var(--pg-border);">
                         <div style="display:flex; gap:12px; align-items:center;">
                             <span style="font-size:12px; font-weight:600; color:var(--pg-text-secondary);">Tail:</span>
-                            <select id="cd-logs-tail-select" class="form-input" style="width:auto; padding:3px 8px; font-size:12px;" onchange="fetchCdLogs()">
+                            <select id="cd-logs-tail-select" class="form-input form-input-sm" style="width:auto;" onchange="fetchCdLogs()">
                                 <option value="50">50 lines</option>
                                 <option value="100" selected>100 lines</option>
                                 <option value="250">250 lines</option>
@@ -2483,7 +2633,7 @@
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
                                 <span>Open Actual Shell</span>
                             </button>
-                            <select id="cd-term-shell" class="form-input" style="width:auto; padding:2px 8px; font-size:11px;">
+                            <select id="cd-term-shell" class="form-input form-input-sm" style="width:auto;">
                                 <option value="/bin/bash" selected>/bin/bash</option>
                                 <option value="/bin/sh">/bin/sh</option>
                                 <option value="/bin/ash">/bin/ash</option>
@@ -2947,10 +3097,10 @@
                             <span>Aggregated Container Logs for Pod</span>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <select id="pd-logs-container-select" class="form-input" style="padding:4px 8px; font-size:12px; width:auto;" onchange="fetchPdLogs()">
+                            <select id="pd-logs-container-select" class="form-input form-input-sm" style="width:auto;" onchange="fetchPdLogs()">
                                 <option value="">All Non-Infra Containers</option>
                             </select>
-                            <select id="pd-logs-tail" class="form-input" style="padding:4px 8px; font-size:12px; width:auto;" onchange="fetchPdLogs()">
+                            <select id="pd-logs-tail" class="form-input form-input-sm" style="width:auto;" onchange="fetchPdLogs()">
                                 <option value="50">50 lines</option>
                                 <option value="100" selected>100 lines</option>
                                 <option value="250">250 lines</option>
@@ -3287,7 +3437,7 @@ spec:
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <input type="text" id="orgs-search-input" class="form-input" style="padding:4px 10px; font-size:11px; width:220px;" placeholder="Search organization..." oninput="filterOrgsTable()">
-                        <select id="orgs-plan-filter" class="form-input" style="width:auto; padding:3px 8px; font-size:11px;" onchange="filterOrgsTable()">
+                        <select id="orgs-plan-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterOrgsTable()">
                             <option value="">All Subscription Plans</option>
                             <option value="enterprise">Enterprise</option>
                             <option value="pro">Pro</option>
@@ -3379,10 +3529,10 @@ spec:
                     </div>
                     <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                         <input type="text" id="users-search-input" class="form-input" style="padding:4px 10px; font-size:11px; width:200px;" placeholder="Search by name, email..." oninput="filterUsersTable()">
-                        <select id="users-org-filter" class="form-input" style="width:auto; padding:3px 8px; font-size:11px;" onchange="filterUsersTable()">
+                        <select id="users-org-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterUsersTable()">
                             <option value="">All Organizations</option>
                         </select>
-                        <select id="users-role-filter" class="form-input" style="width:auto; padding:3px 8px; font-size:11px;" onchange="filterUsersTable()">
+                        <select id="users-role-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterUsersTable()">
                             <option value="">All RBAC Roles</option>
                             <option value="admin">Super Admin / Support Admin</option>
                             <option value="org_admin">Organization Admin</option>
@@ -3919,7 +4069,7 @@ spec:
             <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:12px; padding: 8px 12px; background:var(--pg-card); border:1px solid var(--pg-border); border-radius:8px;">
                 <div style="display:flex; gap:10px; align-items:center;">
                     <span style="font-size:12px; font-weight:600; color:var(--pg-text-secondary);">Tail:</span>
-                    <select id="logs-tail-select" class="form-input" style="width:auto; padding:3px 8px; font-size:12px;" onchange="fetchContainerLogs()">
+                    <select id="logs-tail-select" class="form-input form-input-sm" style="width:auto;" onchange="fetchContainerLogs()">
                         <option value="50">50 lines</option>
                         <option value="100" selected>100 lines</option>
                         <option value="250">250 lines</option>
@@ -4097,7 +4247,7 @@ spec:
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:12px; font-weight:600; color:var(--pg-text-secondary);">Template:</span>
-                    <select id="play-kube-template-select" class="form-input" style="width:auto; padding:4px 8px; font-size:12px;" onchange="loadPlayKubeTemplate(this.value)">
+                    <select id="play-kube-template-select" class="form-input form-input-sm" style="width:auto;" onchange="loadPlayKubeTemplate(this.value)">
                         <option value="nginx">Standard Web Pod (Nginx)</option>
                         <option value="multicontainer">Multi-Container Pod (Web + Redis Cache)</option>
                         <option value="volume">Microservice with Persistent Volume</option>
@@ -4259,7 +4409,7 @@ spec:
                         <div style="font-size: 12px; font-weight: 700; color: var(--pg-text);">Load Preconfigured Workflow Template</div>
                         <div style="font-size: 11px; color: var(--pg-text-secondary);">Instantly populates source code, Containerfile, and Deploy.yaml for common stacks</div>
                     </div>
-                    <select id="wf-template-select" class="form-input" style="width: auto; min-width: 240px; padding: 6px 12px; font-size: 12px;" onchange="loadWorkflowTemplate(this.value)">
+                    <select id="wf-template-select" class="form-input form-input-sm" style="width: auto; min-width: 240px;" onchange="loadWorkflowTemplate(this.value)">
                         <option value="">-- Choose a Workflow Stack --</option>
                         <option value="node">Node.js Express REST API (Container)</option>
                         <option value="python">Python FastAPI Microservice (Container)</option>
