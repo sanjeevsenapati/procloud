@@ -90,6 +90,7 @@ type RunOptions struct {
 	Volumes    []string          `json:"volumes,omitempty"` // "host:container:Z"
 	Env        map[string]string `json:"env,omitempty"`
 	Secrets    []string          `json:"secrets,omitempty"` // Podman secrets attached: "name" or "name,type=env,target=VAR"
+	Labels     map[string]string `json:"labels,omitempty"`  // Metadata labels: e.g. procloud.io/organization
 	Command    []string          `json:"command,omitempty"`
 	Restart    string            `json:"restart,omitempty"`
 	Detach     bool              `json:"detach"`
@@ -163,30 +164,33 @@ type ContainerStatus struct {
 }
 
 type ContainerSummary struct {
-	ID      string   `json:"id"`
-	Names   []string `json:"names"`
-	Image   string   `json:"image"`
-	State   string   `json:"state"` // running, exited, paused, stopped
-	Status  string   `json:"status"`
-	Ports   []string `json:"ports"`
-	Created string   `json:"created"`
-	Pod     string   `json:"pod,omitempty"`
+	ID      string            `json:"id"`
+	Names   []string          `json:"names"`
+	Image   string            `json:"image"`
+	State   string            `json:"state"` // running, exited, paused, stopped
+	Status  string            `json:"status"`
+	Ports   []string          `json:"ports"`
+	Created string            `json:"created"`
+	Pod     string            `json:"pod,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
 }
 
 type PodSummary struct {
-	ID                 string   `json:"id"`
-	Name               string   `json:"name"`
-	Status             string   `json:"status"` // Running, Degraded, Exited, Created
-	Created            string   `json:"created"`
-	NumberOfContainers int      `json:"number_of_containers"`
-	InfraID            string   `json:"infra_id"`
-	Ports              []string `json:"ports"`
+	ID                 string            `json:"id"`
+	Name               string            `json:"name"`
+	Status             string            `json:"status"` // Running, Degraded, Exited, Created
+	Created            string            `json:"created"`
+	NumberOfContainers int               `json:"number_of_containers"`
+	InfraID            string            `json:"infra_id"`
+	Ports              []string          `json:"ports"`
+	Labels             map[string]string `json:"labels,omitempty"`
 }
 
 type PodCreateOptions struct {
-	Name    string   `json:"name"`
-	Ports   []string `json:"ports"` // "8080:80"
-	Network string   `json:"network,omitempty"`
+	Name    string            `json:"name"`
+	Ports   []string          `json:"ports"` // "8080:80"
+	Network string            `json:"network,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
 }
 
 type PodInspect struct {
@@ -401,13 +405,14 @@ func (p *PodmanCLI) ListContainers(ctx context.Context, all bool) ([]*ContainerS
 	}
 
 	var raw []struct {
-		Id      string   `json:"Id"`
-		Names   []string `json:"Names"`
-		Image   string   `json:"Image"`
-		State   string   `json:"State"`
-		Status  string   `json:"Status"`
-		Created int64    `json:"Created"`
-		Pod     string   `json:"Pod"`
+		Id      string            `json:"Id"`
+		Names   []string          `json:"Names"`
+		Image   string            `json:"Image"`
+		State   string            `json:"State"`
+		Status  string            `json:"Status"`
+		Created int64             `json:"Created"`
+		Pod     string            `json:"Pod"`
+		Labels  map[string]string `json:"Labels"`
 		Ports   []struct {
 			HostPort      int `json:"hostPort"`
 			ContainerPort int `json:"containerPort"`
@@ -436,6 +441,7 @@ func (p *PodmanCLI) ListContainers(ctx context.Context, all bool) ([]*ContainerS
 			Ports:   ports,
 			Created: time.Unix(c.Created, 0).Format(time.RFC3339),
 			Pod:     c.Pod,
+			Labels:  c.Labels,
 		})
 	}
 	return list, nil
@@ -466,6 +472,11 @@ func (p *PodmanCLI) RunContainer(ctx context.Context, opts RunOptions) (string, 
 	for _, sec := range opts.Secrets {
 		if sec != "" {
 			args = append(args, "--secret", sec)
+		}
+	}
+	for k, v := range opts.Labels {
+		if k != "" {
+			args = append(args, "--label", fmt.Sprintf("%s=%s", k, v))
 		}
 	}
 	for k, v := range opts.Env {
@@ -789,11 +800,12 @@ func (p *PodmanCLI) ListPods(ctx context.Context) ([]*PodSummary, error) {
 	}
 
 	var raw []struct {
-		Id         string `json:"Id"`
-		Name       string `json:"Name"`
-		Status     string `json:"Status"`
-		Created    string `json:"Created"`
-		InfraId    string `json:"InfraId"`
+		Id         string            `json:"Id"`
+		Name       string            `json:"Name"`
+		Status     string            `json:"Status"`
+		Created    string            `json:"Created"`
+		InfraId    string            `json:"InfraId"`
+		Labels     map[string]string `json:"Labels"`
 		Containers []struct {
 			Id    string `json:"Id"`
 			Names string `json:"Names"`
@@ -817,6 +829,7 @@ func (p *PodmanCLI) ListPods(ctx context.Context) ([]*PodSummary, error) {
 			Created:            pod.Created,
 			NumberOfContainers: len(pod.Containers),
 			InfraID:            pod.InfraId,
+			Labels:             pod.Labels,
 		})
 	}
 	return list, nil
@@ -832,6 +845,11 @@ func (p *PodmanCLI) CreatePod(ctx context.Context, opts PodCreateOptions) (strin
 	}
 	for _, port := range opts.Ports {
 		args = append(args, "-p", port)
+	}
+	for k, v := range opts.Labels {
+		if k != "" {
+			args = append(args, "--label", fmt.Sprintf("%s=%s", k, v))
+		}
 	}
 
 	cmd := exec.CommandContext(ctx, p.binPath, args...)

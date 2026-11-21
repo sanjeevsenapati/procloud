@@ -432,6 +432,31 @@ func (s *Server) handleListContainers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Filter by organization if requested or if user has non-admin role
+	tenantFilter := r.URL.Query().Get("tenant_id")
+	claims := s.checkAuth(r)
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin && claims.Role != protocol.RoleOrgAdmin {
+		tenantFilter = claims.TenantID
+	}
+
+	if tenantFilter != "" {
+		var filtered []*podman.ContainerSummary
+		for _, c := range containers {
+			orgID := ""
+			if c.Labels != nil {
+				orgID = c.Labels["procloud.io/organization"]
+			}
+			if orgID == "" {
+				orgID = "tnt-default"
+			}
+			if orgID == tenantFilter {
+				filtered = append(filtered, c)
+			}
+		}
+		containers = filtered
+	}
+
 	respondJSON(w, http.StatusOK, containers)
 }
 
@@ -447,19 +472,57 @@ func (s *Server) handleRunContainer(w http.ResponseWriter, r *http.Request) {
 	}
 	opts.Detach = true
 
+	// Resolve acting user and organization context
+	actor := "anonymous"
+	tenantID := ""
+	tenantName := ""
+	claims := s.checkAuth(r)
+	if claims != nil {
+		actor = claims.Username
+		tenantID = claims.TenantID
+	}
+
+	// Allow superadmin/admin to override target organization
+	if reqTenant := r.URL.Query().Get("tenant_id"); reqTenant != "" && (claims == nil || claims.Role == protocol.RoleSuperAdmin || claims.Role == protocol.RoleOrgAdmin) {
+		tenantID = reqTenant
+	}
+	if opts.Labels != nil && opts.Labels["procloud.io/organization"] != "" && (claims == nil || claims.Role == protocol.RoleSuperAdmin || claims.Role == protocol.RoleOrgAdmin) {
+		tenantID = opts.Labels["procloud.io/organization"]
+	}
+	if tenantID == "" {
+		tenantID = "tnt-default"
+	}
+	if tenantID != "" {
+		if org, err := s.tenantSvc.GetOrganization(r.Context(), tenantID); err == nil && org != nil {
+			tenantName = org.Name
+		} else {
+			tenantName = tenantID
+		}
+	}
+
+	// Auto-tag container with organization and creator metadata labels
+	if opts.Labels == nil {
+		opts.Labels = make(map[string]string)
+	}
+	opts.Labels["procloud.io/organization"] = tenantID
+	opts.Labels["procloud.io/org-name"] = tenantName
+	opts.Labels["procloud.io/created-by"] = actor
+
 	ctrID, err := s.runtime.RunContainer(r.Context(), opts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	actor := "anonymous"
-	if claims := s.checkAuth(r); claims != nil {
-		actor = claims.Username
-	}
-	s.auditSvc.Log(r.Context(), actor, "CONTAINER_RUN", "Container", opts.Name, r.RemoteAddr, fmt.Sprintf("Started container %s with image %s", opts.Name, opts.Image))
+	s.auditSvc.Log(r.Context(), actor, "CONTAINER_RUN", "Container", opts.Name, r.RemoteAddr, fmt.Sprintf("Started container %s with image %s (Org: %s)", opts.Name, opts.Image, tenantName))
 
-	respondJSON(w, http.StatusCreated, map[string]string{"id": ctrID, "name": opts.Name, "status": "running"})
+	respondJSON(w, http.StatusCreated, map[string]string{
+		"id":          ctrID,
+		"name":        opts.Name,
+		"tenant_id":   tenantID,
+		"tenant_name": tenantName,
+		"status":      "running",
+	})
 }
 
 func (s *Server) handleInspectContainer(w http.ResponseWriter, r *http.Request) {
@@ -764,6 +827,31 @@ func (s *Server) handleListPods(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Filter by organization if requested or if user has non-admin role
+	tenantFilter := r.URL.Query().Get("tenant_id")
+	claims := s.checkAuth(r)
+	if claims != nil && claims.Role != protocol.RoleSuperAdmin && claims.Role != protocol.RoleOrgAdmin {
+		tenantFilter = claims.TenantID
+	}
+
+	if tenantFilter != "" {
+		var filtered []*podman.PodSummary
+		for _, p := range pods {
+			orgID := ""
+			if p.Labels != nil {
+				orgID = p.Labels["procloud.io/organization"]
+			}
+			if orgID == "" {
+				orgID = "tnt-default"
+			}
+			if orgID == tenantFilter {
+				filtered = append(filtered, p)
+			}
+		}
+		pods = filtered
+	}
+
 	respondJSON(w, http.StatusOK, pods)
 }
 
@@ -778,19 +866,54 @@ func (s *Server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	actor := "anonymous"
+	tenantID := ""
+	tenantName := ""
+	claims := s.checkAuth(r)
+	if claims != nil {
+		actor = claims.Username
+		tenantID = claims.TenantID
+	}
+
+	if reqTenant := r.URL.Query().Get("tenant_id"); reqTenant != "" && (claims == nil || claims.Role == protocol.RoleSuperAdmin || claims.Role == protocol.RoleOrgAdmin) {
+		tenantID = reqTenant
+	}
+	if opts.Labels != nil && opts.Labels["procloud.io/organization"] != "" && (claims == nil || claims.Role == protocol.RoleSuperAdmin || claims.Role == protocol.RoleOrgAdmin) {
+		tenantID = opts.Labels["procloud.io/organization"]
+	}
+	if tenantID == "" {
+		tenantID = "tnt-default"
+	}
+	if tenantID != "" {
+		if org, err := s.tenantSvc.GetOrganization(r.Context(), tenantID); err == nil && org != nil {
+			tenantName = org.Name
+		} else {
+			tenantName = tenantID
+		}
+	}
+
+	if opts.Labels == nil {
+		opts.Labels = make(map[string]string)
+	}
+	opts.Labels["procloud.io/organization"] = tenantID
+	opts.Labels["procloud.io/org-name"] = tenantName
+	opts.Labels["procloud.io/created-by"] = actor
+
 	podID, err := s.runtime.CreatePod(r.Context(), opts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	actor := "anonymous"
-	if claims := s.checkAuth(r); claims != nil {
-		actor = claims.Username
-	}
-	s.auditSvc.Log(r.Context(), actor, "POD_CREATED", "Pod", opts.Name, r.RemoteAddr, fmt.Sprintf("Created pod %s", opts.Name))
+	s.auditSvc.Log(r.Context(), actor, "POD_CREATED", "Pod", opts.Name, r.RemoteAddr, fmt.Sprintf("Created pod %s (Org: %s)", opts.Name, tenantName))
 
-	respondJSON(w, http.StatusCreated, map[string]string{"id": podID, "name": opts.Name, "status": "Created"})
+	respondJSON(w, http.StatusCreated, map[string]string{
+		"id":          podID,
+		"name":        opts.Name,
+		"tenant_id":   tenantID,
+		"tenant_name": tenantName,
+		"status":      "Created",
+	})
 }
 
 func (s *Server) handleInspectPod(w http.ResponseWriter, r *http.Request) {

@@ -2147,6 +2147,7 @@
                     <thead>
                         <tr>
                             <th>Container Name</th>
+                            <th>Organization</th>
                             <th>ID</th>
                             <th>Image</th>
                             <th>State</th>
@@ -2156,7 +2157,7 @@
                         </tr>
                     </thead>
                     <tbody id="containers-table">
-                        <tr><td colspan="7" style="text-align:center;">Loading containers...</td></tr>
+                        <tr><td colspan="8" style="text-align:center;">Loading containers...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -2705,6 +2706,7 @@
                     <thead>
                         <tr>
                             <th>Pod Name</th>
+                            <th>Organization</th>
                             <th>ID</th>
                             <th>Status</th>
                             <th>Containers</th>
@@ -2713,7 +2715,7 @@
                         </tr>
                     </thead>
                     <tbody id="pods-table">
-                        <tr><td colspan="6" style="text-align:center;">Loading pods...</td></tr>
+                        <tr><td colspan="7" style="text-align:center;">Loading pods...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -3449,6 +3451,10 @@ spec:
                 <label class="form-label">Podman Secrets (Optional, comma-separated e.g. db_password, api_token)</label>
                 <input type="text" id="ctr-secrets" class="form-input" placeholder="e.g. db_password or secretName,type=env,target=VAR">
             </div>
+            <div class="form-group">
+                <label class="form-label">Organization Context</label>
+                <select id="ctr-org" class="form-input"></select>
+            </div>
             <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitRunContainer()">
                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 <span>Launch Container</span>
@@ -3469,6 +3475,10 @@ spec:
             <div class="form-group">
                 <label class="form-label">Pod Name</label>
                 <input type="text" id="pod-name" class="form-input" placeholder="e.g. web-tier-pod">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Organization Context</label>
+                <select id="pod-org" class="form-input"></select>
             </div>
             <div class="form-group">
                 <label class="form-label">Port Forwardings (comma separated, host:container)</label>
@@ -5610,19 +5620,25 @@ spec:
 
         async function fetchContainers(all = false) {
             try {
-                const res = await authFetch(`/api/v1/containers${all ? '?all=true' : ''}`);
+                let url = `/api/v1/containers${all ? '?all=true' : ''}`;
+                if (activeOrgFilter) {
+                    url += (url.includes('?') ? '&' : '?') + `tenant_id=${encodeURIComponent(activeOrgFilter)}`;
+                }
+                const res = await authFetch(url);
                 const list = await res.json() || [];
                 document.getElementById('tab-badge-containers').innerText = list.length;
                 const tbody = document.getElementById('containers-table');
                 if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px;">No containers found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px;">No containers found.</td></tr>';
                     return;
                 }
                 tbody.innerHTML = list.map(c => {
                     const name = c.names ? c.names[0] : c.id;
+                    const orgName = (c.labels && (c.labels['procloud.io/org-name'] || c.labels['procloud.io/organization'])) || 'Default';
                     return `
                     <tr>
                         <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openContainerDetails('${escapeHtml(c.id)}')">${escapeHtml(name)}</a></td>
+                        <td><span class="pill pill-blue" style="font-size:11px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>${escapeHtml(orgName)}</span></td>
                         <td><code style="color:var(--pg-blue-600);">${escapeHtml(c.id)}</code></td>
                         <td><code>${escapeHtml(c.image)}</code></td>
                         <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${escapeHtml(c.state)}</span></td>
@@ -5652,17 +5668,24 @@ spec:
 
         async function fetchPods() {
             try {
-                const res = await authFetch('/api/v1/pods');
+                let url = '/api/v1/pods';
+                if (activeOrgFilter) {
+                    url += `?tenant_id=${encodeURIComponent(activeOrgFilter)}`;
+                }
+                const res = await authFetch(url);
                 const list = await res.json() || [];
                 document.getElementById('tab-badge-pods').innerText = list.length;
                 const tbody = document.getElementById('pods-table');
                 if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px;">No pods created. Click "Create Pod" to provision a multi-container pod.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px;">No pods created. Click "Create Pod" to provision a multi-container pod.</td></tr>';
                     return;
                 }
-                tbody.innerHTML = list.map(p => `
+                tbody.innerHTML = list.map(p => {
+                    const orgName = (p.labels && (p.labels['procloud.io/org-name'] || p.labels['procloud.io/organization'])) || 'Default';
+                    return `
                     <tr>
                         <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openPodDetails('${escapeHtml(p.id)}')">${escapeHtml(p.name)}</a></td>
+                        <td><span class="pill pill-blue" style="font-size:11px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>${escapeHtml(orgName)}</span></td>
                         <td><code style="color:var(--pg-blue-600);">${escapeHtml(p.id)}</code></td>
                         <td><span class="pill pill-${p.status.toLowerCase() === 'running' ? 'running' : 'stopped'}">${escapeHtml(p.status)}</span></td>
                         <td>${p.number_of_containers} containers</td>
@@ -5686,7 +5709,8 @@ spec:
                             </div>
                         </td>
                     </tr>
-                `).join('');
+                    `;
+                }).join('');
             } catch (err) {
                 console.error(err);
             }
@@ -5856,13 +5880,20 @@ spec:
             const pod = document.getElementById('ctr-pod').value.trim();
             const volsStr = document.getElementById('ctr-vols').value.trim();
             const secsStr = document.getElementById('ctr-secrets') ? document.getElementById('ctr-secrets').value.trim() : '';
+            const orgSelect = document.getElementById('ctr-org');
+            const targetOrg = orgSelect ? orgSelect.value : '';
 
             const ports = portsStr ? [portsStr] : [];
             const vols = volsStr ? [volsStr] : [];
             const secs = secsStr ? secsStr.split(',').map(s => s.trim()).filter(Boolean) : [];
 
+            let url = '/api/v1/containers';
+            if (targetOrg) {
+                url += `?tenant_id=${encodeURIComponent(targetOrg)}`;
+            }
+
             try {
-                const res = await authFetch('/api/v1/containers', {
+                const res = await authFetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, image, pod, ports, volumes: vols, secrets: secs })
@@ -6054,9 +6085,16 @@ spec:
             const name = document.getElementById('pod-name').value.trim();
             const portsStr = document.getElementById('pod-ports').value.trim();
             const ports = portsStr ? portsStr.split(',').map(s => s.trim()) : [];
+            const orgSelect = document.getElementById('pod-org');
+            const targetOrg = orgSelect ? orgSelect.value : '';
+
+            let url = '/api/v1/pods';
+            if (targetOrg) {
+                url += `?tenant_id=${encodeURIComponent(targetOrg)}`;
+            }
 
             try {
-                const res = await authFetch('/api/v1/pods', {
+                const res = await authFetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, ports })
@@ -8590,6 +8628,38 @@ spec:
                 }
             }
 
+            // Container Modal Org Selector
+            const ctrOrg = document.getElementById('ctr-org');
+            if (ctrOrg) {
+                const prev = ctrOrg.value;
+                let html = '<option value="">Current User Organization</option>';
+                allOrganizations.forEach(o => {
+                    html += `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}</option>`;
+                });
+                ctrOrg.innerHTML = html;
+                if (prev && allOrganizations.some(o => o.id === prev)) {
+                    ctrOrg.value = prev;
+                } else if (activeOrgFilter) {
+                    ctrOrg.value = activeOrgFilter;
+                }
+            }
+
+            // Pod Modal Org Selector
+            const podOrg = document.getElementById('pod-org');
+            if (podOrg) {
+                const prev = podOrg.value;
+                let html = '<option value="">Current User Organization</option>';
+                allOrganizations.forEach(o => {
+                    html += `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}</option>`;
+                });
+                podOrg.innerHTML = html;
+                if (prev && allOrganizations.some(o => o.id === prev)) {
+                    podOrg.value = prev;
+                } else if (activeOrgFilter) {
+                    podOrg.value = activeOrgFilter;
+                }
+            }
+
             // Users Table Filter Org Selector
             const usersFilterSelect = document.getElementById('users-org-filter');
             if (usersFilterSelect) {
@@ -8649,7 +8719,13 @@ spec:
                 usersFilterSelect.value = orgId;
                 filterUsersTable();
             }
-            if (currentTab === 'organizations') {
+            if (currentTab === 'containers') {
+                fetchContainers();
+            } else if (currentTab === 'pods') {
+                fetchPods();
+            } else if (currentTab === 'secrets') {
+                fetchSecrets();
+            } else if (currentTab === 'organizations') {
                 filterOrgsTable();
             }
         }

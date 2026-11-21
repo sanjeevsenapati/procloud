@@ -155,6 +155,7 @@ func (m *MockRuntime) ListContainers(ctx context.Context, all bool) ([]*Containe
 			State:   c.Status,
 			Status:  fmt.Sprintf("Up %s", c.Status),
 			Created: c.StartedAt.Format(time.RFC3339),
+			Labels:  c.Labels,
 		})
 	}
 	return list, nil
@@ -235,6 +236,7 @@ func (m *MockRuntime) RunContainer(ctx context.Context, opts RunOptions) (string
 		RestartPolicy: opts.Restart,
 		Mounts:        mounts,
 		Pod:           opts.Pod,
+		Labels:        opts.Labels,
 		RawInspect:    rawInspect,
 	}
 	m.Logs[opts.Name] = []string{fmt.Sprintf("Container %s started successfully", opts.Name)}
@@ -416,6 +418,7 @@ func (m *MockRuntime) CreatePod(ctx context.Context, opts PodCreateOptions) (str
 		NumberOfContainers: 1,
 		InfraID:            fmt.Sprintf("infra-%s", id),
 		Ports:              opts.Ports,
+		Labels:             opts.Labels,
 	}
 	return id, nil
 }
