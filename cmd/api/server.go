@@ -164,6 +164,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("DELETE /api/v1/containers/{id}", s.authRequired(s.handleRemoveContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/logs", s.authRequired(s.handleContainerLogs))
 	s.mux.HandleFunc("POST /api/v1/containers/{id}/exec", s.authRequired(s.handleExecContainer))
+	s.mux.HandleFunc("GET /api/v1/containers/{id}/top", s.authRequired(s.handleTopContainer))
+	s.mux.HandleFunc("GET /api/v1/containers/{id}/stats", s.authRequired(s.handleStatsContainer))
 
 	// -------------------------------------------------------------
 	// Podman Desktop Features: Pod Provisioning & Lifecycle (Protected)
@@ -411,17 +413,60 @@ func (s *Server) handleExecContainer(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var req struct {
 		Command []string `json:"command"`
+		Cmd     []string `json:"cmd"`
+		Raw     string   `json:"raw"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.Command) == 0 {
-		http.Error(w, "command array is required", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	out, err := s.runtime.ExecContainer(r.Context(), id, req.Command)
+	var command []string
+	if len(req.Command) > 0 {
+		command = req.Command
+	} else if len(req.Cmd) > 0 {
+		command = req.Cmd
+	} else if strings.TrimSpace(req.Raw) != "" {
+		command = []string{"sh", "-c", req.Raw}
+	} else {
+		http.Error(w, "command array or raw string is required", http.StatusBadRequest)
+		return
+	}
+	out, err := s.runtime.ExecContainer(r.Context(), id, command)
 	if err != nil {
+		// Try fallback directly if sh -c failed and raw was provided
+		if req.Raw != "" {
+			parts := strings.Fields(req.Raw)
+			if len(parts) > 0 {
+				if fbOut, fbErr := s.runtime.ExecContainer(r.Context(), id, parts); fbErr == nil {
+					respondJSON(w, http.StatusOK, map[string]string{"output": fbOut})
+					return
+				}
+			}
+		}
 		http.Error(w, fmt.Sprintf("%v: %s", err, out), http.StatusInternalServerError)
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]string{"output": out})
+}
+
+func (s *Server) handleTopContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	procs, err := s.runtime.TopContainer(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, procs)
+}
+
+func (s *Server) handleStatsContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	stats, err := s.runtime.ContainerStats(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, stats)
 }
 
 // -------------------------------------------------------------

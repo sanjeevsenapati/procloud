@@ -485,6 +485,172 @@
             gap: 8px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
+
+        /* Sleek SVG utilities */
+        .icon-svg {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            stroke-width: 2;
+            flex-shrink: 0;
+            vertical-align: -2px;
+        }
+        .icon-svg-lg {
+            width: 18px;
+            height: 18px;
+            vertical-align: -3px;
+        }
+        .btn .icon-svg {
+            margin-right: 4px;
+        }
+
+        /* Interactive Terminal */
+        .term-container {
+            background: #090d16;
+            color: #f1f5f9;
+            font-family: 'JetBrains Mono', monospace;
+            border-radius: 8px;
+            border: 1px solid #1e293b;
+            padding: 14px;
+            height: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+        .term-output {
+            flex: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 12px;
+            line-height: 1.5;
+            padding-bottom: 8px;
+        }
+        .term-prompt-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #1e293b;
+        }
+        .term-prompt {
+            color: #38bdf8;
+            font-weight: 600;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .term-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            outline: none;
+        }
+        .term-quick-btn {
+            padding: 4px 9px;
+            font-size: 11px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #94a3b8;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .term-quick-btn:hover {
+            background: #1e293b;
+            color: #38bdf8;
+            border-color: #38bdf8;
+        }
+
+        /* Resource Stats Gauges */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .metric-card {
+            background: #f8faff;
+            border: 1px solid var(--pg-border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .metric-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--pg-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .metric-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--pg-text);
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .metric-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .metric-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--pg-blue-600), #38bdf8);
+            border-radius: 9999px;
+            transition: width 0.4s ease;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 960px) {
+            header.progit-navbar {
+                height: auto;
+                padding: 12px 16px;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .search-container {
+                width: 100%;
+            }
+            .navbar-right {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .grid-12 {
+                grid-template-columns: 1fr;
+            }
+            .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-12 {
+                grid-column: span 1;
+            }
+            .progit-tabs-nav {
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+            main.progit-container {
+                padding: 14px;
+            }
+            .pg-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
     </style>
 </head>
 <body>
@@ -500,7 +666,8 @@
                 <h1 style="font-size: 22px; font-weight: 800; color: var(--pg-text); margin: 0 0 4px 0;">ProCloud</h1>
                 <p style="font-size: 13px; color: var(--pg-text-muted); margin: 0 0 12px 0;">Sovereign Cloud & Container Platform</p>
                 <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 11px; font-weight: 600; color: var(--pg-blue-600);">
-                    <span>🔒 Authentication Required</span>
+                    <svg class="icon-svg" style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>Authentication Required</span>
                 </div>
             </div>
 
@@ -525,7 +692,10 @@
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <button type="button" class="btn" style="padding: 4px 10px; font-size: 11px; border: 1px dashed var(--pg-blue-500); background: #eff6ff; color: var(--pg-blue-600);" onclick="fillDemoAdmin()">⚡ Fill Default Admin</button>
+                    <button type="button" class="btn" style="padding: 4px 10px; font-size: 11px; border: 1px dashed var(--pg-blue-500); background: #eff6ff; color: var(--pg-blue-600);" onclick="fillDemoAdmin()">
+                        <svg class="icon-svg" style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        Fill Default Admin
+                    </button>
                     <span style="font-size: 11px; color: var(--pg-text-muted);">Default: admin / admin123</span>
                 </div>
 
@@ -590,14 +760,24 @@
             </a>
 
             <div id="user-display" class="user-profile-badge">
-                <span id="username-label">👤 admin</span>
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span id="username-label">admin</span>
                 <span class="pill pill-blue" id="userrole-label">ADMIN</span>
-                <button class="btn btn-rose" style="padding: 2px 7px; font-size:10px; margin-left: 4px;" onclick="logout()">Logout</button>
+                <button class="btn btn-rose" style="padding: 2px 8px; font-size:10px; margin-left: 4px;" onclick="logout()">
+                    <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span>Sign Out</span>
+                </button>
             </div>
             <button class="btn btn-primary" id="login-btn" style="display:none;" onclick="openModal('auth-modal')">Log In</button>
 
-            <button class="btn btn-emerald" onclick="runMilestone()">▶ Run Milestone 1</button>
-            <button class="btn" onclick="refreshCurrentTab()">↻ Refresh</button>
+            <button class="btn btn-emerald" onclick="runMilestone()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Run Milestone 1</span>
+            </button>
+            <button class="btn" onclick="refreshCurrentTab()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                <span>Refresh</span>
+            </button>
         </div>
     </header>
 
@@ -703,7 +883,10 @@
                         <p style="font-size:12px; color: var(--pg-text-secondary); line-height: 1.6;">
                             Single-node workflow verification: Podman, systemd Quadlet, Netavark, Nginx ingress, SQLite WAL persistence, and 1-click rollback.
                         </p>
-                        <button class="btn btn-emerald" style="margin-top: 14px; width: 100%; justify-content: center;" onclick="runMilestone()">▶ Execute 16-Step Verification</button>
+                        <button class="btn btn-emerald" style="margin-top: 14px; width: 100%; justify-content: center;" onclick="runMilestone()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span>Execute 16-Step Verification</span>
+                        </button>
                         <div class="code-view" style="margin-top: 14px; max-height: 180px;" id="milestone-quick-log">Ready to run.</div>
                     </div>
                 </div>
@@ -861,7 +1044,16 @@
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                             <span>GitOps Manifest Deployment (deploy.yml v1alpha1)</span>
                         </div>
-                        <button class="btn btn-primary" onclick="deployManifest()">🚀 Deploy Manifest</button>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-primary" onclick="openModal('create-deployment-modal')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <span>+ New Deployment</span>
+                            </button>
+                            <button class="btn btn-emerald" onclick="deployManifest()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                                <span>Deploy YAML</span>
+                            </button>
+                        </div>
                     </div>
                     <div style="padding: 16px;">
                         <textarea id="manifest-editor" class="form-input" style="height: 380px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.5;">apiVersion: procloud.io/v1alpha1
@@ -966,7 +1158,10 @@ spec:
     <div id="run-container-modal" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title">🚀 Create &amp; Run Container</div>
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                    <span>Run Container</span>
+                </div>
                 <div class="modal-dialog-close" onclick="closeModal('run-container-modal')">&times;</div>
             </div>
             <div class="form-group">
@@ -989,26 +1184,128 @@ spec:
                 <label class="form-label">Volume Mounts (hostPath:containerPath:Z)</label>
                 <input type="text" id="ctr-vols" class="form-input" placeholder="/data:/var/data:Z">
             </div>
-            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitRunContainer()">Launch Container</button>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitRunContainer()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Launch Container</span>
+            </button>
         </div>
     </div>
 
-    <!-- MODAL: Create Pod -->
+    <!-- MODAL: Enhanced Create Pod Wizard -->
     <div id="create-pod-modal" class="modal-overlay">
-        <div class="modal-dialog">
+        <div class="modal-dialog" style="max-width: 540px;">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title">☸️ Create Multi-Container Pod</div>
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+                    <span>Create Pod</span>
+                </div>
                 <div class="modal-dialog-close" onclick="closeModal('create-pod-modal')">&times;</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Pod Name</label>
-                <input type="text" id="pod-name" class="form-input" placeholder="e.g. backend-pod">
+                <input type="text" id="pod-name" class="form-input" placeholder="e.g. web-tier-pod">
             </div>
             <div class="form-group">
-                <label class="form-label">Port Forwardings (comma separated)</label>
-                <input type="text" id="pod-ports" class="form-input" placeholder="8080:80, 9000:9000">
+                <label class="form-label">Port Forwardings (comma separated, host:container)</label>
+                <input type="text" id="pod-ports" class="form-input" placeholder="8080:80, 8443:443">
             </div>
-            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitCreatePod()">Create Pod</button>
+            <div class="form-group">
+                <label class="form-label">Shared Network (Optional)</label>
+                <input type="text" id="pod-network" class="form-input" placeholder="Leave empty for default bridge">
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitCreatePod()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Create Pod</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Deployment Creation Wizard -->
+    <div id="create-deployment-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 640px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                    <span>Deploy Application Workload</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('create-deployment-modal')">&times;</div>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-bottom:16px;">
+                <button id="dep-tab-wizard" class="btn btn-primary" style="flex:1; justify-content:center;" onclick="toggleDeploymentMode('wizard')">Visual Wizard</button>
+                <button id="dep-tab-raw" class="btn" style="flex:1; justify-content:center;" onclick="toggleDeploymentMode('raw')">Raw YAML</button>
+            </div>
+
+            <!-- Visual Form Wizard -->
+            <div id="dep-view-wizard">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Application Name</label>
+                        <input type="text" id="wiz-app-name" class="form-input" placeholder="e.g. store-frontend" value="store-app">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Replicas</label>
+                        <input type="number" id="wiz-replicas" class="form-input" min="1" max="10" value="1">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Image Repository</label>
+                        <input type="text" id="wiz-image-repo" class="form-input" placeholder="e.g. docker.io/library/nginx" value="docker.io/library/nginx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Image Tag</label>
+                        <input type="text" id="wiz-image-tag" class="form-input" placeholder="alpine" value="alpine">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Host Port</label>
+                        <input type="number" id="wiz-host-port" class="form-input" placeholder="8080" value="8080">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Container Port</label>
+                        <input type="number" id="wiz-container-port" class="form-input" placeholder="80" value="80">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ingress Domain</label>
+                    <input type="text" id="wiz-domain" class="form-input" placeholder="app.procloud.local" value="store.procloud.local">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Persistent Volume Name</label>
+                        <input type="text" id="wiz-vol-name" class="form-input" placeholder="store-data" value="store-data">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mount Path</label>
+                        <input type="text" id="wiz-mount-path" class="form-input" placeholder="/data" value="/data">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Health Check Path</label>
+                    <input type="text" id="wiz-health-path" class="form-input" placeholder="/" value="/">
+                </div>
+
+                <button class="btn btn-primary" style="width:100%; justify-content:center; padding:10px; font-weight:600;" onclick="submitWizardDeployment()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                    <span>Deploy Application</span>
+                </button>
+            </div>
+
+            <!-- Raw YAML Mode -->
+            <div id="dep-view-raw" style="display:none;">
+                <textarea id="wiz-raw-yaml" class="form-input" style="height: 320px; font-family:'JetBrains Mono',monospace; font-size:12px;"></textarea>
+                <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:12px; padding:10px; font-weight:600;" onclick="submitRawDeployment()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                    <span>Deploy Manifest</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1016,14 +1313,20 @@ spec:
     <div id="pull-image-modal" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title">🖼️ Pull Image from Registry</div>
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/></svg>
+                    <span>Pull Image from Registry</span>
+                </div>
                 <div class="modal-dialog-close" onclick="closeModal('pull-image-modal')">&times;</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Image Reference</label>
                 <input type="text" id="pull-image-name" class="form-input" placeholder="docker.io/library/redis:alpine">
             </div>
-            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitPullImage()">Pull Image</button>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitPullImage()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Pull Image</span>
+            </button>
         </div>
     </div>
 
@@ -1031,14 +1334,20 @@ spec:
     <div id="create-volume-modal" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title">💾 Create Persistent Volume</div>
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                    <span>Create Persistent Volume</span>
+                </div>
                 <div class="modal-dialog-close" onclick="closeModal('create-volume-modal')">&times;</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Volume Name</label>
                 <input type="text" id="new-vol-name" class="form-input" placeholder="app-storage">
             </div>
-            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitCreateVolume()">Create Volume</button>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitCreateVolume()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Create Volume</span>
+            </button>
         </div>
     </div>
 
@@ -1046,7 +1355,10 @@ spec:
     <div id="create-network-modal" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title">🌐 Create Netavark Bridge Network</div>
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    <span>Create Netavark Bridge Network</span>
+                </div>
                 <div class="modal-dialog-close" onclick="closeModal('create-network-modal')">&times;</div>
             </div>
             <div class="form-group">
@@ -1061,21 +1373,217 @@ spec:
                 <label class="form-label">Gateway IP</label>
                 <input type="text" id="new-net-gateway" class="form-input" placeholder="10.89.2.1">
             </div>
-            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitCreateNetwork()">Create Network</button>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitCreateNetwork()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Create Network</span>
+            </button>
         </div>
     </div>
 
-    <!-- MODAL: Logs & Interactive Terminal -->
-    <div id="logs-modal" class="modal-overlay">
-        <div class="modal-dialog">
+    <!-- MODAL: Open Terminal (Interactive Container Shell) -->
+    <div id="terminal-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 820px; width: 95%;">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title" id="logs-modal-title">📜 Container Console</div>
-                <div class="modal-dialog-close" onclick="closeModal('logs-modal')">&times;</div>
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                    <span id="term-modal-title">Container Terminal</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="copyTerminalOutput()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy</span>
+                    </button>
+                    <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="clearTerminal()">Clear</button>
+                    <div class="modal-dialog-close" onclick="closeModal('terminal-modal')">&times;</div>
+                </div>
             </div>
-            <pre class="code-view" id="logs-content" style="max-height: 360px;">Fetching logs...</pre>
-            <div style="margin-top: 12px; display:flex; gap: 8px;">
-                <input type="text" id="exec-input" class="form-input" placeholder="Command to exec (e.g. uname -a, ls -lh)..." onkeydown="if(event.key==='Enter') submitExec()">
-                <button class="btn btn-primary" onclick="submitExec()">Exec</button>
+
+            <!-- Preset Commands Bar -->
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                <span style="font-size:11px; color:var(--pg-text-muted); align-self:center; margin-right:4px;">Quick Exec:</span>
+                <button class="term-quick-btn" onclick="execTerminalCommand('ls -la')">ls -la</button>
+                <button class="term-quick-btn" onclick="execTerminalCommand('ps aux')">ps aux</button>
+                <button class="term-quick-btn" onclick="execTerminalCommand('env')">env</button>
+                <button class="term-quick-btn" onclick="execTerminalCommand('df -h')">df -h</button>
+                <button class="term-quick-btn" onclick="execTerminalCommand('cat /etc/os-release')">os-release</button>
+                <button class="term-quick-btn" onclick="execTerminalCommand('uname -a')">uname -a</button>
+                <button class="term-quick-btn" onclick="execTerminalCommand('uptime')">uptime</button>
+            </div>
+
+            <div class="term-container">
+                <div class="term-output" id="term-output">
+                    <div style="color:#64748b;">Ready. Select a quick command or type below.</div>
+                </div>
+                <div class="term-prompt-line">
+                    <span class="term-prompt">root@container:~$</span>
+                    <input type="text" id="term-input" class="term-input" placeholder="Type shell command..." onkeydown="handleTerminalKey(event)">
+                    <button class="btn btn-primary" style="padding: 4px 12px; font-size:11px;" onclick="execTerminalCommand()">Run</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Enhanced View Logs -->
+    <div id="logs-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 820px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span id="logs-modal-title">Container Logs</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn" style="padding: 3px 8px; font-size:11px;" onclick="copyLogs()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy</span>
+                    </button>
+                    <button class="btn" style="padding: 3px 8px; font-size:11px;" onclick="downloadLogs()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Download</span>
+                    </button>
+                    <div class="modal-dialog-close" onclick="closeModal('logs-modal')">&times;</div>
+                </div>
+            </div>
+
+            <!-- Log Controls Toolbar -->
+            <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:12px; padding: 8px 12px; background:var(--pg-card); border:1px solid var(--pg-border); border-radius:8px;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span style="font-size:12px; font-weight:600; color:var(--pg-text-secondary);">Tail:</span>
+                    <select id="logs-tail-select" class="form-input" style="width:auto; padding:3px 8px; font-size:12px;" onchange="fetchContainerLogs()">
+                        <option value="50">50 lines</option>
+                        <option value="100" selected>100 lines</option>
+                        <option value="250">250 lines</option>
+                        <option value="500">500 lines</option>
+                    </select>
+                    <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+                        <input type="checkbox" id="logs-live-toggle" checked onchange="this.checked ? startLogsPolling() : stopLogsPolling()">
+                        <span>Live Stream (2s)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+                        <input type="checkbox" id="logs-autoscroll-toggle" checked>
+                        <span>Auto-scroll</span>
+                    </label>
+                </div>
+                <div style="flex:1; max-width:240px;">
+                    <input type="text" id="logs-search-filter" class="form-input" style="padding:4px 8px; font-size:11px;" placeholder="Filter logs in view..." oninput="renderFilteredLogs()">
+                </div>
+            </div>
+
+            <pre class="code-view" id="logs-content" style="max-height: 400px; height: 380px; font-size: 11px;">Fetching container logs...</pre>
+        </div>
+    </div>
+
+    <!-- MODAL: Container Top (Process Explorer) -->
+    <div id="top-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 860px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    <span id="top-modal-title">Container Top Processes</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn" style="padding: 3px 8px; font-size:11px;" onclick="fetchContainerTop()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                        <span>Refresh</span>
+                    </button>
+                    <div class="modal-dialog-close" onclick="closeModal('top-modal')">&times;</div>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="pg-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>PID</th>
+                            <th>PPID</th>
+                            <th>%CPU</th>
+                            <th>Elapsed</th>
+                            <th>TTY</th>
+                            <th>Time</th>
+                            <th>Command</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-table-body">
+                        <tr><td colspan="8" style="text-align:center; padding:20px;">Inspecting running container processes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Resource Utilisation (Live Container Stats) -->
+    <div id="stats-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 680px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <span id="stats-modal-title">Resource Utilisation</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="pill pill-running">Live Telemetry (2s)</span>
+                    <div class="modal-dialog-close" onclick="closeModal('stats-modal')">&times;</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <!-- CPU Metric Card -->
+                <div class="metric-card">
+                    <div class="metric-title">
+                        <span>CPU Utilisation</span>
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--pg-blue-600)"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/></svg>
+                    </div>
+                    <div class="metric-val" id="stat-cpu-percent">0.00%</div>
+                    <div class="metric-bar-bg">
+                        <div id="stat-cpu-bar" class="metric-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div style="margin-top:8px; font-size:11px; color:var(--pg-text-muted);">
+                        Total CPU Time: <span id="stat-cpu-time" style="font-weight:600; color:var(--pg-text-secondary);">-</span>
+                    </div>
+                </div>
+
+                <!-- Memory Metric Card -->
+                <div class="metric-card">
+                    <div class="metric-title">
+                        <span>Memory Usage</span>
+                        <span id="stat-mem-percent" class="pill pill-blue">0.00%</span>
+                    </div>
+                    <div class="metric-val" id="stat-mem-usage" style="font-size:18px;">0 MB / 0 MB</div>
+                    <div class="metric-bar-bg">
+                        <div id="stat-mem-bar" class="metric-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div style="margin-top:8px; font-size:11px; color:var(--pg-text-muted);">
+                        Memory Footprint vs Host Reservation
+                    </div>
+                </div>
+
+                <!-- Network I/O -->
+                <div class="metric-card">
+                    <div class="metric-title">
+                        <span>Network I/O</span>
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--pg-sky)"><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    </div>
+                    <div class="metric-val" id="stat-net-io" style="font-size:18px;">0B / 0B</div>
+                    <div style="font-size:11px; color:var(--pg-text-muted);">
+                        Received (Rx) / Transmitted (Tx)
+                    </div>
+                </div>
+
+                <!-- Block I/O & Tasks -->
+                <div class="metric-card">
+                    <div class="metric-title">
+                        <span>Block I/O &amp; Tasks</span>
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--pg-emerald)"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                        <div>
+                            <div class="metric-val" id="stat-block-io" style="font-size:18px;">0B / 0B</div>
+                            <div style="font-size:11px; color:var(--pg-text-muted);">Storage Read / Write</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="metric-val" id="stat-pids-count" style="font-size:18px; color:var(--pg-blue-600);">1</div>
+                            <div style="font-size:11px; color:var(--pg-text-muted);">Active PIDs</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1084,7 +1592,10 @@ spec:
     <div id="kube-modal" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title">📄 Kubernetes Pod YAML</div>
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Kubernetes Pod YAML</span>
+                </div>
                 <div class="modal-dialog-close" onclick="closeModal('kube-modal')">&times;</div>
             </div>
             <pre class="code-view" id="kube-content" style="max-height: 380px; color:#7c3aed; background:#f5f3ff; border-color:#ddd6fe;"></pre>
@@ -1095,7 +1606,10 @@ spec:
     <div id="auth-modal" class="modal-overlay">
         <div class="modal-dialog" style="max-width: 420px;">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title">🔐 ProCloud Authentication</div>
+                <div class="modal-dialog-title" style="display:flex;align-items:center;gap:8px;">
+                    <svg class="icon-svg" style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    ProCloud Authentication
+                </div>
                 <div class="modal-dialog-close" onclick="closeModal('auth-modal')">&times;</div>
             </div>
             <div style="display:flex; gap: 8px; margin-bottom: 14px;">
@@ -1241,7 +1755,7 @@ spec:
             if (appEl) appEl.style.display = 'block';
 
             if (user) {
-                document.getElementById('username-label').innerText = '👤 ' + (user.username || 'admin');
+                document.getElementById('username-label').innerText = user.username || 'admin';
                 document.getElementById('userrole-label').innerText = (user.role || 'ADMIN').toUpperCase();
             }
 
@@ -1388,8 +1902,422 @@ spec:
             });
         }
 
+        let activeContainerForTerminal = '';
+        let activeContainerForLogs = '';
+        let activeContainerForTop = '';
+        let activeContainerForStats = '';
+        let logsPollTimer = null;
+        let topPollTimer = null;
+        let statsPollTimer = null;
+        let terminalHistory = [];
+        let terminalHistoryIndex = -1;
+        let rawLogsText = '';
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
         // -------------------------------------------------------------
-        // Data Fetching
+        // 1. Interactive Terminal
+        // -------------------------------------------------------------
+
+        function openTerminal(idOrName) {
+            activeContainerForTerminal = idOrName;
+            document.getElementById('term-modal-title').innerText = 'Terminal: ' + idOrName;
+            document.getElementById('term-output').innerHTML = '<div style="color:#64748b;">Connected to container ' + escapeHtml(idOrName) + '. Type a command or click a quick action below:</div>';
+            document.getElementById('term-input').value = '';
+            terminalHistory = [];
+            terminalHistoryIndex = -1;
+            openModal('terminal-modal');
+            setTimeout(() => {
+                const inp = document.getElementById('term-input');
+                if (inp) inp.focus();
+            }, 150);
+        }
+
+        function handleTerminalKey(e) {
+            if (e.key === 'Enter') {
+                execTerminalCommand();
+            } else if (e.key === 'ArrowUp') {
+                if (terminalHistory.length > 0) {
+                    if (terminalHistoryIndex > 0) terminalHistoryIndex--;
+                    else terminalHistoryIndex = 0;
+                    document.getElementById('term-input').value = terminalHistory[terminalHistoryIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (terminalHistoryIndex < terminalHistory.length - 1) {
+                    terminalHistoryIndex++;
+                    document.getElementById('term-input').value = terminalHistory[terminalHistoryIndex];
+                } else {
+                    terminalHistoryIndex = terminalHistory.length;
+                    document.getElementById('term-input').value = '';
+                }
+            }
+        }
+
+        async function execTerminalCommand(cmdToRun) {
+            const inputEl = document.getElementById('term-input');
+            const cmdStr = (cmdToRun || inputEl.value).trim();
+            if (!cmdStr || !activeContainerForTerminal) return;
+
+            if (!cmdToRun) {
+                terminalHistory.push(cmdStr);
+                terminalHistoryIndex = terminalHistory.length;
+                inputEl.value = '';
+            }
+
+            const termOut = document.getElementById('term-output');
+            termOut.innerHTML += `<div style="margin-top:6px;"><span style="color:#38bdf8;font-weight:600;">root@${escapeHtml(activeContainerForTerminal)}</span>:<span style="color:#a78bfa;">~</span>$ ${escapeHtml(cmdStr)}</div>`;
+            termOut.scrollTop = termOut.scrollHeight;
+
+            try {
+                const res = await authFetch(`/api/v1/containers/${activeContainerForTerminal}/exec`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ raw: cmdStr, command: cmdStr.split(/\s+/) })
+                });
+                const data = await res.json();
+                const output = data.output || '(Process exited with no output)';
+                termOut.innerHTML += `<div style="color:#e2e8f0;white-space:pre-wrap;font-size:12px;margin-top:2px;">${escapeHtml(output)}</div>`;
+            } catch (e) {
+                termOut.innerHTML += `<div style="color:#fb7185;">Error: ${escapeHtml(e.message)}</div>`;
+            }
+            termOut.scrollTop = termOut.scrollHeight;
+        }
+
+        function clearTerminal() {
+            document.getElementById('term-output').innerHTML = '<div style="color:#64748b;">Terminal cleared.</div>';
+        }
+
+        function copyTerminalOutput() {
+            const text = document.getElementById('term-output').innerText;
+            navigator.clipboard.writeText(text).then(() => alert('Terminal output copied!'));
+        }
+
+        // -------------------------------------------------------------
+        // 2. View Logs
+        // -------------------------------------------------------------
+
+        function openLogs(idOrName) {
+            activeContainerForLogs = idOrName;
+            document.getElementById('logs-modal-title').innerText = 'Logs: ' + idOrName;
+            document.getElementById('logs-search-filter').value = '';
+            openModal('logs-modal');
+            fetchContainerLogs();
+
+            const liveToggle = document.getElementById('logs-live-toggle');
+            if (liveToggle && liveToggle.checked) {
+                startLogsPolling();
+            }
+        }
+
+        async function fetchContainerLogs() {
+            if (!activeContainerForLogs) return;
+            const tail = document.getElementById('logs-tail-select').value;
+            try {
+                const res = await authFetch(`/api/v1/containers/${activeContainerForLogs}/logs?tail=${tail}`);
+                const data = await res.json();
+                rawLogsText = data.logs || 'No log output captured.';
+                renderFilteredLogs();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderFilteredLogs() {
+            const filter = (document.getElementById('logs-search-filter').value || '').toLowerCase();
+            const logBox = document.getElementById('logs-content');
+            if (!filter) {
+                logBox.innerText = rawLogsText;
+            } else {
+                const filtered = rawLogsText.split('\n').filter(line => line.toLowerCase().includes(filter)).join('\n');
+                logBox.innerText = filtered || '(No lines matching filter)';
+            }
+            const autoScroll = document.getElementById('logs-autoscroll-toggle');
+            if (autoScroll && autoScroll.checked) {
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+        }
+
+        function startLogsPolling() {
+            stopLogsPolling();
+            logsPollTimer = setInterval(fetchContainerLogs, 2000);
+        }
+
+        function stopLogsPolling() {
+            if (logsPollTimer) {
+                clearInterval(logsPollTimer);
+                logsPollTimer = null;
+            }
+        }
+
+        function copyLogs() {
+            navigator.clipboard.writeText(rawLogsText).then(() => alert('Logs copied to clipboard!'));
+        }
+
+        function downloadLogs() {
+            const blob = new Blob([rawLogsText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${activeContainerForLogs}-logs.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // -------------------------------------------------------------
+        // 3. Container Top (Process Explorer)
+        // -------------------------------------------------------------
+
+        function openTop(idOrName) {
+            activeContainerForTop = idOrName;
+            document.getElementById('top-modal-title').innerText = 'Top Processes: ' + idOrName;
+            openModal('top-modal');
+            fetchContainerTop();
+            startTopPolling();
+        }
+
+        async function fetchContainerTop() {
+            if (!activeContainerForTop) return;
+            const tbody = document.getElementById('top-table-body');
+            try {
+                const res = await authFetch(`/api/v1/containers/${activeContainerForTop}/top`);
+                if (!res.ok) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--pg-rose);padding:18px;">Container is not running or top unavailable.</td></tr>`;
+                    return;
+                }
+                const procs = await res.json() || [];
+                if (procs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:18px;">No active processes found.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = procs.map(p => `
+                    <tr>
+                        <td><code>${escapeHtml(p.user || 'root')}</code></td>
+                        <td><strong>${escapeHtml(p.pid || '-')}</strong></td>
+                        <td>${escapeHtml(p.ppid || '-')}</td>
+                        <td><span class="pill pill-blue">${escapeHtml(p.cpu || '0%')}</span></td>
+                        <td>${escapeHtml(p.elapsed || '-')}</td>
+                        <td>${escapeHtml(p.tty || '?')}</td>
+                        <td>${escapeHtml(p.time || '-')}</td>
+                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(p.command || '')}</code></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--pg-rose);padding:18px;">Failed to inspect container top: ${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        function startTopPolling() {
+            stopTopPolling();
+            topPollTimer = setInterval(fetchContainerTop, 2500);
+        }
+
+        function stopTopPolling() {
+            if (topPollTimer) {
+                clearInterval(topPollTimer);
+                topPollTimer = null;
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 4. Resource Utilisation (Container Stats)
+        // -------------------------------------------------------------
+
+        function openStats(idOrName) {
+            activeContainerForStats = idOrName;
+            document.getElementById('stats-modal-title').innerText = 'Resource Utilisation: ' + idOrName;
+            openModal('stats-modal');
+            fetchContainerStats();
+            startStatsPolling();
+        }
+
+        async function fetchContainerStats() {
+            if (!activeContainerForStats) return;
+            try {
+                const res = await authFetch(`/api/v1/containers/${activeContainerForStats}/stats`);
+                if (!res.ok) {
+                    document.getElementById('stat-cpu-percent').innerText = 'N/A';
+                    document.getElementById('stat-mem-usage').innerText = 'N/A';
+                    return;
+                }
+                const s = await res.json();
+                if (s) {
+                    document.getElementById('stat-cpu-percent').innerText = s.cpu_percent || '0.00%';
+                    const cpuNum = parseFloat((s.cpu_percent || '0').replace('%', '')) || 0;
+                    document.getElementById('stat-cpu-bar').style.width = Math.min(100, Math.max(0, cpuNum)) + '%';
+                    document.getElementById('stat-cpu-time').innerText = s.cpu_time || 'N/A';
+
+                    document.getElementById('stat-mem-usage').innerText = s.mem_usage || 'N/A';
+                    document.getElementById('stat-mem-percent').innerText = s.mem_percent || '0.00%';
+                    const memNum = parseFloat((s.mem_percent || '0').replace('%', '')) || 0;
+                    document.getElementById('stat-mem-bar').style.width = Math.min(100, Math.max(0, memNum)) + '%';
+
+                    document.getElementById('stat-net-io').innerText = s.net_io || '0B / 0B';
+                    document.getElementById('stat-block-io').innerText = s.block_io || '0B / 0B';
+                    document.getElementById('stat-pids-count').innerText = s.pids || '1';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function startStatsPolling() {
+            stopStatsPolling();
+            statsPollTimer = setInterval(fetchContainerStats, 2000);
+        }
+
+        function stopStatsPolling() {
+            if (statsPollTimer) {
+                clearInterval(statsPollTimer);
+                statsPollTimer = null;
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 5. Deployment Wizard
+        // -------------------------------------------------------------
+
+        function toggleDeploymentMode(mode) {
+            if (mode === 'wizard') {
+                document.getElementById('dep-view-wizard').style.display = 'block';
+                document.getElementById('dep-view-raw').style.display = 'none';
+                document.getElementById('dep-tab-wizard').className = 'btn btn-primary';
+                document.getElementById('dep-tab-raw').className = 'btn';
+            } else {
+                document.getElementById('dep-view-wizard').style.display = 'none';
+                document.getElementById('dep-view-raw').style.display = 'block';
+                document.getElementById('dep-tab-wizard').className = 'btn';
+                document.getElementById('dep-tab-raw').className = 'btn btn-primary';
+
+                // Sync current form to raw YAML
+                const appName = document.getElementById('wiz-app-name').value.trim() || 'store-app';
+                const imageRepo = document.getElementById('wiz-image-repo').value.trim() || 'docker.io/library/nginx';
+                const imageTag = document.getElementById('wiz-image-tag').value.trim() || 'alpine';
+                const hostPort = document.getElementById('wiz-host-port').value.trim() || '8080';
+                const containerPort = document.getElementById('wiz-container-port').value.trim() || '80';
+                const domain = document.getElementById('wiz-domain').value.trim() || 'store.procloud.local';
+                const volName = document.getElementById('wiz-vol-name').value.trim() || 'store-data';
+                const mountPath = document.getElementById('wiz-mount-path').value.trim() || '/data';
+                const healthPath = document.getElementById('wiz-health-path').value.trim() || '/';
+
+                document.getElementById('wiz-raw-yaml').value = `apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: ${appName}
+spec:
+  replicas: 1
+  image:
+    repository: ${imageRepo}
+    tag: ${imageTag}
+  ports:
+    - containerPort: ${containerPort}
+      hostPort: ${hostPort}
+      protocol: TCP
+      ingress:
+        enabled: true
+        domain: ${domain}
+        path: /
+  volumes:
+    - name: ${volName}
+      mountPath: ${mountPath}
+      size: 1Gi
+  healthCheck:
+    httpGet:
+      path: ${healthPath}
+      port: ${containerPort}
+  restartPolicy: always`;
+            }
+        }
+
+        async function submitWizardDeployment() {
+            const appName = document.getElementById('wiz-app-name').value.trim();
+            const replicas = parseInt(document.getElementById('wiz-replicas').value.trim()) || 1;
+            const imageRepo = document.getElementById('wiz-image-repo').value.trim();
+            const imageTag = document.getElementById('wiz-image-tag').value.trim();
+            const hostPort = parseInt(document.getElementById('wiz-host-port').value.trim()) || 8080;
+            const containerPort = parseInt(document.getElementById('wiz-container-port').value.trim()) || 80;
+            const domain = document.getElementById('wiz-domain').value.trim() || `${appName}.procloud.local`;
+            const volName = document.getElementById('wiz-vol-name').value.trim() || `${appName}-data`;
+            const mountPath = document.getElementById('wiz-mount-path').value.trim() || '/data';
+            const healthPath = document.getElementById('wiz-health-path').value.trim() || '/';
+
+            if (!appName || !imageRepo) {
+                alert('App name and image repository are required.');
+                return;
+            }
+
+            const yamlManifest = `apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: ${appName}
+spec:
+  replicas: ${replicas}
+  image:
+    repository: ${imageRepo}
+    tag: ${imageTag}
+  ports:
+    - containerPort: ${containerPort}
+      hostPort: ${hostPort}
+      protocol: TCP
+      ingress:
+        enabled: true
+        domain: ${domain}
+        path: /
+  volumes:
+    - name: ${volName}
+      mountPath: ${mountPath}
+      size: 1Gi
+  healthCheck:
+    httpGet:
+      path: ${healthPath}
+      port: ${containerPort}
+  restartPolicy: always`;
+
+            try {
+                const res = await authFetch('/api/v1/deployments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: yamlManifest
+                });
+                if (res.ok) {
+                    alert(`Workload '${appName}' deployed successfully!`);
+                    closeModal('create-deployment-modal');
+                    switchTab('deployments');
+                    fetchDeployments();
+                } else {
+                    alert('Deployment failed: ' + await res.text());
+                }
+            } catch (e) {
+                alert('Deployment error: ' + e.message);
+            }
+        }
+
+        async function submitRawDeployment() {
+            const yamlText = document.getElementById('wiz-raw-yaml').value;
+            if (!yamlText.trim()) return;
+            try {
+                const res = await authFetch('/api/v1/deployments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: yamlText
+                });
+                if (res.ok) {
+                    alert('Deployment triggered successfully!');
+                    closeModal('create-deployment-modal');
+                    switchTab('deployments');
+                    fetchDeployments();
+                } else {
+                    alert('Deployment failed: ' + await res.text());
+                }
+            } catch (e) {
+                alert('Deployment error: ' + e.message);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Data Fetching & Table Rendering
         // -------------------------------------------------------------
 
         async function fetchDashboard() {
@@ -1421,19 +2349,35 @@ spec:
 
                 const tbody = document.getElementById('dash-containers-table');
                 if (ctrs.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No containers running. Click "+ Run Container" to provision one!</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No containers running. Click "Run Container" to provision one!</td></tr>';
                 } else {
-                    tbody.innerHTML = ctrs.slice(0, 5).map(c => `
+                    tbody.innerHTML = ctrs.slice(0, 5).map(c => {
+                        const name = c.names ? c.names[0] : c.id;
+                        return `
                         <tr>
-                            <td><strong>${c.names ? c.names[0] : c.id}</strong></td>
-                            <td><code style="color:var(--pg-blue-600);">${c.image}</code></td>
-                            <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${c.state}</span></td>
-                            <td>${c.ports ? c.ports.join(', ') : 'None'}</td>
+                            <td><strong>${escapeHtml(name)}</strong></td>
+                            <td><code style="color:var(--pg-blue-600);">${escapeHtml(c.image)}</code></td>
+                            <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${escapeHtml(c.state)}</span></td>
+                            <td>${c.ports ? escapeHtml(c.ports.join(', ')) : 'None'}</td>
                             <td>
-                                <button class="btn btn-rose" style="padding: 3px 8px; font-size:11px;" onclick="stopContainer('${c.id}')">Stop</button>
+                                <div style="display:flex; gap:4px;">
+                                    <button class="btn btn-primary" style="padding: 2px 6px; font-size:10px;" onclick="openTerminal('${escapeHtml(name)}')">
+                                        <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                                        <span>Term</span>
+                                    </button>
+                                    <button class="btn" style="padding: 2px 6px; font-size:10px;" onclick="openLogs('${escapeHtml(name)}')">
+                                        <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        <span>Logs</span>
+                                    </button>
+                                    <button class="btn" style="padding: 2px 6px; font-size:10px;" onclick="openStats('${escapeHtml(name)}')">
+                                        <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                        <span>Stats</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
-                    `).join('');
+                        `;
+                    }).join('');
                 }
             } catch (err) {
                 console.error(err);
@@ -1454,20 +2398,37 @@ spec:
                     const name = c.names ? c.names[0] : c.id;
                     return `
                     <tr>
-                        <td><strong>${name}</strong></td>
-                        <td><code style="color:var(--pg-blue-600);">${c.id}</code></td>
-                        <td><code>${c.image}</code></td>
-                        <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${c.state}</span></td>
-                        <td>${c.ports ? c.ports.join(', ') : 'None'}</td>
+                        <td><strong>${escapeHtml(name)}</strong></td>
+                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(c.id)}</code></td>
+                        <td><code>${escapeHtml(c.image)}</code></td>
+                        <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${escapeHtml(c.state)}</span></td>
+                        <td>${c.ports ? escapeHtml(c.ports.join(', ')) : 'None'}</td>
                         <td>${c.created ? new Date(c.created).toLocaleTimeString() : 'n/a'}</td>
                         <td>
-                            ${c.state === 'running'
-                                ? `<button class="btn" style="padding: 3px 6px; font-size:11px;" onclick="stopContainer('${c.id}')">⏹ Stop</button>`
-                                : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" onclick="startContainer('${c.id}')">▶ Start</button>`
-                            }
-                            <button class="btn" style="padding: 3px 6px; font-size:11px;" onclick="restartContainer('${c.id}')">↻</button>
-                            <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" onclick="viewLogs('${name}')">📜 Logs</button>
-                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeContainer('${c.id}')">🗑️</button>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                ${c.state === 'running'
+                                    ? `<button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Stop" onclick="stopContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> <span>Stop</span></button>`
+                                    : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" title="Start" onclick="startContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> <span>Start</span></button>`
+                                }
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Restart" onclick="restartContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+                                <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" title="Open Terminal" onclick="openTerminal('${escapeHtml(name)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                                    <span>Term</span>
+                                </button>
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="View Logs" onclick="openLogs('${escapeHtml(name)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span>Logs</span>
+                                </button>
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Container Top (Processes)" onclick="openTop('${escapeHtml(name)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                    <span>Top</span>
+                                </button>
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Resource Utilisation" onclick="openStats('${escapeHtml(name)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                    <span>Stats</span>
+                                </button>
+                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Delete" onclick="removeContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                            </div>
                         </td>
                     </tr>
                     `;
@@ -1484,24 +2445,29 @@ spec:
                 document.getElementById('tab-badge-pods').innerText = list.length;
                 const tbody = document.getElementById('pods-table');
                 if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px;">No pods created. Click "+ Create Pod" to provision a multi-container pod.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px;">No pods created. Click "Create Pod" to provision a multi-container pod.</td></tr>';
                     return;
                 }
                 tbody.innerHTML = list.map(p => `
                     <tr>
-                        <td><strong>${p.name}</strong></td>
-                        <td><code style="color:var(--pg-blue-600);">${p.id}</code></td>
-                        <td><span class="pill pill-${p.status.toLowerCase() === 'running' ? 'running' : 'stopped'}">${p.status}</span></td>
+                        <td><strong>${escapeHtml(p.name)}</strong></td>
+                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(p.id)}</code></td>
+                        <td><span class="pill pill-${p.status.toLowerCase() === 'running' ? 'running' : 'stopped'}">${escapeHtml(p.status)}</span></td>
                         <td>${p.number_of_containers} containers</td>
-                        <td>${p.ports ? p.ports.join(', ') : 'None'}</td>
+                        <td>${p.ports ? escapeHtml(p.ports.join(', ')) : 'None'}</td>
                         <td>
-                            ${p.status.toLowerCase() === 'running'
-                                ? `<button class="btn" style="padding: 3px 6px; font-size:11px;" onclick="stopPod('${p.id}')">⏹</button>`
-                                : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" onclick="startPod('${p.id}')">▶</button>`
-                            }
-                            <button class="btn" style="padding: 3px 6px; font-size:11px;" onclick="restartPod('${p.id}')">↻</button>
-                            <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" onclick="viewKube('${p.id}')">📄 Kube</button>
-                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removePod('${p.id}')">🗑️</button>
+                            <div style="display:flex; gap:4px;">
+                                ${p.status.toLowerCase() === 'running'
+                                    ? `<button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Stop" onclick="stopPod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`
+                                    : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" title="Start" onclick="startPod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
+                                }
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Restart" onclick="restartPod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+                                <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" title="Kubernetes Pod YAML" onclick="viewKube('${p.id}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span>Kube</span>
+                                </button>
+                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Delete" onclick="removePod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');
@@ -1522,14 +2488,21 @@ spec:
                 }
                 tbody.innerHTML = list.map(img => `
                     <tr>
-                        <td><strong>${img.repository}</strong></td>
-                        <td><span class="pill pill-blue">${img.tag}</span></td>
-                        <td><code style="color:var(--pg-blue-600);">${img.id}</code></td>
-                        <td>${img.size}</td>
+                        <td><strong>${escapeHtml(img.repository)}</strong></td>
+                        <td><span class="pill pill-blue">${escapeHtml(img.tag)}</span></td>
+                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(img.id)}</code></td>
+                        <td>${escapeHtml(img.size)}</td>
                         <td>${img.created ? new Date(img.created).toLocaleDateString() : 'n/a'}</td>
                         <td>
-                            <button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" onclick="quickRunImage('${img.repository}:${img.tag}')">🚀 Run</button>
-                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeImage('${img.id}')">🗑️</button>
+                            <div style="display:flex; gap:4px;">
+                                <button class="btn btn-emerald" style="padding: 3px 8px; font-size:11px;" onclick="quickRunImage('${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                    <span>Run</span>
+                                </button>
+                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeImage('${img.id}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');
@@ -1550,11 +2523,14 @@ spec:
                 }
                 tbody.innerHTML = list.map(v => `
                     <tr>
-                        <td><strong>${v.name}</strong></td>
-                        <td><span class="pill pill-blue">${v.driver}</span></td>
-                        <td><code>${v.mountpoint}</code></td>
+                        <td><strong>${escapeHtml(v.name)}</strong></td>
+                        <td><span class="pill pill-blue">${escapeHtml(v.driver)}</span></td>
+                        <td><code>${escapeHtml(v.mountpoint)}</code></td>
                         <td>
-                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeVolume('${v.name}')">🗑️ Delete</button>
+                            <button class="btn btn-rose" style="padding: 3px 8px; font-size:11px;" onclick="removeVolume('${escapeHtml(v.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Delete</span>
+                            </button>
                         </td>
                     </tr>
                 `).join('');
@@ -1575,13 +2551,16 @@ spec:
                 }
                 tbody.innerHTML = list.map(n => `
                     <tr>
-                        <td><strong>${n.name}</strong></td>
-                        <td><code style="color:var(--pg-blue-600);">${n.id}</code></td>
-                        <td><span class="pill pill-blue">${n.driver}</span></td>
-                        <td>${n.subnet || 'Auto'}</td>
-                        <td>${n.gateway || 'Auto'}</td>
+                        <td><strong>${escapeHtml(n.name)}</strong></td>
+                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(n.id)}</code></td>
+                        <td><span class="pill pill-blue">${escapeHtml(n.driver)}</span></td>
+                        <td>${escapeHtml(n.subnet || 'Auto')}</td>
+                        <td>${escapeHtml(n.gateway || 'Auto')}</td>
                         <td>
-                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeNetwork('${n.name}')">🗑️</button>
+                            <button class="btn btn-rose" style="padding: 3px 8px; font-size:11px;" onclick="removeNetwork('${escapeHtml(n.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Delete</span>
+                            </button>
                         </td>
                     </tr>
                 `).join('');
@@ -1601,12 +2580,15 @@ spec:
                 }
                 tbody.innerHTML = list.map(w => `
                     <tr>
-                        <td><strong>${w.name}</strong></td>
+                        <td><strong>${escapeHtml(w.name)}</strong></td>
                         <td><span class="pill pill-blue">Release v${w.current_release}</span></td>
-                        <td><span class="pill pill-${w.status === 'running' ? 'healthy' : 'stopped'}">${w.status}</span></td>
+                        <td><span class="pill pill-${w.status === 'running' ? 'healthy' : 'stopped'}">${escapeHtml(w.status)}</span></td>
                         <td>${w.host_port ? `localhost:${w.host_port}` : 'None'}</td>
                         <td>
-                            <button class="btn" style="padding: 2px 6px; font-size:11px;" onclick="rollback('${w.name}', ${Math.max(1, w.current_release - 1)})">Rollback</button>
+                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="rollback('${escapeHtml(w.name)}', ${Math.max(1, w.current_release - 1)})">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+                                <span>Rollback</span>
+                            </button>
                         </td>
                     </tr>
                 `).join('');
@@ -1629,9 +2611,9 @@ spec:
                 } else {
                     tbody.innerHTML = jobs.slice(0, 10).map(j => `
                         <tr>
-                            <td><code>${j.id.substring(0, 10)}...</code></td>
-                            <td>${j.type}</td>
-                            <td><span class="pill pill-${j.status === 'COMPLETED' ? 'healthy' : 'blue'}">${j.status}</span></td>
+                            <td><code>${escapeHtml(j.id.substring(0, 10))}...</code></td>
+                            <td>${escapeHtml(j.type)}</td>
+                            <td><span class="pill pill-${j.status === 'COMPLETED' ? 'healthy' : 'blue'}">${escapeHtml(j.status)}</span></td>
                             <td>${new Date(j.scheduled_at).toLocaleTimeString()}</td>
                         </tr>
                     `).join('');
@@ -1642,7 +2624,7 @@ spec:
         }
 
         // -------------------------------------------------------------
-        // Actions
+        // Other Operations
         // -------------------------------------------------------------
 
         async function submitRunContainer() {
@@ -1701,35 +2683,6 @@ spec:
                     fetchContainers();
                 } catch (e) { console.error(e); }
             }
-        }
-
-        async function viewLogs(idOrName) {
-            activeContainerForLogs = idOrName;
-            document.getElementById('logs-modal-title').innerText = `📜 Container Console: ${idOrName}`;
-            document.getElementById('logs-content').innerText = 'Fetching logs...';
-            openModal('logs-modal');
-
-            try {
-                const res = await authFetch(`/api/v1/containers/${idOrName}/logs?tail=50`);
-                const data = await res.json();
-                document.getElementById('logs-content').innerText = data.logs || 'No log output captured.';
-            } catch (e) { console.error(e); }
-        }
-
-        async function submitExec() {
-            const cmdStr = document.getElementById('exec-input').value.trim();
-            if (!cmdStr || !activeContainerForLogs) return;
-
-            try {
-                const res = await authFetch(`/api/v1/containers/${activeContainerForLogs}/exec`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: cmdStr.split(' ') })
-                });
-                const data = await res.json();
-                document.getElementById('logs-content').innerText += `\n$ ${cmdStr}\n${data.output || 'Command executed.'}`;
-                document.getElementById('exec-input').value = '';
-            } catch (e) { console.error(e); }
         }
 
         async function submitCreatePod() {
@@ -1931,7 +2884,13 @@ spec:
         }
 
         function openModal(id) { document.getElementById(id).classList.add('open'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('open');
+            if (id === 'logs-modal') stopLogsPolling();
+            if (id === 'top-modal') stopTopPolling();
+            if (id === 'stats-modal') stopStatsPolling();
+        }
 
         // Start session check immediately
         checkSession();

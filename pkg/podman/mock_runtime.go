@@ -249,6 +249,45 @@ func (m *MockRuntime) ExecContainer(ctx context.Context, nameOrID string, cmd []
 	return fmt.Sprintf("Command '%s' executed successfully inside %s\nOutput: OK", strings.Join(cmd, " "), nameOrID), nil
 }
 
+func (m *MockRuntime) TopContainer(ctx context.Context, nameOrID string) ([]*ContainerProcess, error) {
+	return []*ContainerProcess{
+		{
+			User:    "root",
+			PID:     "101",
+			PPID:    "1",
+			CPU:     "0.02%",
+			Elapsed: "12m",
+			TTY:     "?",
+			Time:    "0:01",
+			Command: "/entrypoint.sh",
+		},
+		{
+			User:    "app",
+			PID:     "108",
+			PPID:    "101",
+			CPU:     "0.15%",
+			Elapsed: "12m",
+			TTY:     "?",
+			Time:    "0:04",
+			Command: "procloud-service --port=8080",
+		},
+	}, nil
+}
+
+func (m *MockRuntime) ContainerStats(ctx context.Context, nameOrID string) (*ContainerResourceStats, error) {
+	return &ContainerResourceStats{
+		ID:         nameOrID,
+		Name:       nameOrID,
+		CPUTime:    "45.2ms",
+		CPUPercent: "0.24%",
+		MemUsage:   "24.8MB / 2.0GB",
+		MemPercent: "1.24%",
+		NetIO:      "1.4kB / 820B",
+		BlockIO:    "0B / 0B",
+		PIDs:       "4",
+	}, nil
+}
+
 // -------------------------------------------------------------
 // Pods
 // -------------------------------------------------------------

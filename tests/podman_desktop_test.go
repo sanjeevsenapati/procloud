@@ -84,6 +84,24 @@ func TestPodmanDesktopFeatures(t *testing.T) {
 		t.Errorf("exec failed: %v, out: %s", err, execOut)
 	}
 
+	// 3a. Top Container Processes
+	topProcs, err := rt.TopContainer(ctx, "nginx-service")
+	if err != nil || len(topProcs) == 0 {
+		t.Fatalf("top container failed: %v", err)
+	}
+	if topProcs[0].Command == "" {
+		t.Errorf("top container command is empty")
+	}
+
+	// 3b. Container Resource Stats
+	stats, err := rt.ContainerStats(ctx, "nginx-service")
+	if err != nil || stats.Name == "" {
+		t.Fatalf("container stats failed: %v", err)
+	}
+	if stats.CPUPercent == "" || stats.MemUsage == "" {
+		t.Errorf("incomplete container stats: %+v", stats)
+	}
+
 	if err := rt.RestartContainer(ctx, "nginx-service", 2); err != nil {
 		t.Errorf("restart container failed: %v", err)
 	}

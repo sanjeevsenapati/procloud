@@ -33,6 +33,8 @@ type ContainerRuntime interface {
 	RemoveContainer(ctx context.Context, nameOrID string, force bool) error
 	GetContainerLogs(ctx context.Context, nameOrID string, tailLines int) (string, error)
 	ExecContainer(ctx context.Context, nameOrID string, cmd []string) (string, error)
+	TopContainer(ctx context.Context, nameOrID string) ([]*ContainerProcess, error)
+	ContainerStats(ctx context.Context, nameOrID string) (*ContainerResourceStats, error)
 
 	// Pods
 	ListPods(ctx context.Context) ([]*PodSummary, error)
@@ -513,6 +515,106 @@ func (p *PodmanCLI) ExecContainer(ctx context.Context, nameOrID string, cmd []st
 	execCmd := exec.CommandContext(ctx, p.binPath, args...)
 	out, err := execCmd.CombinedOutput()
 	return string(out), err
+}
+
+type ContainerProcess struct {
+	User    string `json:"user"`
+	PID     string `json:"pid"`
+	PPID    string `json:"ppid"`
+	CPU     string `json:"cpu"`
+	Elapsed string `json:"elapsed"`
+	TTY     string `json:"tty"`
+	Time    string `json:"time"`
+	Command string `json:"command"`
+}
+
+type ContainerResourceStats struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	CPUTime    string `json:"cpu_time"`
+	CPUPercent string `json:"cpu_percent"`
+	MemUsage   string `json:"mem_usage"`
+	MemPercent string `json:"mem_percent"`
+	NetIO      string `json:"net_io"`
+	BlockIO    string `json:"block_io"`
+	PIDs       string `json:"pids"`
+}
+
+func (p *PodmanCLI) TopContainer(ctx context.Context, nameOrID string) ([]*ContainerProcess, error) {
+	cmd := exec.CommandContext(ctx, p.binPath, "top", nameOrID)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("podman top failed: %w: %s", err, string(out))
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) <= 1 {
+		return []*ContainerProcess{}, nil
+	}
+
+	var procs []*ContainerProcess
+	for _, line := range lines[1:] {
+		fields := strings.Fields(line)
+		if len(fields) >= 8 {
+			procs = append(procs, &ContainerProcess{
+				User:    fields[0],
+				PID:     fields[1],
+				PPID:    fields[2],
+				CPU:     fields[3],
+				Elapsed: fields[4],
+				TTY:     fields[5],
+				Time:    fields[6],
+				Command: strings.Join(fields[7:], " "),
+			})
+		} else if len(fields) > 0 {
+			procs = append(procs, &ContainerProcess{
+				User:    fields[0],
+				Command: strings.Join(fields[1:], " "),
+			})
+		}
+	}
+	return procs, nil
+}
+
+func (p *PodmanCLI) ContainerStats(ctx context.Context, nameOrID string) (*ContainerResourceStats, error) {
+	cmd := exec.CommandContext(ctx, p.binPath, "stats", "--no-stream", "--format", "json", nameOrID)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("podman stats failed: %w: %s", err, string(out))
+	}
+
+	var statsList []struct {
+		ID         string `json:"id"`
+		Name       string `json:"name"`
+		CPUTime    string `json:"cpu_time"`
+		CPUPercent string `json:"cpu_percent"`
+		MemUsage   string `json:"mem_usage"`
+		MemPercent string `json:"mem_percent"`
+		NetIO      string `json:"net_io"`
+		BlockIO    string `json:"block_io"`
+		PIDs       string `json:"pids"`
+	}
+
+	if err := json.Unmarshal(out, &statsList); err != nil {
+		return nil, fmt.Errorf("failed parsing stats json: %w", err)
+	}
+
+	if len(statsList) == 0 {
+		return nil, fmt.Errorf("no stats available for container %s", nameOrID)
+	}
+
+	s := statsList[0]
+	return &ContainerResourceStats{
+		ID:         s.ID,
+		Name:       s.Name,
+		CPUTime:    s.CPUTime,
+		CPUPercent: s.CPUPercent,
+		MemUsage:   s.MemUsage,
+		MemPercent: s.MemPercent,
+		NetIO:      s.NetIO,
+		BlockIO:    s.BlockIO,
+		PIDs:       s.PIDs,
+	}, nil
 }
 
 // -------------------------------------------------------------
