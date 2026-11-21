@@ -181,4 +181,32 @@ CREATE TABLE IF NOT EXISTS audit_events (
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
 `,
 	},
+	{
+		Version:     2,
+		Description: "Add workflow_runs table for build & deploy pipelines",
+		SQL: `
+CREATE TABLE IF NOT EXISTS workflow_runs (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'QUEUED',
+    stage TEXT NOT NULL DEFAULT 'init',
+    image_tag TEXT NOT NULL,
+    source_type TEXT NOT NULL DEFAULT 'inline',
+    source_summary TEXT NOT NULL DEFAULT '',
+    containerfile TEXT NOT NULL,
+    deploy_yaml TEXT NOT NULL,
+    build_logs TEXT NOT NULL DEFAULT '',
+    deploy_logs TEXT NOT NULL DEFAULT '',
+    target_id TEXT NOT NULL DEFAULT '',
+    target_name TEXT NOT NULL DEFAULT '',
+    error_message TEXT NOT NULL DEFAULT '',
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_runs_created ON workflow_runs(created_at DESC);
+`,
+	},
 }

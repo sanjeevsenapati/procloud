@@ -28,7 +28,9 @@ import (
 	"procloud.io/procloud/internal/storage"
 	"procloud.io/procloud/internal/tenant"
 	"procloud.io/procloud/internal/vpc"
+	"procloud.io/procloud/internal/workflow"
 	"procloud.io/procloud/pkg/podman"
+	"procloud.io/procloud/pkg/protocol"
 	"procloud.io/procloud/web"
 )
 
@@ -51,6 +53,7 @@ type Server struct {
 	auditSvc      *audit.Service
 	runtime       podman.ContainerRuntime
 	builder       build.ImageBuilder
+	wfEngine      *workflow.Engine
 }
 
 func NewServer(
@@ -72,6 +75,7 @@ func NewServer(
 	tenantSvc := tenant.NewService(repo)
 	netProvider := network.NewNetavarkProvider(runtime)
 	vpcSvc := vpc.NewService(repo, netProvider)
+	wfEngine := workflow.NewEngine(repo, runtime)
 
 	s := &Server{
 		mux:           http.NewServeMux(),
@@ -92,6 +96,7 @@ func NewServer(
 		auditSvc:      auditSvc,
 		runtime:       runtime,
 		builder:       builder,
+		wfEngine:      wfEngine,
 	}
 
 	// Ensure default administrator account exists (admin / admin123)
@@ -230,6 +235,13 @@ func (s *Server) registerRoutes() {
 	// Background Jobs & Audit (Protected)
 	s.mux.HandleFunc("GET /api/v1/jobs", s.authRequired(s.handleListJobs))
 	s.mux.HandleFunc("GET /api/v1/audit", s.authRequired(s.handleListAudit))
+
+	// Build & Deploy Workflow Engine (Protected)
+	s.mux.HandleFunc("POST /api/v1/workflows/run", s.authRequired(s.handleRunWorkflow))
+	s.mux.HandleFunc("GET /api/v1/workflows/runs", s.authRequired(s.handleListWorkflowRuns))
+	s.mux.HandleFunc("GET /api/v1/workflows/runs/{id}", s.authRequired(s.handleGetWorkflowRun))
+	s.mux.HandleFunc("DELETE /api/v1/workflows/runs/{id}", s.authRequired(s.handleDeleteWorkflowRun))
+	s.mux.HandleFunc("POST /api/v1/workflows/runs/{id}/rerun", s.authRequired(s.handleRerunWorkflow))
 
 	// Webhooks & Milestone
 	s.mux.HandleFunc("POST /api/v1/webhooks/progit", s.handleProGitWebhook)
@@ -1130,6 +1142,115 @@ func (s *Server) handleRunMilestone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, res)
+}
+
+// -------------------------------------------------------------
+// Build & Deploy Workflow Handlers
+// -------------------------------------------------------------
+
+func (s *Server) handleRunWorkflow(w http.ResponseWriter, r *http.Request) {
+	var req protocol.WorkflowRunRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+
+	run, err := s.wfEngine.Execute(r.Context(), req, actor)
+	if err != nil {
+		http.Error(w, "workflow execution failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.auditSvc.Log(r.Context(), actor, "WORKFLOW_RUN", "workflow", run.ID, r.RemoteAddr, fmt.Sprintf("target=%s, status=%s", run.TargetType, run.Status))
+
+	respondJSON(w, http.StatusOK, run)
+}
+
+func (s *Server) handleListWorkflowRuns(w http.ResponseWriter, r *http.Request) {
+	limitStr := r.URL.Query().Get("limit")
+	limit := 100
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	runs, err := s.wfEngine.ListRuns(r.Context(), limit)
+	if err != nil {
+		http.Error(w, "failed to list workflow runs: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if runs == nil {
+		runs = []*protocol.WorkflowRun{}
+	}
+	respondJSON(w, http.StatusOK, runs)
+}
+
+func (s *Server) handleGetWorkflowRun(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing workflow id", http.StatusBadRequest)
+		return
+	}
+
+	run, err := s.wfEngine.GetRun(r.Context(), id)
+	if err != nil {
+		http.Error(w, "workflow run not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, run)
+}
+
+func (s *Server) handleDeleteWorkflowRun(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing workflow id", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.wfEngine.DeleteRun(r.Context(), id); err != nil {
+		http.Error(w, "failed to delete workflow run: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "WORKFLOW_DELETE", "workflow", id, r.RemoteAddr, "")
+
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
+}
+
+func (s *Server) handleRerunWorkflow(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing workflow id", http.StatusBadRequest)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+
+	run, err := s.wfEngine.Rerun(r.Context(), id, actor)
+	if err != nil {
+		http.Error(w, "failed to rerun workflow: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.auditSvc.Log(r.Context(), actor, "WORKFLOW_RERUN", "workflow", run.ID, r.RemoteAddr, fmt.Sprintf("rerun_of=%s, status=%s", id, run.Status))
+
+	respondJSON(w, http.StatusOK, run)
 }
 
 func respondJSON(w http.ResponseWriter, code int, payload any) {

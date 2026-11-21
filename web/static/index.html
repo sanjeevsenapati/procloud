@@ -861,6 +861,544 @@
                 white-space: nowrap;
             }
         }
+
+        /* -------------------------------------------------------------
+           COLLAPSIBLE LEFT SIDEBAR & LAYOUT (ProGit White & Light Blue)
+        ------------------------------------------------------------- */
+        .progit-app-body {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 60px);
+            position: relative;
+            width: 100%;
+            background: var(--pg-base);
+        }
+
+        aside.progit-sidebar {
+            width: 240px;
+            min-width: 240px;
+            background: #ffffff;
+            border-right: 1px solid var(--pg-border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: sticky;
+            top: 60px;
+            height: calc(100vh - 60px);
+            z-index: 90;
+            user-select: none;
+            box-shadow: 2px 0 8px rgba(37, 99, 235, 0.03);
+        }
+
+        aside.progit-sidebar.collapsed {
+            width: 68px;
+            min-width: 68px;
+        }
+
+        .sidebar-header {
+            padding: 14px 16px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .sidebar-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--pg-text-muted);
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.2s ease;
+        }
+        aside.progit-sidebar.collapsed .sidebar-section-title {
+            display: none;
+        }
+
+        .sidebar-pin-btn {
+            background: transparent;
+            border: 1px solid var(--pg-border);
+            border-radius: 6px;
+            padding: 4px;
+            color: var(--pg-text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .sidebar-pin-btn:hover {
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-600);
+            border-color: var(--pg-blue-600);
+        }
+        aside.progit-sidebar.collapsed .sidebar-pin-btn svg {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: var(--pg-text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            white-space: nowrap;
+            position: relative;
+        }
+        .sidebar-item:hover {
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-700);
+        }
+        .sidebar-item.active {
+            background: #eff6ff;
+            color: var(--pg-blue-600);
+            font-weight: 700;
+            box-shadow: inset 3px 0 0 var(--pg-blue-600);
+        }
+        .sidebar-item svg.sidebar-icon {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2;
+            flex-shrink: 0;
+            color: currentColor;
+        }
+        .sidebar-label {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: opacity 0.2s ease;
+        }
+        aside.progit-sidebar.collapsed .sidebar-label {
+            display: none;
+        }
+
+        .sidebar-badge {
+            background: #ffffff;
+            border: 1px solid var(--pg-border);
+            color: var(--pg-text-muted);
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .sidebar-item.active .sidebar-badge {
+            background: var(--pg-blue-600);
+            border-color: var(--pg-blue-600);
+            color: #ffffff;
+        }
+        .sidebar-badge.pill-blue {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+        }
+        .sidebar-item.active .sidebar-badge.pill-blue {
+            background: #ffffff;
+            color: #1d4ed8;
+        }
+
+        aside.progit-sidebar.collapsed .sidebar-badge {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            font-size: 9px;
+            padding: 1px 4px;
+        }
+
+        /* Tooltip for collapsed items */
+        aside.progit-sidebar.collapsed .sidebar-item::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 72px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #0f172a;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        aside.progit-sidebar.collapsed .sidebar-item:hover::after {
+            opacity: 1;
+        }
+
+        .sidebar-footer {
+            padding: 12px 14px;
+            border-top: 1px solid #f1f5f9;
+            background: #fafcff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .sidebar-footer-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow: hidden;
+        }
+        .sidebar-footer-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            flex-shrink: 0;
+        }
+        .sidebar-footer-text {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--pg-text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        aside.progit-sidebar.collapsed .sidebar-footer-text {
+            display: none;
+        }
+
+        .sidebar-toggle-btn {
+            background: #ffffff;
+            border: 1px solid var(--pg-border);
+            border-radius: 7px;
+            padding: 6px 8px;
+            color: var(--pg-text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            margin-right: 4px;
+        }
+        .sidebar-toggle-btn:hover {
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-600);
+            border-color: var(--pg-blue-600);
+        }
+
+        .sidebar-backdrop {
+            display: none;
+        }
+        @media (max-width: 960px) {
+            aside.progit-sidebar {
+                position: fixed;
+                top: 60px;
+                bottom: 0;
+                left: 0;
+                z-index: 1000;
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            }
+            aside.progit-sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .sidebar-backdrop.active {
+                display: block;
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(2px);
+                z-index: 999;
+            }
+            main.progit-container {
+                padding: 14px;
+            }
+        }
+
+        /* -------------------------------------------------------------
+           BUILD & DEPLOY WORKFLOW STYLING
+        ------------------------------------------------------------- */
+        .wf-hero-card {
+            background: #ffffff;
+            border: 1px solid var(--pg-border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.04);
+        }
+        .wf-hero-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--pg-blue-600), #38bdf8);
+        }
+        .wf-hero-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .wf-hero-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .wf-hero-icon-badge {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border: 1px solid #bfdbfe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--pg-blue-600);
+            flex-shrink: 0;
+        }
+        .wf-hero-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--pg-text);
+            letter-spacing: -0.3px;
+        }
+        .wf-hero-subtitle {
+            font-size: 13px;
+            color: var(--pg-text-secondary);
+            margin-top: 2px;
+        }
+
+        .wf-pipeline-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 18px 20px;
+            background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+            border: 1px solid var(--pg-border);
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+        .wf-stage-node {
+            flex: 1;
+            min-width: 200px;
+            background: #ffffff;
+            border: 1px solid var(--pg-border);
+            border-radius: 10px;
+            padding: 16px;
+            position: relative;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.04);
+            cursor: pointer;
+        }
+        .wf-stage-node:hover {
+            border-color: var(--pg-blue-600);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+            transform: translateY(-2px);
+        }
+        .wf-stage-node-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .wf-stage-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .wf-stage-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--pg-text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .wf-stage-desc {
+            font-size: 11px;
+            color: var(--pg-text-secondary);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .wf-stage-connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--pg-blue-600);
+            flex-shrink: 0;
+            padding: 0 4px;
+        }
+        .wf-stage-connector svg {
+            animation: wf-pulse 1.8s infinite ease-in-out;
+        }
+        @keyframes wf-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+
+        /* Target Mode Toggle Cards */
+        .wf-target-toggle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .wf-target-card {
+            border: 2px solid var(--pg-border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            cursor: pointer;
+            background: #ffffff;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+        .wf-target-card:hover {
+            border-color: #93c5fd;
+            background: #fafcff;
+        }
+        .wf-target-card.selected {
+            border-color: var(--pg-blue-600);
+            background: #eff6ff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+        }
+        .wf-target-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .wf-target-card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--pg-text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .wf-target-card-desc {
+            font-size: 11px;
+            color: var(--pg-text-secondary);
+            line-height: 1.35;
+        }
+
+        /* File Switcher Tabs in Modal */
+        .wf-file-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px 6px;
+            border-radius: 8px 8px 0 0;
+            border: 1px solid var(--pg-border);
+            border-bottom: none;
+            overflow-x: auto;
+        }
+        .wf-file-tab-btn {
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--pg-text-secondary);
+            background: transparent;
+            border: none;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .wf-file-tab-btn:hover {
+            color: var(--pg-blue-700);
+            background: #e2e8f0;
+        }
+        .wf-file-tab-btn.active {
+            background: #ffffff;
+            color: var(--pg-blue-600);
+            font-weight: 700;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .wf-code-editor {
+            width: 100%;
+            height: 180px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            background: #f8faff;
+            border: 1px solid var(--pg-border);
+            border-radius: 0 0 8px 8px;
+            padding: 12px;
+            color: #0f172a;
+            resize: vertical;
+            outline: none;
+        }
+        .wf-code-editor:focus {
+            border-color: var(--pg-blue-600);
+            background: #ffffff;
+            box-shadow: 0 0 0 2px var(--pg-blue-glow);
+        }
+
+        .wf-stage-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .wf-stage-pill.building {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        .wf-stage-pill.deploying {
+            background: #faf5ff;
+            color: #7e22ce;
+            border: 1px solid #e9d5ff;
+        }
+        .wf-stage-pill.success {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .wf-stage-pill.failed {
+            background: #fff1f2;
+            color: #be123c;
+            border: 1px solid #fecdd3;
+        }
     </style>
 </head>
 <body>
@@ -947,7 +1485,12 @@
     <div id="app-screen" style="display: none;">
     <!-- Top Brand Navbar (White & Light Blue Accent) -->
     <header class="progit-navbar">
-        <div style="display: flex; align-items: center; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Left Sidebar Menu" aria-label="Toggle Sidebar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
             <a href="/" class="navbar-brand">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/>
@@ -991,49 +1534,82 @@
         </div>
     </header>
 
-    <!-- Sub-Navigation Tabs Bar (White & Light Blue) -->
-    <nav class="progit-tabs-nav">
-        <div class="pg-tab active" onclick="switchTab('dashboard')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-            <span>Overview</span>
-        </div>
-        <div class="pg-tab" onclick="switchTab('containers')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
-            <span>Containers</span>
-            <span class="tab-badge" id="tab-badge-containers">0</span>
-        </div>
-        <div class="pg-tab" onclick="switchTab('pods')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M10.5 10.5 6.5 6.5"/><path d="m13.5 10.5 4-4"/><path d="m10.5 13.5-4 4"/><path d="m13.5 13.5 4 4"/></svg>
-            <span>Pods</span>
-            <span class="tab-badge" id="tab-badge-pods">0</span>
-        </div>
-        <div class="pg-tab" onclick="switchTab('images')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-            <span>Images</span>
-            <span class="tab-badge" id="tab-badge-images">0</span>
-        </div>
-        <div class="pg-tab" onclick="switchTab('volumes')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
-            <span>Volumes</span>
-            <span class="tab-badge" id="tab-badge-volumes">0</span>
-        </div>
-        <div class="pg-tab" onclick="switchTab('networks')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
-            <span>Networks</span>
-            <span class="tab-badge" id="tab-badge-networks">0</span>
-        </div>
-        <div class="pg-tab" onclick="switchTab('deployments')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-            <span>Deployments &amp; Quadlet</span>
-        </div>
-        <div class="pg-tab" onclick="switchTab('telemetry')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            <span>SQLite WAL &amp; Jobs</span>
-        </div>
-    </nav>
+    <!-- Main Application Body: Collapsible Left Sidebar + Main Content -->
+    <div class="progit-app-body" id="progit-app-body">
+        <!-- Collapsible Left Sidebar Navigation (ProGit White & Light Blue) -->
+        <aside class="progit-sidebar" id="progit-sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-section-title">PLATFORM MENU</span>
+                <button class="sidebar-pin-btn" id="sidebar-pin-btn" onclick="toggleSidebar()" title="Collapse / Expand Sidebar">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                </button>
+            </div>
 
-    <!-- Main Container -->
-    <main class="progit-container">
+            <nav class="sidebar-nav">
+                <a class="sidebar-item active" onclick="switchTab('dashboard')" data-tab="dashboard" data-tooltip="Overview">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                    <span class="sidebar-label">Overview</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('workflow')" data-tab="workflow" data-tooltip="Build & Deploy">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/></svg>
+                    <span class="sidebar-label">Build &amp; Deploy</span>
+                    <span class="sidebar-badge pill-blue">CI/CD</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('containers')" data-tab="containers" data-tooltip="Containers">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                    <span class="sidebar-label">Containers</span>
+                    <span class="sidebar-badge" id="tab-badge-containers">0</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('pods')" data-tab="pods" data-tooltip="Pods">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M10.5 10.5 6.5 6.5"/><path d="m13.5 10.5 4-4"/><path d="m10.5 13.5-4 4"/><path d="m13.5 13.5 4 4"/></svg>
+                    <span class="sidebar-label">Pods</span>
+                    <span class="sidebar-badge" id="tab-badge-pods">0</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('images')" data-tab="images" data-tooltip="Images">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    <span class="sidebar-label">Images</span>
+                    <span class="sidebar-badge" id="tab-badge-images">0</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('volumes')" data-tab="volumes" data-tooltip="Volumes">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+                    <span class="sidebar-label">Volumes</span>
+                    <span class="sidebar-badge" id="tab-badge-volumes">0</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('networks')" data-tab="networks" data-tooltip="Networks">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    <span class="sidebar-label">Networks</span>
+                    <span class="sidebar-badge" id="tab-badge-networks">0</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('deployments')" data-tab="deployments" data-tooltip="Deployments & Quadlet">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                    <span class="sidebar-label">Deployments &amp; Quadlet</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('telemetry')" data-tab="telemetry" data-tooltip="SQLite WAL & Jobs">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <span class="sidebar-label">SQLite WAL &amp; Jobs</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-info">
+                    <div class="sidebar-footer-dot"></div>
+                    <span class="sidebar-footer-text" id="sidebar-node-status">Podman Ready</span>
+                </div>
+                <button class="sidebar-pin-btn" onclick="toggleSidebar()" title="Toggle Menu Size">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Mobile Backdrop -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
+
+        <!-- Main Container -->
+        <main class="progit-container">
         <!-- 1. OVERVIEW DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active">
             <div class="grid-12">
@@ -1100,6 +1676,154 @@
                         <div class="code-view" style="margin-top: 14px; max-height: 180px;" id="milestone-quick-log">Ready to run.</div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- BUILD & DEPLOY WORKFLOW TAB (Source Code -> Containerfile -> Deploy.yaml -> Container/Pod) -->
+        <div id="tab-workflow" class="tab-content">
+            <!-- Hero Card -->
+            <div class="wf-hero-card">
+                <div class="wf-hero-top">
+                    <div class="wf-hero-title-group">
+                        <div class="wf-hero-icon-badge">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="wf-hero-title">Build &amp; Deploy Pipeline Workflow</div>
+                            <div class="wf-hero-subtitle">Automate compiling source code with Containerfile and provisioning workloads as Containers or Podman Pods via Deploy.yaml</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary" onclick="openRunWorkflowModal()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span>+ New Build &amp; Deploy Workflow</span>
+                        </button>
+                        <button class="btn" onclick="fetchWorkflows()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Tiles -->
+                <div class="grid-12" style="margin-bottom: 20px;">
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Total Workflow Runs</div>
+                        <div class="stat-number" style="color: var(--pg-blue-600);" id="wf-stat-total">0</div>
+                        <div class="stat-hint">Historical pipeline triggers</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Successful Deployments</div>
+                        <div class="stat-number" style="color: var(--pg-emerald);" id="wf-stat-success">0</div>
+                        <div class="stat-hint">Verified OCI and Pod workloads</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Active Workload Targets</div>
+                        <div class="stat-number" style="color: var(--pg-purple);" id="wf-stat-targets">0</div>
+                        <div class="stat-hint">Containers &amp; Podman Pods</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Pipeline Engine</div>
+                        <div class="stat-number" style="color: var(--pg-emerald);">READY</div>
+                        <div class="stat-hint">Podman OCI &amp; SQLite WAL</div>
+                    </div>
+                </div>
+
+                <!-- Visual Pipeline Stage Graph / Architecture Diagram -->
+                <div style="margin-top: 10px;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;">
+                        CI/CD WORKFLOW PIPELINE ARCHITECTURE (STAGE FLOW)
+                    </div>
+                    <div class="wf-pipeline-diagram">
+                        <!-- Node 1: Source Context -->
+                        <div class="wf-stage-node" onclick="openRunWorkflowModal()">
+                            <div class="wf-stage-node-header">
+                                <span class="wf-stage-badge pill-blue">STAGE 1</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+                            </div>
+                            <div class="wf-stage-title">Source Context</div>
+                            <div class="wf-stage-desc">Git Repository clone, inline source files, or local project directory.</div>
+                        </div>
+
+                        <!-- Connector 1 -->
+                        <div class="wf-stage-connector">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        </div>
+
+                        <!-- Node 2: Containerfile Build -->
+                        <div class="wf-stage-node" onclick="openRunWorkflowModal()">
+                            <div class="wf-stage-node-header">
+                                <span class="wf-stage-badge pill-purple">STAGE 2</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                            </div>
+                            <div class="wf-stage-title">Containerfile Build</div>
+                            <div class="wf-stage-desc">Compile OCI container image with <code>podman build -t &lt;tag&gt; -f Containerfile</code>.</div>
+                        </div>
+
+                        <!-- Connector 2 -->
+                        <div class="wf-stage-connector">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        </div>
+
+                        <!-- Node 3: Deploy.yaml Workload -->
+                        <div class="wf-stage-node" onclick="openRunWorkflowModal()">
+                            <div class="wf-stage-node-header">
+                                <span class="wf-stage-badge pill-amber">STAGE 3</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                            </div>
+                            <div class="wf-stage-title">Deploy.yaml Engine</div>
+                            <div class="wf-stage-desc">Deploy as <strong>Standalone Container</strong> or <strong>Podman Pod</strong> via Kubernetes spec.</div>
+                        </div>
+
+                        <!-- Connector 3 -->
+                        <div class="wf-stage-connector">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        </div>
+
+                        <!-- Node 4: Running Workload -->
+                        <div class="wf-stage-node" onclick="openRunWorkflowModal()">
+                            <div class="wf-stage-node-header">
+                                <span class="wf-stage-badge pill-emerald">STAGE 4</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                            <div class="wf-stage-title">Verified Workload</div>
+                            <div class="wf-stage-desc">Verified exposed ports, IP address, health checks, web terminal, and live logs.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow Execution History Table -->
+            <div class="pg-box">
+                <div class="pg-box-header">
+                    <div class="pg-box-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>Workflow Pipeline Execution History</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="wf-search-input" class="search-input" style="width:200px;" placeholder="Search workflows..." oninput="filterWfTable(this.value)">
+                        <button class="btn btn-primary" onclick="openRunWorkflowModal()">+ Run Workflow</button>
+                    </div>
+                </div>
+                <table class="pg-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Pipeline Name</th>
+                            <th>Target Mode</th>
+                            <th>Image Tag</th>
+                            <th>Source Context</th>
+                            <th>Duration</th>
+                            <th>Triggered At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="wf-runs-table">
+                        <tr><td colspan="8" style="text-align:center; padding: 30px; color: var(--pg-text-secondary);">No workflow pipelines executed yet. Click "+ New Build &amp; Deploy Workflow" to start.</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -1866,6 +2590,7 @@ spec:
             </div>
         </div>
     </main>
+    </div> <!-- /.progit-app-body -->
 
     <!-- MODAL: Run Container -->
     <div id="run-container-modal" class="modal-overlay">
@@ -2515,10 +3240,321 @@ spec:
             </div>
         </div>
     </div>
+
+    <!-- MODAL: Build & Deploy Workflow Designer & Runner -->
+    <div id="run-workflow-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 860px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/>
+                    </svg>
+                    <span>Build &amp; Deploy Workflow Designer</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('run-workflow-modal')">&times;</div>
+            </div>
+
+            <div style="overflow-y: auto; padding: 20px; flex: 1;">
+                <!-- Template Preset Selector -->
+                <div style="background: #f8faff; border: 1px solid var(--pg-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700; color: var(--pg-text);">Load Preconfigured Workflow Template</div>
+                        <div style="font-size: 11px; color: var(--pg-text-secondary);">Instantly populates source code, Containerfile, and Deploy.yaml for common stacks</div>
+                    </div>
+                    <select id="wf-template-select" class="form-input" style="width: auto; min-width: 240px; padding: 6px 12px; font-size: 12px;" onchange="loadWorkflowTemplate(this.value)">
+                        <option value="">-- Choose a Workflow Stack --</option>
+                        <option value="node">Node.js Express REST API (Container)</option>
+                        <option value="python">Python FastAPI Microservice (Container)</option>
+                        <option value="go">Go HTTP High-Performance Server (Container)</option>
+                        <option value="nginx">Static Alpine Nginx Web App (Container)</option>
+                        <option value="multi-pod">Multi-Container Web App + Redis Cache (Pod)</option>
+                    </select>
+                </div>
+
+                <!-- 1. Deployment Target Mode Selection -->
+                <div class="form-group">
+                    <label class="form-label">Deployment Target Mode</label>
+                    <div class="wf-target-toggle-grid">
+                        <div class="wf-target-card selected" id="wf-card-target-container" onclick="setWorkflowTargetType('container')">
+                            <div class="wf-target-card-header">
+                                <div class="wf-target-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                                    <span>Standalone Container</span>
+                                </div>
+                                <span class="pill pill-blue">OCI WORKLOAD</span>
+                            </div>
+                            <div class="wf-target-card-desc">Build image and deploy directly as an independent OCI container with port publishing and restart policies.</div>
+                        </div>
+
+                        <div class="wf-target-card" id="wf-card-target-pod" onclick="setWorkflowTargetType('pod')">
+                            <div class="wf-target-card-header">
+                                <div class="wf-target-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M10.5 10.5 6.5 6.5"/><path d="m13.5 10.5 4-4"/><path d="m10.5 13.5-4 4"/><path d="m13.5 13.5 4 4"/></svg>
+                                    <span>Podman Pod (Kube Deploy)</span>
+                                </div>
+                                <span class="pill pill-purple">MULTI-CONTAINER POD</span>
+                            </div>
+                            <div class="wf-target-card-desc">Deploy into an isolated Podman Pod sharing localhost network/IPC namespace and volumes via Kubernetes Play Kube.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Pipeline Identity & Tag -->
+                <div class="grid-12" style="margin-bottom: 16px;">
+                    <div class="col-6">
+                        <label class="form-label">Workflow Pipeline Name</label>
+                        <input type="text" id="wf-input-name" class="form-input" placeholder="e.g. api-service-workflow" oninput="syncWorkflowImageTag(this.value)">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Target Image Tag</label>
+                        <input type="text" id="wf-input-image-tag" class="form-input" placeholder="e.g. localhost/api-service:latest" oninput="syncDeployYAMLImage(this.value)">
+                    </div>
+                </div>
+
+                <!-- 3. Source Code Stage -->
+                <div class="form-group">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label class="form-label" style="margin-bottom:0;">Stage 1: Source Code Specification</label>
+                        <div style="display:flex; gap:4px;">
+                            <button type="button" class="btn btn-sm" id="wf-src-btn-inline" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" onclick="setWorkflowSourceType('inline')">Inline Code Editor</button>
+                            <button type="button" class="btn btn-sm" id="wf-src-btn-git" onclick="setWorkflowSourceType('git')">Git Repository</button>
+                            <button type="button" class="btn btn-sm" id="wf-src-btn-path" onclick="setWorkflowSourceType('path')">Host Path</button>
+                        </div>
+                    </div>
+
+                    <!-- Mode A: Inline Code Editor with file tabs -->
+                    <div id="wf-src-panel-inline">
+                        <div class="wf-file-tabs" id="wf-file-tabs-bar">
+                            <button type="button" class="wf-file-tab-btn active" id="wf-tab-file-main" onclick="switchWorkflowFileTab('main')">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                                <span id="wf-tab-file-main-label">server.js</span>
+                            </button>
+                            <button type="button" class="wf-file-tab-btn" id="wf-tab-file-config" onclick="switchWorkflowFileTab('config')">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                                <span id="wf-tab-file-config-label">package.json</span>
+                            </button>
+                        </div>
+                        <textarea id="wf-code-editor-main" class="wf-code-editor" placeholder="// Write source code here..."></textarea>
+                        <textarea id="wf-code-editor-config" class="wf-code-editor" style="display:none;" placeholder="// Configuration / dependencies..."></textarea>
+                    </div>
+
+                    <!-- Mode B: Git Repository -->
+                    <div id="wf-src-panel-git" style="display:none; padding:14px; background:#f8faff; border:1px solid var(--pg-border); border-radius:8px;">
+                        <div class="grid-12">
+                            <div class="col-8">
+                                <label class="form-label">Git Clone Repository URL</label>
+                                <input type="text" id="wf-git-url" class="form-input" placeholder="https://github.com/my-org/my-repo.git">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Branch / Ref</label>
+                                <input type="text" id="wf-git-branch" class="form-input" placeholder="main">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mode C: Local Path -->
+                    <div id="wf-src-panel-path" style="display:none; padding:14px; background:#f8faff; border:1px solid var(--pg-border); border-radius:8px;">
+                        <label class="form-label">Local Host Directory Path</label>
+                        <input type="text" id="wf-local-path" class="form-input" placeholder="/Users/sanjeev/workspace/my-app">
+                    </div>
+                </div>
+
+                <!-- 4. Containerfile Stage -->
+                <div class="form-group">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <label class="form-label" style="margin-bottom:0;">Stage 2: Containerfile Specification</label>
+                        <div style="display:flex; gap:4px;">
+                            <button type="button" class="btn btn-sm" style="font-size:10px; padding:2px 6px;" onclick="insertContainerfileSnippet('FROM')">+ FROM</button>
+                            <button type="button" class="btn btn-sm" style="font-size:10px; padding:2px 6px;" onclick="insertContainerfileSnippet('WORKDIR')">+ WORKDIR</button>
+                            <button type="button" class="btn btn-sm" style="font-size:10px; padding:2px 6px;" onclick="insertContainerfileSnippet('EXPOSE')">+ EXPOSE</button>
+                            <button type="button" class="btn btn-sm" style="font-size:10px; padding:2px 6px;" onclick="insertContainerfileSnippet('CMD')">+ CMD</button>
+                        </div>
+                    </div>
+                    <textarea id="wf-containerfile-editor" class="wf-code-editor" style="height:150px; border-radius:8px;" placeholder="FROM alpine:latest&#10;WORKDIR /app&#10;COPY . .&#10;EXPOSE 8080&#10;CMD [&quot;sh&quot;]"></textarea>
+                </div>
+
+                <!-- 5. Deploy.yaml Stage -->
+                <div class="form-group">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <label class="form-label" style="margin-bottom:0;">
+                            Stage 3: Workload Deployment Specification (<code>Deploy.yaml</code>)
+                        </label>
+                        <span class="pill pill-blue" id="wf-deploy-spec-badge">CONTAINER SPEC</span>
+                    </div>
+                    <textarea id="wf-deploy-yaml-editor" class="wf-code-editor" style="height:170px; border-radius:8px;" placeholder="apiVersion: procloud.io/v1alpha1&#10;kind: Workload&#10;metadata:&#10;  name: my-app"></textarea>
+                </div>
+            </div>
+
+            <div style="padding:14px 20px; background:#f8faff; border-top:1px solid var(--pg-border); display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:11px; color:var(--pg-text-secondary);">
+                    Execution runs: <strong>Source Prep &rarr; Podman Build &rarr; Deploy &rarr; Verify</strong>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn" onclick="closeModal('run-workflow-modal')">Cancel</button>
+                    <button type="button" id="wf-submit-btn" class="btn btn-primary" style="padding:8px 18px; font-weight:700;" onclick="submitRunWorkflow()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <span id="wf-submit-btn-label">Trigger Build &amp; Deploy Workflow</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Workflow Execution Details & Stage Logs -->
+    <div id="workflow-details-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 900px; max-height: 90vh; display:flex; flex-direction:column;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span>Pipeline Run: <span id="wf-modal-run-title" style="font-family:'JetBrains Mono',monospace;">...</span></span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('workflow-details-modal')">&times;</div>
+            </div>
+
+            <div style="overflow-y:auto; padding:20px; flex:1;">
+                <!-- Execution Header Banner -->
+                <div style="background:#f8faff; border:1px solid var(--pg-border); border-radius:10px; padding:16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="wf-stage-pill success" id="wf-modal-status-pill">SUCCESS</span>
+                            <span class="pill pill-blue" id="wf-modal-target-pill">CONTAINER</span>
+                            <span style="font-size:12px; font-weight:700; color:var(--pg-text);" id="wf-modal-run-name">...</span>
+                        </div>
+                        <div style="font-size:11px; color:var(--pg-text-secondary); margin-top:4px;" id="wf-modal-meta">
+                            Image: <code id="wf-modal-image">...</code> | Duration: <span id="wf-modal-duration">...</span> | Triggered: <span id="wf-modal-time">...</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;" id="wf-modal-actions-bar">
+                        <!-- Dynamic Workload action buttons -->
+                    </div>
+                </div>
+
+                <!-- Stage Progress Flow -->
+                <div class="wf-pipeline-diagram" style="margin: 0 0 16px 0; padding: 12px 16px;">
+                    <div class="wf-stage-node" style="min-width:140px; padding:10px;" id="wf-step-node-1">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:10px; font-weight:700;">STAGE 1</span>
+                            <span class="pill pill-emerald" style="font-size:9px;" id="wf-step-pill-1">DONE</span>
+                        </div>
+                        <div style="font-size:12px; font-weight:700; margin-top:4px;">Source Prep</div>
+                    </div>
+                    <div class="wf-stage-connector">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="wf-stage-node" style="min-width:140px; padding:10px;" id="wf-step-node-2">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:10px; font-weight:700;">STAGE 2</span>
+                            <span class="pill pill-emerald" style="font-size:9px;" id="wf-step-pill-2">DONE</span>
+                        </div>
+                        <div style="font-size:12px; font-weight:700; margin-top:4px;">Image Build</div>
+                    </div>
+                    <div class="wf-stage-connector">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="wf-stage-node" style="min-width:140px; padding:10px;" id="wf-step-node-3">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:10px; font-weight:700;">STAGE 3</span>
+                            <span class="pill pill-emerald" style="font-size:9px;" id="wf-step-pill-3">DONE</span>
+                        </div>
+                        <div style="font-size:12px; font-weight:700; margin-top:4px;">Deployment</div>
+                    </div>
+                    <div class="wf-stage-connector">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                    <div class="wf-stage-node" style="min-width:140px; padding:10px;" id="wf-step-node-4">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:10px; font-weight:700;">STAGE 4</span>
+                            <span class="pill pill-emerald" style="font-size:9px;" id="wf-step-pill-4">ACTIVE</span>
+                        </div>
+                        <div style="font-size:12px; font-weight:700; margin-top:4px;">Workload Live</div>
+                    </div>
+                </div>
+
+                <!-- Tabbed Details / Logs -->
+                <div class="cd-subnav" style="margin-bottom:12px;">
+                    <div class="cd-subnav-tab active" id="wf-log-tab-build" onclick="switchWorkflowDetailsTab('build')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        <span>Build Logs</span>
+                    </div>
+                    <div class="cd-subnav-tab" id="wf-log-tab-deploy" onclick="switchWorkflowDetailsTab('deploy')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                        <span>Deployment Logs</span>
+                    </div>
+                    <div class="cd-subnav-tab" id="wf-log-tab-deploy-yaml" onclick="switchWorkflowDetailsTab('deploy-yaml')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                        <span>Deploy.yaml Spec</span>
+                    </div>
+                    <div class="cd-subnav-tab" id="wf-log-tab-containerfile" onclick="switchWorkflowDetailsTab('containerfile')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                        <span>Containerfile Spec</span>
+                    </div>
+                </div>
+
+                <!-- Log Views -->
+                <div id="wf-view-build-logs" class="code-view" style="max-height:280px; min-height:180px; font-size:11px; white-space:pre-wrap;">Loading build logs...</div>
+                <div id="wf-view-deploy-logs" class="code-view" style="display:none; max-height:280px; min-height:180px; font-size:11px; white-space:pre-wrap;">Loading deployment logs...</div>
+                <div id="wf-view-deploy-yaml" class="code-view" style="display:none; max-height:280px; min-height:180px; font-size:11px; white-space:pre-wrap;">Loading Deploy.yaml...</div>
+                <div id="wf-view-containerfile" class="code-view" style="display:none; max-height:280px; min-height:180px; font-size:11px; white-space:pre-wrap;">Loading Containerfile...</div>
+            </div>
+
+            <div style="padding:14px 20px; background:#f8faff; border-top:1px solid var(--pg-border); display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" class="btn" onclick="copyActiveWorkflowLog()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span>Copy Active View</span>
+                </button>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-primary" id="wf-modal-rerun-btn" onclick="rerunCurrentWorkflowModal()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                        <span>Re-run Pipeline</span>
+                    </button>
+                    <button type="button" class="btn" onclick="closeModal('workflow-details-modal')">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
     </div> <!-- /#app-screen -->
 
     <script>
         let currentTab = 'dashboard';
+
+        // Collapsible Left Sidebar Controller
+        function toggleSidebar(forceState) {
+            const sidebar = document.getElementById('progit-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (!sidebar) return;
+
+            if (window.innerWidth < 960) {
+                // Mobile off-canvas toggle
+                const shouldOpen = forceState !== undefined ? forceState : !sidebar.classList.contains('mobile-open');
+                if (shouldOpen) {
+                    sidebar.classList.add('mobile-open');
+                    if (backdrop) backdrop.classList.add('active');
+                } else {
+                    sidebar.classList.remove('mobile-open');
+                    if (backdrop) backdrop.classList.remove('active');
+                }
+            } else {
+                // Desktop collapse toggle
+                const willCollapse = forceState !== undefined ? !forceState : !sidebar.classList.contains('collapsed');
+                if (willCollapse) {
+                    sidebar.classList.add('collapsed');
+                    localStorage.setItem('procloud_sidebar_collapsed', 'true');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    localStorage.setItem('procloud_sidebar_collapsed', 'false');
+                }
+            }
+        }
+
+        // Restore sidebar state from localStorage on load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('procloud_sidebar_collapsed') === 'true' && window.innerWidth >= 960) {
+                const sb = document.getElementById('progit-sidebar');
+                if (sb) sb.classList.add('collapsed');
+            }
+        });
 
         // Global key shortcut '/' for search
         window.addEventListener('keydown', (e) => {
@@ -2535,14 +3571,25 @@ spec:
                 if (typeof stopCdStatsPolling === 'function') stopCdStatsPolling();
             }
             currentTab = tabName;
-            document.querySelectorAll('.pg-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.sidebar-item, .pg-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-            const tabEl = Array.from(document.querySelectorAll('.pg-tab')).find(t => t.innerText.toLowerCase().includes(tabName.toLowerCase()));
+            const sidebarEl = document.querySelector(`.sidebar-item[data-tab="${tabName}"]`);
+            if (sidebarEl) sidebarEl.classList.add('active');
+
+            const tabEl = Array.from(document.querySelectorAll('.pg-tab')).find(t => t.innerText && t.innerText.toLowerCase().includes(tabName.toLowerCase()));
             if (tabEl) tabEl.classList.add('active');
 
             const target = document.getElementById(`tab-${tabName}`);
             if (target) target.classList.add('active');
+
+            // Close mobile sidebar when a menu item is tapped
+            if (window.innerWidth < 960) {
+                const sb = document.getElementById('progit-sidebar');
+                const backdrop = document.getElementById('sidebar-backdrop');
+                if (sb) sb.classList.remove('mobile-open');
+                if (backdrop) backdrop.classList.remove('active');
+            }
 
             refreshCurrentTab();
         }
@@ -2550,6 +3597,7 @@ spec:
         function refreshCurrentTab() {
             switch (currentTab) {
                 case 'dashboard': fetchDashboard(); break;
+                case 'workflow': fetchWorkflows(); break;
                 case 'containers': fetchContainers(); break;
                 case 'pods': fetchPods(); break;
                 case 'images': fetchImages(); break;
@@ -4739,6 +5787,761 @@ CMD ["echo", "Container ready"]`;
                 }
             } catch (err) {
                 showToast('Build error: ' + err.message, 'error');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // BUILD & DEPLOY WORKFLOW PIPELINE CONTROLLER
+        // -------------------------------------------------------------
+        let currentWorkflowRuns = [];
+        let activeWorkflowDetail = null;
+        let wfTargetType = 'container';
+        let wfSourceType = 'inline';
+        let wfActiveFileTab = 'main';
+
+        const WORKFLOW_TEMPLATES = {
+            'node': {
+                name: 'express-rest-api',
+                target: 'container',
+                imageTag: 'localhost/express-api:latest',
+                mainFile: 'server.js',
+                mainCode: `const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.json({ message: 'Hello from ProCloud Express Microservice!', status: 'healthy', time: new Date() });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('Server running on port ' + PORT);
+});`,
+                configFile: 'package.json',
+                configCode: `{
+  "name": "express-api",
+  "version": "1.0.0",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}`,
+                containerfile: `FROM docker.io/library/node:18-alpine
+WORKDIR /app
+COPY package.json .
+RUN npm install --production
+COPY server.js .
+EXPOSE 3000
+CMD ["node", "server.js"]`,
+                deployYAML: `apiVersion: procloud.io/v1alpha1
+kind: Workload
+metadata:
+  name: express-api
+spec:
+  image:
+    repository: localhost/express-api
+    tag: latest
+  ports:
+    - containerPort: 3000
+      hostPort: 3000
+  env:
+    - name: NODE_ENV
+      value: production
+  restartPolicy: always`
+            },
+            'python': {
+                name: 'fastapi-microservice',
+                target: 'container',
+                imageTag: 'localhost/fastapi-app:latest',
+                mainFile: 'app.py',
+                mainCode: `from fastapi import FastAPI
+import uvicorn, os
+
+app = FastAPI(title="ProCloud FastAPI Service")
+
+@app.get("/")
+def read_root():
+    return {"service": "fastapi-microservice", "status": "active", "platform": "ProCloud"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))`,
+                configFile: 'requirements.txt',
+                configCode: `fastapi>=0.100.0
+uvicorn>=0.23.0`,
+                containerfile: `FROM docker.io/library/python:3.11-alpine
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+EXPOSE 8000
+CMD ["python", "app.py"]`,
+                deployYAML: `apiVersion: procloud.io/v1alpha1
+kind: Workload
+metadata:
+  name: fastapi-microservice
+spec:
+  image:
+    repository: localhost/fastapi-app
+    tag: latest
+  ports:
+    - containerPort: 8000
+      hostPort: 8000
+  restartPolicy: always`
+            },
+            'go': {
+                name: 'go-microservice',
+                target: 'container',
+                imageTag: 'localhost/go-service:latest',
+                mainFile: 'main.go',
+                mainCode: `package main
+
+import (
+    "fmt"
+    "net/http"
+    "os"
+)
+
+func main() {
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        fmt.Fprintf(w, "ProCloud High-Performance Go Service is Running!")
+    })
+    fmt.Printf("Server listening on :%s\\n", port)
+    http.ListenAndServe(":"+port, nil)
+}`,
+                configFile: 'go.mod',
+                configCode: `module go-service
+
+go 1.22`,
+                containerfile: `FROM docker.io/library/golang:alpine AS builder
+WORKDIR /app
+COPY . .
+RUN CGO_ENABLED=0 go build -o server .
+
+FROM docker.io/library/alpine:latest
+WORKDIR /app
+COPY --from=builder /app/server .
+EXPOSE 8080
+CMD ["/app/server"]`,
+                deployYAML: `apiVersion: procloud.io/v1alpha1
+kind: Workload
+metadata:
+  name: go-microservice
+spec:
+  image:
+    repository: localhost/go-service
+    tag: latest
+  ports:
+    - containerPort: 8080
+      hostPort: 8080
+  restartPolicy: always`
+            },
+            'nginx': {
+                name: 'nginx-web-app',
+                target: 'container',
+                imageTag: 'localhost/nginx-static:latest',
+                mainFile: 'index.html',
+                mainCode: `<!DOCTYPE html>
+<html>
+<head>
+  <title>ProCloud Static Web App</title>
+  <style>body { font-family: sans-serif; text-align: center; padding: 50px; background: #f0f6ff; color: #0f172a; }</style>
+</head>
+<body>
+  <h1>ProCloud Web App Deployed</h1>
+  <p>Provisioned by ProCloud Containerfile &amp; Deploy.yaml Workflow</p>
+</body>
+</html>`,
+                configFile: 'nginx.conf',
+                configCode: `server {
+    listen 80;
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+    }
+}`,
+                containerfile: `FROM docker.io/library/nginx:alpine
+COPY index.html /usr/share/nginx/html/index.html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]`,
+                deployYAML: `apiVersion: procloud.io/v1alpha1
+kind: Workload
+metadata:
+  name: nginx-web-app
+spec:
+  image:
+    repository: localhost/nginx-static
+    tag: latest
+  ports:
+    - containerPort: 80
+      hostPort: 8080
+  restartPolicy: always`
+            },
+            'multi-pod': {
+                name: 'web-cache-pod',
+                target: 'pod',
+                imageTag: 'localhost/web-frontend:latest',
+                mainFile: 'app.py',
+                mainCode: `from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(b'{"message": "Web + Redis multi-container pod running!", "pod": "web-cache-pod"}')
+
+server = HTTPServer(('0.0.0.0', 8080), Handler)
+print("Listening on 8080...")
+server.serve_forever()`,
+                configFile: 'README.md',
+                configCode: `# Web + Redis Multi-Container Pod
+Shares localhost networking namespace between frontend Python and Redis cache.`,
+                containerfile: `FROM docker.io/library/python:3.11-alpine
+WORKDIR /app
+COPY app.py .
+EXPOSE 8080
+CMD ["python", "app.py"]`,
+                deployYAML: `apiVersion: v1
+kind: Pod
+metadata:
+  name: web-cache-pod
+  labels:
+    app: web-cache
+spec:
+  restartPolicy: Always
+  containers:
+    - name: web-frontend
+      image: localhost/web-frontend:latest
+      ports:
+        - containerPort: 8080
+          hostPort: 8080
+    - name: redis-cache
+      image: docker.io/library/redis:alpine
+      ports:
+        - containerPort: 6379
+          hostPort: 6379`
+            }
+        };
+
+        async function fetchWorkflows() {
+            try {
+                const res = await authFetch('/api/v1/workflows/runs?limit=100');
+                if (!res.ok) return;
+                currentWorkflowRuns = await res.json();
+                renderWorkflowTable(currentWorkflowRuns);
+                updateWorkflowMetrics(currentWorkflowRuns);
+            } catch (err) {
+                console.error("fetchWorkflows error:", err);
+            }
+        }
+
+        function updateWorkflowMetrics(runs) {
+            if (!runs) return;
+            const totalEl = document.getElementById('wf-stat-total');
+            const successEl = document.getElementById('wf-stat-success');
+            const targetsEl = document.getElementById('wf-stat-targets');
+            if (totalEl) totalEl.innerText = runs.length;
+            const successCount = runs.filter(r => r.status === 'SUCCESS').length;
+            if (successEl) successEl.innerText = successCount;
+            const targetCount = runs.filter(r => r.status === 'SUCCESS' && r.target_id).length;
+            if (targetsEl) targetsEl.innerText = targetCount;
+        }
+
+        function renderWorkflowTable(runs) {
+            const tbody = document.getElementById('wf-runs-table');
+            if (!tbody) return;
+            if (!runs || runs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 30px; color: var(--pg-text-secondary);">No workflow pipelines executed yet. Click "+ New Build &amp; Deploy Workflow" to start.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = runs.map(r => {
+                let statusPill = `<span class="wf-stage-pill success"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> SUCCESS</span>`;
+                if (r.status === 'BUILDING') {
+                    statusPill = `<span class="wf-stage-pill building"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> BUILDING</span>`;
+                } else if (r.status === 'DEPLOYING') {
+                    statusPill = `<span class="wf-stage-pill deploying"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> DEPLOYING</span>`;
+                } else if (r.status === 'FAILED') {
+                    statusPill = `<span class="wf-stage-pill failed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> FAILED</span>`;
+                }
+
+                const targetBadge = r.target_type === 'pod'
+                    ? `<span class="pill pill-purple">POD</span>`
+                    : `<span class="pill pill-blue">CONTAINER</span>`;
+
+                const durationSec = r.duration_ms ? (r.duration_ms / 1000).toFixed(1) + 's' : '-';
+                const createdTime = r.created_at ? new Date(r.created_at).toLocaleString() : '-';
+
+                return `
+                <tr>
+                    <td>${statusPill}</td>
+                    <td>
+                        <div style="font-weight:700; color:var(--pg-text);">${escapeHtml(r.name)}</div>
+                        <div style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--pg-text-muted);">${escapeHtml(r.id)}</div>
+                    </td>
+                    <td>${targetBadge}</td>
+                    <td><code style="font-size:11px;">${escapeHtml(r.image_tag)}</code></td>
+                    <td style="font-size:11px; color:var(--pg-text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(r.source_summary || 'Inline')}</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:12px;">${durationSec}</td>
+                    <td style="font-size:11px; color:var(--pg-text-secondary);">${createdTime}</td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-sm" onclick="openWorkflowDetails('${r.id}')" title="Inspect Pipeline Execution">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span>Inspect</span>
+                            </button>
+                            ${r.status === 'SUCCESS' && r.target_name ? `
+                                <button class="btn btn-sm" style="color:var(--pg-blue-600);" onclick="navigateToWorkload('${r.target_type}', '${r.target_name}')" title="View Resulting Workload">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                    <span>Workload</span>
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-sm" onclick="rerunWorkflow('${r.id}')" title="Re-run Pipeline">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            </button>
+                            <button class="btn btn-sm btn-rose" onclick="deleteWorkflow('${r.id}', '${r.name}')" title="Delete Pipeline Record">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function filterWfTable(query) {
+            if (!query) {
+                renderWorkflowTable(currentWorkflowRuns);
+                return;
+            }
+            const q = query.toLowerCase();
+            const filtered = currentWorkflowRuns.filter(r =>
+                (r.name && r.name.toLowerCase().includes(q)) ||
+                (r.id && r.id.toLowerCase().includes(q)) ||
+                (r.image_tag && r.image_tag.toLowerCase().includes(q)) ||
+                (r.target_type && r.target_type.toLowerCase().includes(q)) ||
+                (r.status && r.status.toLowerCase().includes(q))
+            );
+            renderWorkflowTable(filtered);
+        }
+
+        function openRunWorkflowModal(presetKey) {
+            openModal('run-workflow-modal');
+            if (presetKey) {
+                loadWorkflowTemplate(presetKey);
+            } else if (!document.getElementById('wf-input-name').value) {
+                loadWorkflowTemplate('node');
+            }
+        }
+
+        function setWorkflowTargetType(type) {
+            wfTargetType = type;
+            const cardCtr = document.getElementById('wf-card-target-container');
+            const cardPod = document.getElementById('wf-card-target-pod');
+            const badge = document.getElementById('wf-deploy-spec-badge');
+
+            if (type === 'pod') {
+                if (cardCtr) cardCtr.classList.remove('selected');
+                if (cardPod) cardPod.classList.add('selected');
+                if (badge) {
+                    badge.innerText = 'KUBERNETES POD SPEC (PLAY KUBE)';
+                    badge.className = 'pill pill-purple';
+                }
+            } else {
+                if (cardPod) cardPod.classList.remove('selected');
+                if (cardCtr) cardCtr.classList.add('selected');
+                if (badge) {
+                    badge.innerText = 'CONTAINER SPEC';
+                    badge.className = 'pill pill-blue';
+                }
+            }
+
+            // Sync Deploy.yaml editor
+            const name = document.getElementById('wf-input-name').value || 'my-app';
+            const imgTag = document.getElementById('wf-input-image-tag').value || `localhost/${name}:latest`;
+            syncDeployYAMLTemplate(name, type, imgTag);
+        }
+
+        function setWorkflowSourceType(type) {
+            wfSourceType = type;
+            const btnInline = document.getElementById('wf-src-btn-inline');
+            const btnGit = document.getElementById('wf-src-btn-git');
+            const btnPath = document.getElementById('wf-src-btn-path');
+            const panelInline = document.getElementById('wf-src-panel-inline');
+            const panelGit = document.getElementById('wf-src-panel-git');
+            const panelPath = document.getElementById('wf-src-panel-path');
+
+            [btnInline, btnGit, btnPath].forEach(b => {
+                if (b) {
+                    b.style.background = '#ffffff';
+                    b.style.color = 'var(--pg-text-secondary)';
+                    b.style.borderColor = 'var(--pg-border)';
+                }
+            });
+
+            if (panelInline) panelInline.style.display = 'none';
+            if (panelGit) panelGit.style.display = 'none';
+            if (panelPath) panelPath.style.display = 'none';
+
+            if (type === 'git') {
+                if (btnGit) { btnGit.style.background = '#eff6ff'; btnGit.style.color = '#2563eb'; btnGit.style.borderColor = '#bfdbfe'; }
+                if (panelGit) panelGit.style.display = 'block';
+            } else if (type === 'path') {
+                if (btnPath) { btnPath.style.background = '#eff6ff'; btnPath.style.color = '#2563eb'; btnPath.style.borderColor = '#bfdbfe'; }
+                if (panelPath) panelPath.style.display = 'block';
+            } else {
+                if (btnInline) { btnInline.style.background = '#eff6ff'; btnInline.style.color = '#2563eb'; btnInline.style.borderColor = '#bfdbfe'; }
+                if (panelInline) panelInline.style.display = 'block';
+            }
+        }
+
+        function switchWorkflowFileTab(tab) {
+            wfActiveFileTab = tab;
+            const tabMain = document.getElementById('wf-tab-file-main');
+            const tabCfg = document.getElementById('wf-tab-file-config');
+            const editorMain = document.getElementById('wf-code-editor-main');
+            const editorCfg = document.getElementById('wf-code-editor-config');
+
+            if (tab === 'config') {
+                if (tabMain) tabMain.classList.remove('active');
+                if (tabCfg) tabCfg.classList.add('active');
+                if (editorMain) editorMain.style.display = 'none';
+                if (editorCfg) editorCfg.style.display = 'block';
+            } else {
+                if (tabCfg) tabCfg.classList.remove('active');
+                if (tabMain) tabMain.classList.add('active');
+                if (editorCfg) editorCfg.style.display = 'none';
+                if (editorMain) editorMain.style.display = 'block';
+            }
+        }
+
+        function loadWorkflowTemplate(key) {
+            const tmpl = WORKFLOW_TEMPLATES[key];
+            if (!tmpl) return;
+
+            const nameInput = document.getElementById('wf-input-name');
+            const tagInput = document.getElementById('wf-input-image-tag');
+            const cfEditor = document.getElementById('wf-containerfile-editor');
+            const deployEditor = document.getElementById('wf-deploy-yaml-editor');
+            const tabMainLabel = document.getElementById('wf-tab-file-main-label');
+            const tabCfgLabel = document.getElementById('wf-tab-file-config-label');
+            const editorMain = document.getElementById('wf-code-editor-main');
+            const editorCfg = document.getElementById('wf-code-editor-config');
+
+            if (nameInput) nameInput.value = tmpl.name;
+            if (tagInput) tagInput.value = tmpl.imageTag;
+            if (tabMainLabel) tabMainLabel.innerText = tmpl.mainFile;
+            if (tabCfgLabel) tabCfgLabel.innerText = tmpl.configFile;
+            if (editorMain) editorMain.value = tmpl.mainCode;
+            if (editorCfg) editorCfg.value = tmpl.configCode;
+            if (cfEditor) cfEditor.value = tmpl.containerfile;
+            if (deployEditor) deployEditor.value = tmpl.deployYAML;
+
+            setWorkflowTargetType(tmpl.target);
+            setWorkflowSourceType('inline');
+            switchWorkflowFileTab('main');
+        }
+
+        function syncWorkflowImageTag(val) {
+            const sanitized = (val || '').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+            const tagInput = document.getElementById('wf-input-image-tag');
+            if (tagInput) {
+                tagInput.value = `localhost/${sanitized || 'app'}:latest`;
+                syncDeployYAMLImage(tagInput.value);
+            }
+        }
+
+        function syncDeployYAMLImage(tag) {
+            const deployEditor = document.getElementById('wf-deploy-yaml-editor');
+            if (!deployEditor) return;
+            const name = document.getElementById('wf-input-name').value || 'my-app';
+            syncDeployYAMLTemplate(name, wfTargetType, tag);
+        }
+
+        function syncDeployYAMLTemplate(name, targetType, imageTag) {
+            const deployEditor = document.getElementById('wf-deploy-yaml-editor');
+            if (!deployEditor) return;
+            if (targetType === 'pod') {
+                deployEditor.value = `apiVersion: v1
+kind: Pod
+metadata:
+  name: ${name}
+  labels:
+    app: ${name}
+spec:
+  restartPolicy: Always
+  containers:
+    - name: ${name}
+      image: ${imageTag}
+      ports:
+        - containerPort: 8080
+          hostPort: 8080`;
+            } else {
+                deployEditor.value = `apiVersion: procloud.io/v1alpha1
+kind: Workload
+metadata:
+  name: ${name}
+spec:
+  image:
+    repository: ${imageTag.split(':')[0]}
+    tag: ${imageTag.split(':')[1] || 'latest'}
+  ports:
+    - containerPort: 8080
+      hostPort: 8080
+  restartPolicy: always`;
+            }
+        }
+
+        function insertContainerfileSnippet(keyword) {
+            const editor = document.getElementById('wf-containerfile-editor');
+            if (!editor) return;
+            let snippet = '';
+            switch (keyword) {
+                case 'FROM': snippet = 'FROM docker.io/library/alpine:latest\n'; break;
+                case 'WORKDIR': snippet = 'WORKDIR /app\n'; break;
+                case 'COPY': snippet = 'COPY . .\n'; break;
+                case 'RUN': snippet = 'RUN apk add --no-cache curl ca-certificates\n'; break;
+                case 'EXPOSE': snippet = 'EXPOSE 8080\n'; break;
+                case 'CMD': snippet = 'CMD ["sh", "-c", "echo Server started && sleep 3600"]\n'; break;
+            }
+            editor.value += (editor.value.endsWith('\n') ? '' : '\n') + snippet;
+            editor.focus();
+        }
+
+        async function submitRunWorkflow() {
+            const name = document.getElementById('wf-input-name').value.trim();
+            const imageTag = document.getElementById('wf-input-image-tag').value.trim();
+            const containerfile = document.getElementById('wf-containerfile-editor').value;
+            const deployYAML = document.getElementById('wf-deploy-yaml-editor').value;
+
+            if (!name) {
+                showToast("Please provide a workflow pipeline name", "warning");
+                return;
+            }
+            if (!containerfile.trim()) {
+                showToast("Containerfile specification cannot be empty", "warning");
+                return;
+            }
+
+            const payload = {
+                name: name,
+                target_type: wfTargetType,
+                source_type: wfSourceType,
+                image_tag: imageTag || `localhost/${name}:latest`,
+                containerfile: containerfile,
+                deploy_yaml: deployYAML,
+                source_files: {}
+            };
+
+            if (wfSourceType === 'inline') {
+                const mainName = document.getElementById('wf-tab-file-main-label').innerText || 'app.js';
+                const mainContent = document.getElementById('wf-code-editor-main').value;
+                const cfgName = document.getElementById('wf-tab-file-config-label').innerText || 'config.json';
+                const cfgContent = document.getElementById('wf-code-editor-config').value;
+
+                payload.source_files[mainName] = mainContent;
+                if (cfgContent.trim()) {
+                    payload.source_files[cfgName] = cfgContent;
+                }
+            } else if (wfSourceType === 'git') {
+                payload.git_url = document.getElementById('wf-git-url').value.trim();
+                payload.git_branch = document.getElementById('wf-git-branch').value.trim() || 'main';
+            } else if (wfSourceType === 'path') {
+                payload.local_path = document.getElementById('wf-local-path').value.trim();
+            }
+
+            const submitBtn = document.getElementById('wf-submit-btn');
+            const submitLabel = document.getElementById('wf-submit-btn-label');
+            if (submitBtn) submitBtn.disabled = true;
+            if (submitLabel) submitLabel.innerText = "Building & Deploying...";
+
+            try {
+                showToast("Triggered Build & Deploy workflow: " + name, "info");
+                const res = await authFetch('/api/v1/workflows/run', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || "Workflow execution failed");
+                }
+
+                const run = await res.json();
+                closeModal('run-workflow-modal');
+                await fetchWorkflows();
+
+                if (run.status === 'SUCCESS') {
+                    showToast(`Workflow ${run.name} completed successfully!`, "success");
+                } else {
+                    showToast(`Workflow ${run.name} status: ${run.status}`, "warning");
+                }
+
+                openWorkflowDetails(run.id);
+
+            } catch (err) {
+                showToast("Pipeline error: " + err.message, "error");
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+                if (submitLabel) submitLabel.innerText = "Trigger Build & Deploy Workflow";
+            }
+        }
+
+        async function openWorkflowDetails(id) {
+            try {
+                const res = await authFetch(`/api/v1/workflows/runs/${encodeURIComponent(id)}`);
+                if (!res.ok) {
+                    showToast("Failed to load workflow run", "error");
+                    return;
+                }
+                const run = await res.json();
+                activeWorkflowDetail = run;
+
+                document.getElementById('wf-modal-run-title').innerText = run.id;
+                document.getElementById('wf-modal-run-name').innerText = run.name;
+                document.getElementById('wf-modal-image').innerText = run.image_tag;
+                document.getElementById('wf-modal-duration').innerText = run.duration_ms ? (run.duration_ms / 1000).toFixed(1) + 's' : '-';
+                document.getElementById('wf-modal-time').innerText = run.created_at ? new Date(run.created_at).toLocaleTimeString() : '-';
+
+                const statusPill = document.getElementById('wf-modal-status-pill');
+                if (statusPill) {
+                    statusPill.innerText = run.status;
+                    statusPill.className = `wf-stage-pill ${run.status.toLowerCase()}`;
+                }
+
+                const targetPill = document.getElementById('wf-modal-target-pill');
+                if (targetPill) {
+                    targetPill.innerText = (run.target_type || 'CONTAINER').toUpperCase();
+                    targetPill.className = run.target_type === 'pod' ? 'pill pill-purple' : 'pill pill-blue';
+                }
+
+                // Render Logs & Specs
+                document.getElementById('wf-view-build-logs').innerText = run.build_logs || 'No build logs captured.';
+                document.getElementById('wf-view-deploy-logs').innerText = run.deploy_logs || 'No deployment logs captured.';
+                document.getElementById('wf-view-deploy-yaml').innerText = run.deploy_yaml || 'No Deploy.yaml captured.';
+                document.getElementById('wf-view-containerfile').innerText = run.containerfile || 'No Containerfile captured.';
+
+                // Action buttons in modal
+                const actionsBar = document.getElementById('wf-modal-actions-bar');
+                if (actionsBar) {
+                    if (run.status === 'SUCCESS' && run.target_name) {
+                        actionsBar.innerHTML = `
+                            <button class="btn btn-primary" onclick="closeModal('workflow-details-modal'); navigateToWorkload('${run.target_type}', '${run.target_name}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                <span>View Target ${run.target_type === 'pod' ? 'Pod' : 'Container'}</span>
+                            </button>
+                        `;
+                    } else {
+                        actionsBar.innerHTML = '';
+                    }
+                }
+
+                switchWorkflowDetailsTab('build');
+                openModal('workflow-details-modal');
+
+            } catch (err) {
+                showToast("Error inspecting workflow: " + err.message, "error");
+            }
+        }
+
+        function switchWorkflowDetailsTab(tab) {
+            const tabs = ['build', 'deploy', 'deploy-yaml', 'containerfile'];
+            tabs.forEach(t => {
+                const tabEl = document.getElementById(`wf-log-tab-${t}`);
+                if (tabEl) tabEl.classList.remove('active');
+                const viewEl = document.getElementById(`wf-view-${t === 'build' ? 'build-logs' : (t === 'deploy' ? 'deploy-logs' : t)}`);
+                if (viewEl) viewEl.style.display = 'none';
+            });
+
+            const activeTabEl = document.getElementById(`wf-log-tab-${tab}`);
+            if (activeTabEl) activeTabEl.classList.add('active');
+            const activeViewEl = document.getElementById(`wf-view-${tab === 'build' ? 'build-logs' : (tab === 'deploy' ? 'deploy-logs' : tab)}`);
+            if (activeViewEl) activeViewEl.style.display = 'block';
+        }
+
+        function copyActiveWorkflowLog() {
+            const tabs = [
+                { id: 'wf-view-build-logs', tab: 'build' },
+                { id: 'wf-view-deploy-logs', tab: 'deploy' },
+                { id: 'wf-view-deploy-yaml', tab: 'deploy-yaml' },
+                { id: 'wf-view-containerfile', tab: 'containerfile' }
+            ];
+            for (const item of tabs) {
+                const el = document.getElementById(item.id);
+                if (el && el.style.display !== 'none') {
+                    navigator.clipboard.writeText(el.innerText || '');
+                    showToast("Copied to clipboard!", "success");
+                    return;
+                }
+            }
+        }
+
+        async function rerunCurrentWorkflowModal() {
+            if (!activeWorkflowDetail) return;
+            await rerunWorkflow(activeWorkflowDetail.id);
+            closeModal('workflow-details-modal');
+        }
+
+        async function rerunWorkflow(id) {
+            try {
+                showToast("Re-running workflow pipeline...", "info");
+                const res = await authFetch(`/api/v1/workflows/runs/${encodeURIComponent(id)}/rerun`, { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.text();
+                    throw new Error(err || "Failed to re-run");
+                }
+                const newRun = await res.json();
+                showToast(`Re-run finished with status: ${newRun.status}`, newRun.status === 'SUCCESS' ? 'success' : 'warning');
+                await fetchWorkflows();
+                openWorkflowDetails(newRun.id);
+            } catch (err) {
+                showToast("Re-run error: " + err.message, "error");
+            }
+        }
+
+        function deleteWorkflow(id, name) {
+            triggerThemedConfirm({
+                actionType: 'delete',
+                itemType: 'Pipeline Run',
+                itemName: name || id,
+                itemId: id,
+                warning: 'The workflow execution record and logs will be permanently deleted from the authoritative SQLite database.',
+                onConfirm: async () => {
+                    try {
+                        const res = await authFetch(`/api/v1/workflows/runs/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                        if (!res.ok) throw new Error("Failed deleting workflow run");
+                        showToast(`Deleted workflow run ${name || id}`, "success");
+                        await fetchWorkflows();
+                    } catch (err) {
+                        showToast("Delete error: " + err.message, "error");
+                    }
+                }
+            });
+        }
+
+        function navigateToWorkload(targetType, targetName) {
+            if (targetType === 'pod') {
+                switchTab('pods');
+                setTimeout(() => {
+                    const podInput = document.getElementById('global-search');
+                    if (podInput) {
+                        podInput.value = targetName;
+                        filterTables(targetName);
+                    }
+                }, 300);
+            } else {
+                switchTab('containers');
+                setTimeout(() => {
+                    const ctrInput = document.getElementById('global-search');
+                    if (ctrInput) {
+                        ctrInput.value = targetName;
+                        filterTables(targetName);
+                    }
+                }, 300);
             }
         }
 

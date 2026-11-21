@@ -86,3 +86,12 @@ type AuditRepository interface {
 	RecordEvent(ctx context.Context, event *protocol.AuditEvent) error
 	ListRecentEvents(ctx context.Context, limit int) ([]*protocol.AuditEvent, error)
 }
+
+type WorkflowRepository interface {
+	CreateWorkflowRun(ctx context.Context, run *protocol.WorkflowRun) error
+	GetWorkflowRun(ctx context.Context, id string) (*protocol.WorkflowRun, error)
+	ListWorkflowRuns(ctx context.Context, limit int) ([]*protocol.WorkflowRun, error)
+	UpdateWorkflowRun(ctx context.Context, run *protocol.WorkflowRun) error
+	DeleteWorkflowRun(ctx context.Context, id string) error
+}
+

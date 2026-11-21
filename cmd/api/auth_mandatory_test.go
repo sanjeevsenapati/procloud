@@ -51,6 +51,7 @@ func TestMandatoryAuthentication(t *testing.T) {
 		{"GET", "/api/v1/containers/progit/stats"},
 		{"GET", "/api/v1/containers/progit/containerfile"},
 		{"GET", "/api/v1/containers/progit/kube"},
+		{"GET", "/api/v1/workflows/runs"},
 	}
 
 	for _, ep := range protectedEndpoints {

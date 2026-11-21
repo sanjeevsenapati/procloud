@@ -177,3 +177,42 @@ type DatabaseStatus struct {
 	LastBackupPath   string `json:"last_backup_path,omitempty"`
 	Healthy          bool   `json:"healthy"`
 }
+
+// WorkflowRun represents an execution of a source -> Containerfile -> deploy.yaml pipeline.
+type WorkflowRun struct {
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	TargetType    string    `json:"target_type"` // "container" or "pod"
+	Status        string    `json:"status"`      // "QUEUED", "BUILDING", "DEPLOYING", "SUCCESS", "FAILED"
+	Stage         string    `json:"stage"`       // "init", "build", "deploy", "completed", "failed"
+	ImageTag      string    `json:"image_tag"`
+	SourceType    string    `json:"source_type"` // "inline", "git", "path"
+	SourceSummary string    `json:"source_summary"`
+	Containerfile string    `json:"containerfile"`
+	DeployYAML    string    `json:"deploy_yaml"`
+	BuildLogs     string    `json:"build_logs"`
+	DeployLogs    string    `json:"deploy_logs"`
+	TargetID      string    `json:"target_id"`
+	TargetName    string    `json:"target_name"`
+	ErrorMessage  string    `json:"error_message,omitempty"`
+	DurationMs    int64     `json:"duration_ms"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// WorkflowRunRequest represents the incoming submission to build and deploy.
+type WorkflowRunRequest struct {
+	Name          string            `json:"name"`
+	TargetType    string            `json:"target_type"` // "container" or "pod"
+	SourceType    string            `json:"source_type"` // "inline", "git", "path"
+	SourceFiles   map[string]string `json:"source_files,omitempty"`
+	GitURL        string            `json:"git_url,omitempty"`
+	GitBranch     string            `json:"git_branch,omitempty"`
+	LocalPath     string            `json:"local_path,omitempty"`
+	Containerfile string            `json:"containerfile"`
+	DeployYAML    string            `json:"deploy_yaml"`
+	ImageTag      string            `json:"image_tag"`
+	Ports         []string          `json:"ports,omitempty"`
+	Env           map[string]string `json:"env,omitempty"`
+}
+

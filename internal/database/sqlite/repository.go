@@ -858,3 +858,91 @@ func (r *Repository) ListRecentEvents(ctx context.Context, limit int) ([]*protoc
 	}
 	return list, nil
 }
+
+// -------------------------------------------------------------
+// Workflow Repository
+// -------------------------------------------------------------
+
+func (r *Repository) CreateWorkflowRun(ctx context.Context, run *protocol.WorkflowRun) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		INSERT INTO workflow_runs (
+			id, name, target_type, status, stage, image_tag, source_type,
+			source_summary, containerfile, deploy_yaml, build_logs, deploy_logs,
+			target_id, target_name, error_message, duration_ms, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, run.ID, run.Name, run.TargetType, run.Status, run.Stage, run.ImageTag, run.SourceType,
+		run.SourceSummary, run.Containerfile, run.DeployYAML, run.BuildLogs, run.DeployLogs,
+		run.TargetID, run.TargetName, run.ErrorMessage, run.DurationMs, run.CreatedAt, run.UpdatedAt)
+	return err
+}
+
+func (r *Repository) GetWorkflowRun(ctx context.Context, id string) (*protocol.WorkflowRun, error) {
+	row := r.db.sqlDB.QueryRowContext(ctx, `
+		SELECT id, name, target_type, status, stage, image_tag, source_type,
+		       source_summary, containerfile, deploy_yaml, build_logs, deploy_logs,
+		       target_id, target_name, error_message, duration_ms, created_at, updated_at
+		FROM workflow_runs WHERE id = ?
+	`, id)
+
+	var run protocol.WorkflowRun
+	err := row.Scan(
+		&run.ID, &run.Name, &run.TargetType, &run.Status, &run.Stage, &run.ImageTag, &run.SourceType,
+		&run.SourceSummary, &run.Containerfile, &run.DeployYAML, &run.BuildLogs, &run.DeployLogs,
+		&run.TargetID, &run.TargetName, &run.ErrorMessage, &run.DurationMs, &run.CreatedAt, &run.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &run, nil
+}
+
+func (r *Repository) ListWorkflowRuns(ctx context.Context, limit int) ([]*protocol.WorkflowRun, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := r.db.sqlDB.QueryContext(ctx, `
+		SELECT id, name, target_type, status, stage, image_tag, source_type,
+		       source_summary, containerfile, deploy_yaml, build_logs, deploy_logs,
+		       target_id, target_name, error_message, duration_ms, created_at, updated_at
+		FROM workflow_runs ORDER BY created_at DESC LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []*protocol.WorkflowRun
+	for rows.Next() {
+		var run protocol.WorkflowRun
+		err := rows.Scan(
+			&run.ID, &run.Name, &run.TargetType, &run.Status, &run.Stage, &run.ImageTag, &run.SourceType,
+			&run.SourceSummary, &run.Containerfile, &run.DeployYAML, &run.BuildLogs, &run.DeployLogs,
+			&run.TargetID, &run.TargetName, &run.ErrorMessage, &run.DurationMs, &run.CreatedAt, &run.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, &run)
+	}
+	return list, nil
+}
+
+func (r *Repository) UpdateWorkflowRun(ctx context.Context, run *protocol.WorkflowRun) error {
+	run.UpdatedAt = time.Now()
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE workflow_runs SET
+			status = ?, stage = ?, image_tag = ?, source_summary = ?,
+			build_logs = ?, deploy_logs = ?, target_id = ?, target_name = ?,
+			error_message = ?, duration_ms = ?, updated_at = ?
+		WHERE id = ?
+	`, run.Status, run.Stage, run.ImageTag, run.SourceSummary,
+		run.BuildLogs, run.DeployLogs, run.TargetID, run.TargetName,
+		run.ErrorMessage, run.DurationMs, run.UpdatedAt, run.ID)
+	return err
+}
+
+func (r *Repository) DeleteWorkflowRun(ctx context.Context, id string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, `DELETE FROM workflow_runs WHERE id = ?`, id)
+	return err
+}
+
