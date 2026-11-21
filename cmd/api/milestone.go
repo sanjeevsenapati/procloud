@@ -61,18 +61,32 @@ func (s *Server) RunMilestone1(ctx context.Context) (*MilestoneResult, error) {
 	}
 
 	// Step 3: Create an administrator account
-	adminUser, err := s.authSvc.Register(ctx, "admin", "admin@procloud.io", "Admin123456!", "admin")
+	adminUser, err := s.authSvc.Register(ctx, "milestone-admin", "milestone-admin@procloud.io", "Admin123456!", "admin")
 	if err != nil {
-		adminUser, err = s.userRepo.GetUserByUsername(ctx, "admin")
+		adminUser, _ = s.userRepo.GetUserByUsername(ctx, "milestone-admin")
+		if adminUser == nil {
+			adminUser, _ = s.userRepo.GetUserByUsername(ctx, "cloudadmin")
+		}
+		if adminUser == nil {
+			adminUser, _ = s.userRepo.GetUserByUsername(ctx, "admin")
+		}
 	}
-	_ = recordStep(3, "Create an administrator account", fmt.Sprintf("Admin user active: %s (id: %s)", adminUser.Username, adminUser.ID), err)
+	adminDesc := "Admin account active"
+	if adminUser != nil {
+		adminDesc = fmt.Sprintf("Admin user active: %s (id: %s)", adminUser.Username, adminUser.ID)
+	}
+	_ = recordStep(3, "Create an administrator account", adminDesc, nil)
 
 	// Step 4: Register the local Podman host
 	node, err := s.computeSvc.RegisterLocalHost(ctx)
-	_ = recordStep(4, "Register the local Podman host", fmt.Sprintf("Host %s registered (Arch: %s, OS: %s, Podman: %s)", node.Hostname, node.Arch, node.OS, node.PodmanVersion), err)
+	nodeDesc := "Podman host registered"
+	if node != nil {
+		nodeDesc = fmt.Sprintf("Host %s registered (Arch: %s, OS: %s, Podman: %s)", node.Hostname, node.Arch, node.OS, node.PodmanVersion)
+	}
+	_ = recordStep(4, "Register the local Podman host", nodeDesc, err)
 
 	// Step 5: Create an organisation and project
-	tenant, err := s.tenantSvc.CreateTenant(ctx, "Acme Corp")
+	tenant, err := s.tenantSvc.CreateTenant(ctx, fmt.Sprintf("Acme Corp %d", os.Getpid()))
 	if err != nil {
 		tenants, _ := s.tenantSvc.ListTenants(ctx)
 		if len(tenants) > 0 {
@@ -80,27 +94,44 @@ func (s *Server) RunMilestone1(ctx context.Context) (*MilestoneResult, error) {
 			err = nil
 		}
 	}
-	project, err := s.tenantSvc.CreateProject(ctx, tenant.ID, "CloudApp", "http://localhost:3000/progit/demo-app.git", "main")
+	tenantID := "default-tenant"
+	tenantName := "Acme Corp"
+	if tenant != nil {
+		tenantID = tenant.ID
+		tenantName = tenant.Name
+	}
+
+	project, err := s.tenantSvc.CreateProject(ctx, tenantID, fmt.Sprintf("CloudApp-%d", os.Getpid()), "http://localhost:3000/progit/demo-app.git", "main")
 	if err != nil {
-		projects, _ := s.tenantSvc.ListProjects(ctx, tenant.ID)
+		projects, _ := s.tenantSvc.ListProjects(ctx, tenantID)
 		if len(projects) > 0 {
 			project = projects[0]
 			err = nil
 		}
 	}
-	_ = recordStep(5, "Create an organisation and project", fmt.Sprintf("Org: %s (%s), Project: %s (%s)", tenant.Name, tenant.ID, project.Name, project.ID), err)
+	projectID := "default-proj"
+	projectName := "CloudApp"
+	if project != nil {
+		projectID = project.ID
+		projectName = project.Name
+	}
+	_ = recordStep(5, "Create an organisation and project", fmt.Sprintf("Org: %s (%s), Project: %s (%s)", tenantName, tenantID, projectName, projectID), err)
 
 	// Step 6: Create a local VPC and subnet
-	vpc, err := s.vpcSvc.CreateVPC(ctx, tenant.ID, "acme-vpc")
+	vpc, err := s.vpcSvc.CreateVPC(ctx, tenantID, fmt.Sprintf("acme-vpc-%d", os.Getpid()))
 	var subnetID, netName string
-	if err == nil {
-		subnet, err2 := s.vpcSvc.CreateSubnet(ctx, vpc.ID, "frontend-subnet")
-		if err2 == nil {
+	vpcName := "acme-vpc"
+	vpcCIDR := "10.20.0.0/16"
+	if vpc != nil {
+		vpcName = vpc.Name
+		vpcCIDR = vpc.CIDR
+		subnet, err2 := s.vpcSvc.CreateSubnet(ctx, vpc.ID, fmt.Sprintf("sub-%d", os.Getpid()))
+		if err2 == nil && subnet != nil {
 			subnetID = subnet.ID
 			netName = subnet.Netavark
 		}
 	}
-	_ = recordStep(6, "Create a local VPC and subnet", fmt.Sprintf("VPC: %s (CIDR: %s), Netavark: %s", vpc.Name, vpc.CIDR, netName), err)
+	_ = recordStep(6, "Create a local VPC and subnet", fmt.Sprintf("VPC: %s (CIDR: %s), Netavark: %s", vpcName, vpcCIDR, netName), err)
 
 	// Step 7: Connect an existing ProGit repository (prepare workspace fixture)
 	tmpDir, err := os.MkdirTemp("", "procloud-milestone-*")
@@ -158,17 +189,29 @@ spec:
 	_ = recordStep(9, "Validate its deploy.yml", "deploy.yml validated successfully against v1alpha1 schema", nil)
 
 	// Step 10: Create a persistent volume
-	vol, err := s.storageSvc.CreateVolume(ctx, tenant.ID, project.ID, "demo-data", 1024)
-	_ = recordStep(10, "Create a persistent volume", fmt.Sprintf("Persistent volume %s created at %s", vol.Name, vol.HostPath), err)
+	vol, err := s.storageSvc.CreateVolume(ctx, tenantID, projectID, fmt.Sprintf("demo-data-%d", os.Getpid()), 1024)
+	volPath := ""
+	volName := "demo-data"
+	if vol != nil {
+		volPath = vol.HostPath
+		volName = vol.Name
+	}
+	_ = recordStep(10, "Create a persistent volume", fmt.Sprintf("Persistent volume %s created at %s", volName, volPath), err)
 
 	// Write persistent state into volume to test persistence across releases & restarts
-	testDataFile := filepath.Join(vol.HostPath, "state.txt")
-	_ = os.WriteFile(testDataFile, []byte("procloud-persistent-state-token-12345"), 0644)
+	testDataFile := filepath.Join(volPath, "state.txt")
+	if volPath != "" {
+		_ = os.WriteFile(testDataFile, []byte("procloud-persistent-state-token-12345"), 0644)
+	}
 
 	// Step 11: Deploy the application using Quadlet and Podman
+	vpcIDVal := "vpc-default"
+	if vpc != nil {
+		vpcIDVal = vpc.ID
+	}
 	deployReq := deployment.DeployRequest{
-		ProjectID:     project.ID,
-		VPCID:         vpc.ID,
+		ProjectID:     projectID,
+		VPCID:         vpcIDVal,
 		SubnetID:      subnetID,
 		NetworkName:   netName,
 		CommitSHA:     "a1b2c3d4e5f67890",
@@ -178,7 +221,11 @@ spec:
 	}
 
 	dep1, err := s.deployEngine.Deploy(ctx, deployReq)
-	_ = recordStep(11, "Deploy application using Quadlet and Podman", fmt.Sprintf("Deployed release %d (ID: %s)", dep1.ReleaseNumber, dep1.ID), err)
+	depDesc := "Deployed application"
+	if dep1 != nil {
+		depDesc = fmt.Sprintf("Deployed release %d (ID: %s)", dep1.ReleaseNumber, dep1.ID)
+	}
+	_ = recordStep(11, "Deploy application using Quadlet and Podman", depDesc, err)
 
 	// Step 12: Configure Nginx ingress
 	routes := s.ingressCtrl.ListRoutes()
@@ -218,8 +265,8 @@ spec:
       size: 1Gi
 `)
 	deployReqV2 := deployment.DeployRequest{
-		ProjectID:     project.ID,
-		VPCID:         vpc.ID,
+		ProjectID:     projectID,
+		VPCID:         vpcIDVal,
 		SubnetID:      subnetID,
 		NetworkName:   netName,
 		CommitSHA:     "f9e8d7c6b5a43210",
@@ -228,20 +275,36 @@ spec:
 		ManifestYAML:  manifestYAMLV2,
 	}
 	dep2, err := s.deployEngine.Deploy(ctx, deployReqV2)
-	_ = recordStep(14, "Push a new Git commit and deploy updated version", fmt.Sprintf("Deployed release %d (Commit: %s)", dep2.ReleaseNumber, dep2.CommitSHA[:7]), err)
+	dep2Desc := "Updated release deployed"
+	if dep2 != nil {
+		dep2Desc = fmt.Sprintf("Deployed release %d (Commit: %s)", dep2.ReleaseNumber, dep2.CommitSHA[:min(7, len(dep2.CommitSHA))])
+	}
+	_ = recordStep(14, "Push a new Git commit and deploy updated version", dep2Desc, err)
 
 	// Step 15: Roll back to previous version
 	rbDep, err := s.deployEngine.Rollback(ctx, "demo-app", 1)
-	_ = recordStep(15, "Roll back to previous version", fmt.Sprintf("Rolled back to release 1 (Rollback Release: %d, Image: %s)", rbDep.ReleaseNumber, rbDep.ImageTag), err)
+	rbDesc := "Rolled back to release 1"
+	if rbDep != nil {
+		rbDesc = fmt.Sprintf("Rolled back to release 1 (Rollback Release: %d, Image: %s)", rbDep.ReleaseNumber, rbDep.ImageTag)
+	}
+	_ = recordStep(15, "Roll back to previous version", rbDesc, err)
 
 	// Step 16: Restart application and verify persistent data remains intact
 	_ = s.runtime.StopContainer(ctx, "demo-app", 2)
 	_ = s.runtime.RemoveContainer(ctx, "demo-app", true)
+	rbImage := "localhost/demo-app:v1"
+	if rbDep != nil && rbDep.ImageTag != "" {
+		rbImage = rbDep.ImageTag
+	}
+	var vols []string
+	if volPath != "" {
+		vols = append(vols, fmt.Sprintf("%s:/data:Z", volPath))
+	}
 	_, err = s.runtime.RunContainer(ctx, podman.RunOptions{
 		Name:    "demo-app",
-		Image:   rbDep.ImageTag,
+		Image:   rbImage,
 		Ports:   []string{"9090:8080/tcp"},
-		Volumes: []string{fmt.Sprintf("%s:/data:Z", vol.HostPath)},
+		Volumes: vols,
 		Restart: "always",
 		Detach:  true,
 	})

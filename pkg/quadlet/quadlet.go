@@ -7,22 +7,22 @@ import (
 
 // ContainerConfig defines parameters for a .container Quadlet unit.
 type ContainerConfig struct {
-	UnitName        string
-	Description     string
-	ContainerName   string
-	Image           string
-	Environment     map[string]string
-	PublishPorts    []string // e.g. "8080:8080"
-	Volumes         []string // e.g. "/var/lib/procloud/volumes/v1:/data:Z"
-	Network         string   // e.g. "procloud-net"
-	InternalIP      string
-	HealthCmd       string
-	HealthInterval  string
-	HealthTimeout   string
-	HealthRetries   int
-	RestartPolicy   string // always, on-failure, no
-	AutoUpdate      string // registry, local
-	ExecArgs        []string
+	UnitName       string
+	Description    string
+	ContainerName  string
+	Image          string
+	Environment    map[string]string
+	PublishPorts   []string // e.g. "8080:8080"
+	Volumes        []string // e.g. "/var/lib/procloud/volumes/v1:/data:Z"
+	Network        string   // e.g. "procloud-net"
+	InternalIP     string
+	HealthCmd      string
+	HealthInterval string
+	HealthTimeout  string
+	HealthRetries  int
+	RestartPolicy  string // always, on-failure, no
+	AutoUpdate     string // registry, local
+	ExecArgs       []string
 }
 
 // GenerateContainerUnit generates systemd Quadlet [Container] unit content.
@@ -94,6 +94,33 @@ func GenerateContainerUnit(cfg ContainerConfig) string {
 	sb.WriteString("\n[Install]\n")
 	sb.WriteString("WantedBy=default.target\n")
 
+	return sb.String()
+}
+
+// PodConfig defines parameters for a .pod Quadlet unit.
+type PodConfig struct {
+	PodName      string
+	PublishPorts []string // "8080:80"
+	Network      string
+}
+
+// GeneratePodUnit generates a systemd Quadlet [Pod] unit.
+func GeneratePodUnit(cfg PodConfig) string {
+	var sb strings.Builder
+	sb.WriteString("[Unit]\n")
+	sb.WriteString(fmt.Sprintf("Description=ProCloud Managed Pod %s\n\n", cfg.PodName))
+
+	sb.WriteString("[Pod]\n")
+	sb.WriteString(fmt.Sprintf("PodName=%s\n", cfg.PodName))
+	for _, p := range cfg.PublishPorts {
+		sb.WriteString(fmt.Sprintf("PublishPort=%s\n", p))
+	}
+	if cfg.Network != "" {
+		sb.WriteString(fmt.Sprintf("Network=%s\n", cfg.Network))
+	}
+
+	sb.WriteString("\n[Install]\n")
+	sb.WriteString("WantedBy=default.target\n")
 	return sb.String()
 }
 

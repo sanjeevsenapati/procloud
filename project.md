@@ -184,35 +184,35 @@ Adapt the existing ProGit repository. If a separate project is required, use:
 
 progit-cloud/
 ├── cmd/
-│   ├── api/
-│   ├── agent/
-│   └── worker/
+│ ├── api/
+│ ├── agent/
+│ └── worker/
 ├── internal/
-│   ├── auth/
-│   ├── tenant/
-│   ├── project/
-│   ├── database/
-│   │   ├── sqlite/
-│   │   └── migrations/
-│   ├── repository/
-│   ├── manifest/
-│   ├── build/
-│   ├── deployment/
-│   ├── scheduler/
-│   ├── compute/
-│   ├── container/
-│   ├── pod/
-│   ├── network/
-│   ├── vpc/
-│   ├── storage/
-│   ├── ingress/
-│   ├── dns/
-│   ├── monitoring/
-│   └── audit/
+│ ├── auth/
+│ ├── tenant/
+│ ├── project/
+│ ├── database/
+│ │ ├── sqlite/
+│ │ └── migrations/
+│ ├── repository/
+│ ├── manifest/
+│ ├── build/
+│ ├── deployment/
+│ ├── scheduler/
+│ ├── compute/
+│ ├── container/
+│ ├── pod/
+│ ├── network/
+│ ├── vpc/
+│ ├── storage/
+│ ├── ingress/
+│ ├── dns/
+│ ├── monitoring/
+│ └── audit/
 ├── pkg/
-│   ├── podman/
-│   ├── quadlet/
-│   └── protocol/
+│ ├── podman/
+│ ├── quadlet/
+│ └── protocol/
 ├── web/
 ├── migrations/
 ├── templates/
@@ -271,3 +271,5 @@ All operations must use real Podman, real networking, and real persistent storag
 Do not create mock deployment success responses.
 
 Develop and test this complete single-node workflow before implementing advanced cloud features.
+
+Take reference from podman-desktop (https://github.com/podman-desktop/podman-desktop )

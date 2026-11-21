@@ -98,14 +98,57 @@ func (s *Server) registerRoutes() {
 	// Health & Status
 	s.mux.HandleFunc("GET /healthz", s.handleHealthz)
 
-	// Auth
+	// Auth & User Management
 	s.mux.HandleFunc("POST /api/v1/auth/register", s.handleRegister)
 	s.mux.HandleFunc("POST /api/v1/auth/login", s.handleLogin)
 	s.mux.HandleFunc("GET /api/v1/auth/me", s.handleMe)
 
-	// Nodes
+	// Compute Nodes
 	s.mux.HandleFunc("GET /api/v1/nodes", s.handleListNodes)
 	s.mux.HandleFunc("POST /api/v1/nodes/register", s.handleRegisterNode)
+
+	// -------------------------------------------------------------
+	// Podman Desktop Features: Container Provisioning & Lifecycle
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/containers", s.handleListContainers)
+	s.mux.HandleFunc("POST /api/v1/containers", s.handleRunContainer)
+	s.mux.HandleFunc("GET /api/v1/containers/{id}", s.handleInspectContainer)
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/start", s.handleStartContainer)
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/stop", s.handleStopContainer)
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/restart", s.handleRestartContainer)
+	s.mux.HandleFunc("DELETE /api/v1/containers/{id}", s.handleRemoveContainer)
+	s.mux.HandleFunc("GET /api/v1/containers/{id}/logs", s.handleContainerLogs)
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/exec", s.handleExecContainer)
+
+	// -------------------------------------------------------------
+	// Podman Desktop Features: Pod Provisioning & Lifecycle
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/pods", s.handleListPods)
+	s.mux.HandleFunc("POST /api/v1/pods", s.handleCreatePod)
+	s.mux.HandleFunc("GET /api/v1/pods/{id}", s.handleInspectPod)
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/start", s.handleStartPod)
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/stop", s.handleStopPod)
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/restart", s.handleRestartPod)
+	s.mux.HandleFunc("DELETE /api/v1/pods/{id}", s.handleRemovePod)
+	s.mux.HandleFunc("GET /api/v1/pods/{id}/kube", s.handleGenerateKube)
+
+	// -------------------------------------------------------------
+	// Podman Desktop Features: Image Management
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/images", s.handleListImages)
+	s.mux.HandleFunc("POST /api/v1/images/pull", s.handlePullImage)
+	s.mux.HandleFunc("DELETE /api/v1/images/{id}", s.handleRemoveImage)
+
+	// -------------------------------------------------------------
+	// Podman Desktop Features: Runtime Networks & Volumes
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/podman/networks", s.handleListPodmanNetworks)
+	s.mux.HandleFunc("POST /api/v1/podman/networks", s.handleCreatePodmanNetwork)
+	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id}", s.handleRemovePodmanNetwork)
+
+	s.mux.HandleFunc("GET /api/v1/podman/volumes", s.handleListPodmanVolumes)
+	s.mux.HandleFunc("POST /api/v1/podman/volumes", s.handleCreatePodmanVolume)
+	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.handleRemovePodmanVolume)
 
 	// Tenants & Projects
 	s.mux.HandleFunc("GET /api/v1/tenants", s.handleListTenants)
@@ -113,13 +156,11 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/projects", s.handleListProjects)
 	s.mux.HandleFunc("POST /api/v1/projects", s.handleCreateProject)
 
-	// Networking
+	// VPC & Storage Repositories
 	s.mux.HandleFunc("GET /api/v1/vpcs", s.handleListVPCs)
 	s.mux.HandleFunc("POST /api/v1/vpcs", s.handleCreateVPC)
 	s.mux.HandleFunc("GET /api/v1/subnets", s.handleListSubnets)
 	s.mux.HandleFunc("POST /api/v1/subnets", s.handleCreateSubnet)
-
-	// Storage
 	s.mux.HandleFunc("GET /api/v1/volumes", s.handleListVolumes)
 	s.mux.HandleFunc("POST /api/v1/volumes", s.handleCreateVolume)
 
@@ -137,19 +178,30 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/jobs", s.handleListJobs)
 	s.mux.HandleFunc("GET /api/v1/audit", s.handleListAudit)
 
-	// Webhooks (ProGit Integration)
+	// Webhooks & Milestone
 	s.mux.HandleFunc("POST /api/v1/webhooks/progit", s.handleProGitWebhook)
-
-	// First Milestone Orchestrator Endpoint
 	s.mux.HandleFunc("POST /api/v1/milestone/run", s.handleRunMilestone)
 
-	// Static Web UI Console
+	// Static Web UI Console (Podman Desktop + Sovereign Cloud)
 	s.mux.Handle("/", web.Handler())
 }
 
 // -------------------------------------------------------------
-// HTTP Handlers
+// Authentication Helper & Handlers
 // -------------------------------------------------------------
+
+func (s *Server) checkAuth(r *http.Request) *auth.Claims {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return nil
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := s.authSvc.VerifyToken(token)
+	if err != nil {
+		return nil
+	}
+	return claims
+}
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{"status": "ok", "app": "procloud", "version": "1.0.0"})
@@ -171,6 +223,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.auditSvc.Log(r.Context(), u.Username, "USER_REGISTERED", "User", u.ID, r.RemoteAddr, "Created account")
 	respondJSON(w, http.StatusCreated, u)
 }
 
@@ -188,14 +241,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+	s.auditSvc.Log(r.Context(), user.Username, "USER_LOGIN", "User", user.ID, r.RemoteAddr, "Successful login")
 	respondJSON(w, http.StatusOK, map[string]any{"token": token, "user": user})
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	claims, err := s.authSvc.VerifyToken(token)
-	if err != nil {
+	claims := s.checkAuth(r)
+	if claims == nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -206,6 +258,337 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	}
 	respondJSON(w, http.StatusOK, u)
 }
+
+// -------------------------------------------------------------
+// Podman Desktop: Container Provisioning & Management
+// -------------------------------------------------------------
+
+func (s *Server) handleListContainers(w http.ResponseWriter, r *http.Request) {
+	all := r.URL.Query().Get("all") == "true" || r.URL.Query().Get("all") == "1"
+	containers, err := s.runtime.ListContainers(r.Context(), all)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, containers)
+}
+
+func (s *Server) handleRunContainer(w http.ResponseWriter, r *http.Request) {
+	var opts podman.RunOptions
+	if err := json.NewDecoder(r.Body).Decode(&opts); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if opts.Image == "" {
+		http.Error(w, "image is required", http.StatusBadRequest)
+		return
+	}
+	opts.Detach = true
+
+	ctrID, err := s.runtime.RunContainer(r.Context(), opts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "CONTAINER_RUN", "Container", opts.Name, r.RemoteAddr, fmt.Sprintf("Started container %s with image %s", opts.Name, opts.Image))
+
+	respondJSON(w, http.StatusCreated, map[string]string{"id": ctrID, "name": opts.Name, "status": "running"})
+}
+
+func (s *Server) handleInspectContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	status, err := s.runtime.InspectContainer(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, status)
+}
+
+func (s *Server) handleStartContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.StartContainer(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "container started", "id": id})
+}
+
+func (s *Server) handleStopContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.StopContainer(r.Context(), id, 5); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "container stopped", "id": id})
+}
+
+func (s *Server) handleRestartContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.RestartContainer(r.Context(), id, 5); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "container restarted", "id": id})
+}
+
+func (s *Server) handleRemoveContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	force := r.URL.Query().Get("force") == "true"
+	if err := s.runtime.RemoveContainer(r.Context(), id, force); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "container removed", "id": id})
+}
+
+func (s *Server) handleContainerLogs(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	tailStr := r.URL.Query().Get("tail")
+	tail := 50
+	if tailStr != "" {
+		tail, _ = strconv.Atoi(tailStr)
+	}
+	logs, err := s.runtime.GetContainerLogs(r.Context(), id, tail)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"logs": logs})
+}
+
+func (s *Server) handleExecContainer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req struct {
+		Command []string `json:"command"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.Command) == 0 {
+		http.Error(w, "command array is required", http.StatusBadRequest)
+		return
+	}
+	out, err := s.runtime.ExecContainer(r.Context(), id, req.Command)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%v: %s", err, out), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"output": out})
+}
+
+// -------------------------------------------------------------
+// Podman Desktop: Pod Provisioning & Lifecycle
+// -------------------------------------------------------------
+
+func (s *Server) handleListPods(w http.ResponseWriter, r *http.Request) {
+	pods, err := s.runtime.ListPods(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, pods)
+}
+
+func (s *Server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
+	var opts podman.PodCreateOptions
+	if err := json.NewDecoder(r.Body).Decode(&opts); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if opts.Name == "" {
+		http.Error(w, "pod name is required", http.StatusBadRequest)
+		return
+	}
+
+	podID, err := s.runtime.CreatePod(r.Context(), opts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "POD_CREATED", "Pod", opts.Name, r.RemoteAddr, fmt.Sprintf("Created pod %s", opts.Name))
+
+	respondJSON(w, http.StatusCreated, map[string]string{"id": podID, "name": opts.Name, "status": "Created"})
+}
+
+func (s *Server) handleInspectPod(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	inspect, err := s.runtime.InspectPod(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, inspect)
+}
+
+func (s *Server) handleStartPod(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.StartPod(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "pod started", "id": id})
+}
+
+func (s *Server) handleStopPod(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.StopPod(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "pod stopped", "id": id})
+}
+
+func (s *Server) handleRestartPod(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.RestartPod(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "pod restarted", "id": id})
+}
+
+func (s *Server) handleRemovePod(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	force := r.URL.Query().Get("force") == "true"
+	if err := s.runtime.RemovePod(r.Context(), id, force); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "pod removed", "id": id})
+}
+
+func (s *Server) handleGenerateKube(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	yaml, err := s.runtime.GenerateKube(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"kube_yaml": yaml})
+}
+
+// -------------------------------------------------------------
+// Podman Desktop: Image Catalog & Registry
+// -------------------------------------------------------------
+
+func (s *Server) handleListImages(w http.ResponseWriter, r *http.Request) {
+	images, err := s.runtime.ListImages(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, images)
+}
+
+func (s *Server) handlePullImage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Image string `json:"image"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Image == "" {
+		http.Error(w, "image name is required", http.StatusBadRequest)
+		return
+	}
+	if err := s.runtime.PullImage(r.Context(), req.Image); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "image pulled successfully", "image": req.Image})
+}
+
+func (s *Server) handleRemoveImage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	force := r.URL.Query().Get("force") == "true"
+	if err := s.runtime.RemoveImage(r.Context(), id, force); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "image removed", "id": id})
+}
+
+// -------------------------------------------------------------
+// Podman Desktop: Runtime Networks & Volumes
+// -------------------------------------------------------------
+
+func (s *Server) handleListPodmanNetworks(w http.ResponseWriter, r *http.Request) {
+	nets, err := s.runtime.ListNetworks(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, nets)
+}
+
+func (s *Server) handleCreatePodmanNetwork(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name    string `json:"name"`
+		Subnet  string `json:"subnet"`
+		Gateway string `json:"gateway"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		http.Error(w, "network name is required", http.StatusBadRequest)
+		return
+	}
+	if err := s.runtime.CreateNetwork(r.Context(), req.Name, req.Subnet, req.Gateway); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusCreated, map[string]string{"message": "network created", "name": req.Name})
+}
+
+func (s *Server) handleRemovePodmanNetwork(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.RemoveNetwork(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "network removed", "name": id})
+}
+
+func (s *Server) handleListPodmanVolumes(w http.ResponseWriter, r *http.Request) {
+	vols, err := s.runtime.ListVolumes(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, vols)
+}
+
+func (s *Server) handleCreatePodmanVolume(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		http.Error(w, "volume name is required", http.StatusBadRequest)
+		return
+	}
+	path, err := s.runtime.CreateVolume(r.Context(), req.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusCreated, map[string]string{"message": "volume created", "name": req.Name, "path": path})
+}
+
+func (s *Server) handleRemovePodmanVolume(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.RemoveVolume(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "volume removed", "name": id})
+}
+
+// -------------------------------------------------------------
+// Existing Infrastructure & Workload Handlers
+// -------------------------------------------------------------
 
 func (s *Server) handleListNodes(w http.ResponseWriter, r *http.Request) {
 	node, err := s.computeSvc.GetPrimaryNode(r.Context())
@@ -455,7 +838,6 @@ func (s *Server) handleProGitWebhook(w http.ResponseWriter, r *http.Request) {
 		commitSHA = fmt.Sprintf("sha-%d", time.Now().Unix())
 	}
 
-	// Submit background deploy job
 	job, err := s.jobEngine.Enqueue(r.Context(), "build_and_deploy", map[string]string{
 		"repo":   payload.Repository.Name,
 		"commit": commitSHA,

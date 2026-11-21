@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProCloud — Single-Node Sovereign Cloud Console</title>
+    <title>ProCloud — Podman Desktop & Sovereign Cloud Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-base: #090d16;
             --bg-surface: #111827;
             --bg-card: #162032;
             --border: #1f2d44;
+            --border-highlight: #38bdf8;
             --accent: #38bdf8;
             --accent-glow: rgba(56, 189, 248, 0.15);
             --emerald: #10b981;
@@ -31,26 +32,31 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* Top Header */
         header {
             background: var(--bg-surface);
             border-bottom: 1px solid var(--border);
-            padding: 16px 28px;
+            padding: 12px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
         .brand {
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
             letter-spacing: -0.5px;
         }
         .brand-badge {
             background: linear-gradient(135deg, #0284c7, #38bdf8);
             color: #fff;
-            padding: 4px 8px;
+            padding: 3px 8px;
             border-radius: 6px;
             font-size: 11px;
             font-weight: 700;
@@ -58,16 +64,49 @@
         }
         .header-actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
         }
+
+        /* Nav Tabs */
+        nav.sub-header {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+        }
+        .nav-tab {
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-tab:hover {
+            color: var(--text-primary);
+        }
+        .nav-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Buttons */
         .btn {
             background: var(--bg-card);
             color: var(--text-primary);
             border: 1px solid var(--border);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -76,36 +115,45 @@
             gap: 6px;
         }
         .btn:hover { background: var(--border); }
-        .btn-primary {
-            background: #0284c7;
-            border-color: #38bdf8;
-            color: #fff;
-        }
+        .btn-primary { background: #0284c7; border-color: #38bdf8; color: #fff; }
         .btn-primary:hover { background: #0369a1; }
-        .btn-emerald {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: var(--emerald);
-            color: var(--emerald);
-        }
+        .btn-emerald { background: rgba(16, 185, 129, 0.15); border-color: var(--emerald); color: var(--emerald); }
         .btn-emerald:hover { background: rgba(16, 185, 129, 0.25); }
+        .btn-rose { background: rgba(244, 63, 94, 0.15); border-color: var(--rose); color: var(--rose); }
+        .btn-rose:hover { background: rgba(244, 63, 94, 0.25); }
+        .btn-amber { background: rgba(245, 158, 11, 0.15); border-color: var(--amber); color: var(--amber); }
+        .btn-amber:hover { background: rgba(245, 158, 11, 0.25); }
 
+        /* Main Container */
         main {
             flex: 1;
-            padding: 28px;
+            padding: 24px;
             max-width: 1440px;
             width: 100%;
             margin: 0 auto;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Grid */
+        .grid-12 {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
             gap: 20px;
         }
+        .col-3 { grid-column: span 3; }
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
 
+        /* Stat Card */
         .stat-card {
-            grid-column: span 3;
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 16px;
             position: relative;
             overflow: hidden;
         }
@@ -116,51 +164,49 @@
             background: linear-gradient(90deg, var(--accent), transparent);
         }
         .stat-title {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-secondary);
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .stat-value {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
-            margin-top: 8px;
+            margin-top: 6px;
             font-family: 'JetBrains Mono', monospace;
         }
         .stat-sub {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
-            margin-top: 6px;
+            margin-top: 4px;
         }
 
+        /* Panel */
         .panel {
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 18px;
             display: flex;
             flex-direction: column;
+            margin-bottom: 20px;
         }
         .panel-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
         .panel-title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 700;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .col-8 { grid-column: span 8; }
-        .col-4 { grid-column: span 4; }
-        .col-6 { grid-column: span 6; }
-        .col-12 { grid-column: span 12; }
-
+        /* Table */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -174,181 +220,652 @@
             border-bottom: 1px solid var(--border);
         }
         td {
-            padding: 12px;
+            padding: 10px 12px;
             border-bottom: 1px solid rgba(31, 45, 68, 0.4);
             color: var(--text-secondary);
+            vertical-align: middle;
         }
         tr:hover td {
             background: rgba(22, 32, 50, 0.5);
             color: var(--text-primary);
         }
 
+        /* Badges */
         .badge {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 6px;
+            padding: 2px 7px;
+            border-radius: 4px;
             font-size: 11px;
             font-weight: 700;
             font-family: 'JetBrains Mono', monospace;
         }
-        .badge-healthy { background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
-        .badge-running { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.3); }
-        .badge-warn { background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-running, .badge-healthy, .badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .badge-stopped, .badge-exited {
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--rose);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+        .badge-paused, .badge-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--amber);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
 
-        .console-log {
+        /* Modal Dialogs */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(9, 13, 22, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .modal-title { font-size: 16px; font-weight: 700; }
+        .modal-close { cursor: pointer; color: var(--text-muted); font-size: 20px; }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .form-control {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .console-box {
             background: #050810;
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 14px;
+            border-radius: 6px;
+            padding: 12px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
             color: #38bdf8;
-            max-height: 240px;
+            max-height: 260px;
             overflow-y: auto;
             white-space: pre-wrap;
             line-height: 1.5;
         }
 
-        .milestone-stepper {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 380px;
-            overflow-y: auto;
-        }
-        .step-item {
+        .user-pill {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            padding: 10px 14px;
-            border-radius: 8px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            font-size: 13px;
-        }
-        .step-item.success {
-            border-color: rgba(16, 185, 129, 0.4);
-            background: rgba(16, 185, 129, 0.05);
+            gap: 6px;
         }
     </style>
 </head>
 <body>
+    <!-- Top Bar -->
     <header>
         <div class="brand">
             <span>⚡ ProCloud</span>
-            <span class="brand-badge">Single Node • SQLite WAL</span>
+            <span class="brand-badge">Podman Desktop Edition</span>
         </div>
         <div class="header-actions">
-            <button class="btn btn-emerald" onclick="runMilestone()">▶ Run First Milestone (16 Steps)</button>
-            <button class="btn" onclick="triggerCheckpoint()">⚡ WAL Checkpoint</button>
-            <button class="btn btn-primary" onclick="refreshData()">↻ Refresh</button>
+            <div id="user-display" class="user-pill">
+                <span>👤 <strong id="username-label">Admin</strong></span>
+                <span class="badge badge-running" id="userrole-label">ADMIN</span>
+                <button class="btn btn-rose" style="padding: 2px 6px; font-size:10px; margin-left: 6px;" onclick="logout()">Logout</button>
+            </div>
+            <button class="btn btn-primary" id="login-btn" style="display:none;" onclick="openModal('auth-modal')">Log In</button>
+            <button class="btn btn-emerald" onclick="runMilestone()">▶ Run Milestone 1</button>
+            <button class="btn" onclick="refreshCurrentTab()">↻ Refresh</button>
         </div>
     </header>
 
+    <!-- Navigation Tabs -->
+    <nav class="sub-header">
+        <div class="nav-tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+        <div class="nav-tab" onclick="switchTab('containers')">📦 Containers</div>
+        <div class="nav-tab" onclick="switchTab('pods')">☸️ Pods</div>
+        <div class="nav-tab" onclick="switchTab('images')">🖼️ Images</div>
+        <div class="nav-tab" onclick="switchTab('volumes')">💾 Volumes</div>
+        <div class="nav-tab" onclick="switchTab('networks')">🌐 Networks</div>
+        <div class="nav-tab" onclick="switchTab('deployments')">🚀 Deployments & Quadlet</div>
+        <div class="nav-tab" onclick="switchTab('telemetry')">🛡️ Telemetry & WAL</div>
+    </nav>
+
+    <!-- Main Content -->
     <main>
-        <!-- Top Stats Row -->
-        <div class="stat-card">
-            <div class="stat-title">Compute Node</div>
-            <div class="stat-value" id="node-name">Loading...</div>
-            <div class="stat-sub" id="node-sub">Podman runtime connected</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-title">SQLite WAL Mode</div>
-            <div class="stat-value" style="color: var(--emerald);" id="wal-status">ACTIVE</div>
-            <div class="stat-sub" id="wal-sub">Zero-downtime journal</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-title">Workloads Active</div>
-            <div class="stat-value" style="color: var(--accent);" id="workloads-count">0</div>
-            <div class="stat-sub" id="workloads-sub">Quadlet managed</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-title">Persistent Volumes</div>
-            <div class="stat-value" style="color: var(--purple);" id="volumes-count">0</div>
-            <div class="stat-sub">Independent container lifecycle</div>
-        </div>
+        <!-- 1. DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="grid-12">
+                <div class="stat-card col-3">
+                    <div class="stat-title">Compute Node</div>
+                    <div class="stat-value" id="node-name">Loading...</div>
+                    <div class="stat-sub" id="node-sub">Podman runtime connected</div>
+                </div>
+                <div class="stat-card col-3">
+                    <div class="stat-title">Running Containers</div>
+                    <div class="stat-value" style="color: var(--accent);" id="stat-containers-count">0</div>
+                    <div class="stat-sub">Active OCI workloads</div>
+                </div>
+                <div class="stat-card col-3">
+                    <div class="stat-title">Podman Pods</div>
+                    <div class="stat-value" style="color: var(--purple);" id="stat-pods-count">0</div>
+                    <div class="stat-sub">Multi-container pods</div>
+                </div>
+                <div class="stat-card col-3">
+                    <div class="stat-title">SQLite WAL Mode</div>
+                    <div class="stat-value" style="color: var(--emerald);" id="stat-wal-status">WAL</div>
+                    <div class="stat-sub" id="stat-wal-sub">Zero-downtime journal</div>
+                </div>
 
-        <!-- Left Column: Workloads & Deployments -->
-        <div class="panel col-8">
-            <div class="panel-header">
-                <div class="panel-title">🚀 Workloads & Deployments</div>
-                <span class="badge badge-running" id="dep-count-badge">0 Releases</span>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Application</th>
-                        <th>Release</th>
-                        <th>Commit SHA</th>
-                        <th>Image Tag</th>
-                        <th>Status</th>
-                        <th>Port / Ingress</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="workloads-table">
-                    <tr><td colspan="7" style="text-align:center; padding: 20px;">No workloads deployed yet. Click "Run First Milestone" to execute end-to-end workflow!</td></tr>
-                </tbody>
-            </table>
-        </div>
+                <div class="panel col-8">
+                    <div class="panel-header">
+                        <div class="panel-title">📦 Active Containers Overview</div>
+                        <button class="btn btn-primary" onclick="openModal('run-container-modal')">+ Run Container</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Image</th>
+                                <th>Status</th>
+                                <th>Ports</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-containers-table">
+                            <tr><td colspan="5" style="text-align:center;">No containers running.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-        <!-- Right Column: First Milestone Orchestrator -->
-        <div class="panel col-4">
-            <div class="panel-header">
-                <div class="panel-title">🏆 Milestone 1 Progress</div>
-                <span class="badge badge-healthy" id="milestone-badge">Ready</span>
-            </div>
-            <div class="milestone-stepper" id="milestone-steps">
-                <div class="step-item"><span>1. Server Initialization</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>2. SQLite WAL Verification</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>3. Administrator Account</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>4. Podman Node Registration</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>5. Tenant & Project Setup</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>6. Local VPC & Subnet</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>7. ProGit Repo Link</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>8. Containerfile Image Build</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>9. Manifest Validation</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>10. Persistent Volume Creation</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>11. Quadlet Unit Deployment</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>12. Nginx Ingress Exposure</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>13. Health Check & Logs</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>14. Push Commit & Deploy v2</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>15. Instant Rollback to v1</span><span class="badge">PENDING</span></div>
-                <div class="step-item"><span>16. Verify Persistent Storage</span><span class="badge">PENDING</span></div>
+                <div class="panel col-4">
+                    <div class="panel-header">
+                        <div class="panel-title">🏆 Milestone 1 Status</div>
+                    </div>
+                    <div style="font-size:12px; line-height: 1.6; color: var(--text-secondary);">
+                        ProCloud single-node sovereign cloud verified with real Podman, Quadlet, SQLite WAL, and persistent volumes.
+                    </div>
+                    <button class="btn btn-emerald" style="margin-top: 16px; width: 100%; justify-content: center;" onclick="runMilestone()">Run Full 16-Step Verification</button>
+                    <div class="console-box" style="margin-top: 12px; max-height: 180px;" id="milestone-quick-log">Ready</div>
+                </div>
             </div>
         </div>
 
-        <!-- Bottom: Durable SQLite Job Queue & Database Metrics -->
-        <div class="panel col-6">
-            <div class="panel-header">
-                <div class="panel-title">📦 Background Job Engine (SQLite)</div>
+        <!-- 2. CONTAINERS TAB (Podman Desktop) -->
+        <div id="tab-containers" class="tab-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">📦 Containers Management</div>
+                    <div style="display:flex; gap: 8px;">
+                        <button class="btn" onclick="fetchContainers(true)">Show All</button>
+                        <button class="btn btn-primary" onclick="openModal('run-container-modal')">+ Create & Run Container</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Container Name</th>
+                            <th>ID</th>
+                            <th>Image</th>
+                            <th>State</th>
+                            <th>Ports</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="containers-table">
+                        <tr><td colspan="7" style="text-align:center;">Loading containers...</td></tr>
+                    </tbody>
+                </table>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Job ID</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Retries</th>
-                        <th>Scheduled At</th>
-                    </tr>
-                </thead>
-                <tbody id="jobs-table">
-                    <tr><td colspan="5" style="text-align:center;">Job queue idle</td></tr>
-                </tbody>
-            </table>
         </div>
 
-        <div class="panel col-6">
-            <div class="panel-header">
-                <div class="panel-title">🛡️ System Telemetry & WAL Health</div>
+        <!-- 3. PODS TAB (Podman Desktop) -->
+        <div id="tab-pods" class="tab-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">☸️ Pods Management</div>
+                    <button class="btn btn-primary" onclick="openModal('create-pod-modal')">+ Create Pod</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Pod Name</th>
+                            <th>ID</th>
+                            <th>Status</th>
+                            <th>Containers</th>
+                            <th>Port Mappings</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pods-table">
+                        <tr><td colspan="6" style="text-align:center;">Loading pods...</td></tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="console-log" id="telemetry-log">Initializing ProCloud single-node control plane...</div>
+        </div>
+
+        <!-- 4. IMAGES TAB -->
+        <div id="tab-images" class="tab-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">🖼️ Container Images Catalog</div>
+                    <button class="btn btn-primary" onclick="openModal('pull-image-modal')">+ Pull Image from Registry</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Repository</th>
+                            <th>Tag</th>
+                            <th>Image ID</th>
+                            <th>Size</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="images-table">
+                        <tr><td colspan="6" style="text-align:center;">Loading images...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. VOLUMES TAB -->
+        <div id="tab-volumes" class="tab-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">💾 Persistent Storage Volumes</div>
+                    <button class="btn btn-primary" onclick="openModal('create-volume-modal')">+ Create Volume</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Volume Name</th>
+                            <th>Driver</th>
+                            <th>Mountpoint</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="volumes-table">
+                        <tr><td colspan="4" style="text-align:center;">Loading volumes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6. NETWORKS TAB -->
+        <div id="tab-networks" class="tab-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">🌐 Netavark Bridge Networks</div>
+                    <button class="btn btn-primary" onclick="openModal('create-network-modal')">+ Create Network</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Network Name</th>
+                            <th>ID</th>
+                            <th>Driver</th>
+                            <th>Subnet</th>
+                            <th>Gateway</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="networks-table">
+                        <tr><td colspan="6" style="text-align:center;">Loading networks...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 7. DEPLOYMENTS & QUADLET TAB -->
+        <div id="tab-deployments" class="tab-content">
+            <div class="grid-12">
+                <div class="panel col-7">
+                    <div class="panel-header">
+                        <div class="panel-title">🚀 GitOps Manifest Deployment (deploy.yml v1alpha1)</div>
+                        <button class="btn btn-primary" onclick="deployManifest()">Apply Manifest</button>
+                    </div>
+                    <textarea id="manifest-editor" class="form-control" style="height: 380px; font-family:'JetBrains Mono',monospace; font-size:12px;">apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: demo-webapp
+spec:
+  replicas: 1
+  image:
+    repository: localhost/demo-app
+    tag: v1
+  ports:
+    - containerPort: 8080
+      hostPort: 9090
+      protocol: TCP
+      ingress:
+        enabled: true
+        domain: demo.procloud.local
+        path: /
+  volumes:
+    - name: app-data
+      mountPath: /data
+      size: 1Gi
+  healthCheck:
+    httpGet:
+      path: /
+      port: 8080
+  restartPolicy: always</textarea>
+                </div>
+                <div class="panel col-5">
+                    <div class="panel-header">
+                        <div class="panel-title">📋 Active Workloads & Releases</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>App</th>
+                                <th>Release</th>
+                                <th>Status</th>
+                                <th>Port</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workloads-list-table">
+                            <tr><td colspan="5" style="text-align:center;">No workloads deployed yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. TELEMETRY & WAL TAB -->
+        <div id="tab-telemetry" class="tab-content">
+            <div class="grid-12">
+                <div class="panel col-6">
+                    <div class="panel-header">
+                        <div class="panel-title">⚡ SQLite WAL & Backup Management</div>
+                        <div>
+                            <button class="btn btn-amber" onclick="triggerCheckpoint()">Checkpoint TRUNCATE</button>
+                            <button class="btn btn-primary" onclick="triggerBackup()">Hot Backup (VACUUM INTO)</button>
+                        </div>
+                    </div>
+                    <div class="console-box" id="db-status-box">Loading database status...</div>
+                </div>
+                <div class="panel col-6">
+                    <div class="panel-header">
+                        <div class="panel-title">📦 Background Durable Job Queue</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Job ID</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Scheduled At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobs-telemetry-table">
+                            <tr><td colspan="4" style="text-align:center;">Queue idle</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </main>
 
+    <!-- MODAL: Run Container -->
+    <div id="run-container-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">🚀 Run New Container</div>
+                <div class="modal-close" onclick="closeModal('run-container-modal')">&times;</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Container Name</label>
+                <input type="text" id="ctr-name" class="form-control" placeholder="my-web-app">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Image (Repository:Tag)</label>
+                <input type="text" id="ctr-image" class="form-control" placeholder="alpine:latest or localhost/demo-app:v1">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Publish Ports (host:container)</label>
+                <input type="text" id="ctr-ports" class="form-control" placeholder="8080:80">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Pod (Optional)</label>
+                <input type="text" id="ctr-pod" class="form-control" placeholder="Leave empty for standalone">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Volumes (hostPath:containerPath:Z)</label>
+                <input type="text" id="ctr-vols" class="form-control" placeholder="/var/data:/data:Z">
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="submitRunContainer()">Run Container</button>
+        </div>
+    </div>
+
+    <!-- MODAL: Create Pod -->
+    <div id="create-pod-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">☸️ Create Podman Pod</div>
+                <div class="modal-close" onclick="closeModal('create-pod-modal')">&times;</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Pod Name</label>
+                <input type="text" id="pod-name" class="form-control" placeholder="backend-pod">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Port Mappings (e.g. 8080:80, 9000:9000)</label>
+                <input type="text" id="pod-ports" class="form-control" placeholder="8080:80">
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="submitCreatePod()">Create Pod</button>
+        </div>
+    </div>
+
+    <!-- MODAL: Pull Image -->
+    <div id="pull-image-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">🖼️ Pull Image from Registry</div>
+                <div class="modal-close" onclick="closeModal('pull-image-modal')">&times;</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Image Name</label>
+                <input type="text" id="pull-image-name" class="form-control" placeholder="docker.io/library/nginx:alpine">
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="submitPullImage()">Pull Image</button>
+        </div>
+    </div>
+
+    <!-- MODAL: Create Volume -->
+    <div id="create-volume-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">💾 Create Persistent Volume</div>
+                <div class="modal-close" onclick="closeModal('create-volume-modal')">&times;</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Volume Name</label>
+                <input type="text" id="new-vol-name" class="form-control" placeholder="postgres-data">
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="submitCreateVolume()">Create Volume</button>
+        </div>
+    </div>
+
+    <!-- MODAL: Create Network -->
+    <div id="create-network-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">🌐 Create Netavark Network</div>
+                <div class="modal-close" onclick="closeModal('create-network-modal')">&times;</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Network Name</label>
+                <input type="text" id="new-net-name" class="form-control" placeholder="prod-net">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subnet CIDR</label>
+                <input type="text" id="new-net-subnet" class="form-control" placeholder="10.89.1.0/24">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Gateway IP</label>
+                <input type="text" id="new-net-gateway" class="form-control" placeholder="10.89.1.1">
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="submitCreateNetwork()">Create Network</button>
+        </div>
+    </div>
+
+    <!-- MODAL: Container Logs / Terminal -->
+    <div id="logs-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title" id="logs-modal-title">📜 Container Logs</div>
+                <div class="modal-close" onclick="closeModal('logs-modal')">&times;</div>
+            </div>
+            <div class="console-box" id="logs-content" style="max-height: 400px;">Loading logs...</div>
+            <div style="margin-top: 14px; display:flex; gap: 8px;">
+                <input type="text" id="exec-input" class="form-control" placeholder="Run command inside container (e.g. ls -la, uname -a)...">
+                <button class="btn btn-primary" onclick="submitExec()">Exec</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Kube YAML Viewer -->
+    <div id="kube-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">📄 Kubernetes Pod YAML</div>
+                <div class="modal-close" onclick="closeModal('kube-modal')">&times;</div>
+            </div>
+            <pre class="console-box" id="kube-content" style="max-height: 400px; color:#a855f7;"></pre>
+        </div>
+    </div>
+
+    <!-- MODAL: Authentication (Login / Register) -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <div class="modal-title">🔐 ProCloud Authentication</div>
+                <div class="modal-close" onclick="closeModal('auth-modal')">&times;</div>
+            </div>
+            <div style="display:flex; gap: 8px; margin-bottom: 16px;">
+                <button class="btn btn-primary" id="tab-login-btn" onclick="toggleAuthTab('login')">Log In</button>
+                <button class="btn" id="tab-register-btn" onclick="toggleAuthTab('register')">Register</button>
+            </div>
+            <div id="auth-login-form">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="login-username" class="form-control" placeholder="admin">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+                </div>
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="submitLogin()">Log In</button>
+            </div>
+            <div id="auth-register-form" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="reg-username" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="reg-email" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="reg-password" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select id="reg-role" class="form-control">
+                        <option value="admin">Administrator</option>
+                        <option value="member">Member</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                </div>
+                <button class="btn btn-emerald" style="width:100%; justify-content:center;" onclick="submitRegister()">Create Account</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        async function refreshData() {
+        let currentTab = 'dashboard';
+        let activeContainerForLogs = '';
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            const target = document.getElementById(`tab-${tabName}`);
+            if (target) target.classList.add('active');
+
+            refreshCurrentTab();
+        }
+
+        function refreshCurrentTab() {
+            switch (currentTab) {
+                case 'dashboard': fetchDashboard(); break;
+                case 'containers': fetchContainers(); break;
+                case 'pods': fetchPods(); break;
+                case 'images': fetchImages(); break;
+                case 'volumes': fetchVolumes(); break;
+                case 'networks': fetchNetworks(); break;
+                case 'deployments': fetchDeployments(); break;
+                case 'telemetry': fetchTelemetry(); break;
+            }
+        }
+
+        function getAuthHeader() {
+            const token = localStorage.getItem('procloud_token');
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
+        // -------------------------------------------------------------
+        // API Calls
+        // -------------------------------------------------------------
+
+        async function fetchDashboard() {
             try {
                 const nodeRes = await fetch('/api/v1/nodes');
                 const nodeData = await nodeRes.json();
@@ -358,113 +875,574 @@
                     document.getElementById('node-sub').innerText = `${n.arch} • ${n.os} • ${n.podman_version}`;
                 }
 
+                const ctrRes = await fetch('/api/v1/containers');
+                const ctrs = await ctrRes.json() || [];
+                document.getElementById('stat-containers-count').innerText = ctrs.length;
+
+                const podsRes = await fetch('/api/v1/pods');
+                const pods = await podsRes.json() || [];
+                document.getElementById('stat-pods-count').innerText = pods.length;
+
                 const dbRes = await fetch('/api/v1/database/status');
-                const dbData = await dbRes.json();
-                if (dbData) {
-                    document.getElementById('wal-status').innerText = dbData.mode.toUpperCase();
-                    document.getElementById('wal-sub').innerText = `DB: ${(dbData.db_size_bytes/1024).toFixed(1)} KB • WAL: ${(dbData.wal_size_bytes/1024).toFixed(1)} KB`;
+                const db = await dbRes.json();
+                if (db) {
+                    document.getElementById('stat-wal-status').innerText = db.mode.toUpperCase();
+                    document.getElementById('stat-wal-sub').innerText = `DB: ${(db.db_size_bytes/1024).toFixed(1)} KB • WAL: ${(db.wal_size_bytes/1024).toFixed(1)} KB`;
                 }
 
-                const wlRes = await fetch('/api/v1/workloads');
-                const wlData = await wlRes.json();
-                if (wlData) {
-                    document.getElementById('workloads-count').innerText = wlData.length;
-                    renderWorkloads(wlData);
-                }
-
-                const volRes = await fetch('/api/v1/volumes');
-                const volData = await volRes.json();
-                if (volData) {
-                    document.getElementById('volumes-count').innerText = volData.length;
-                }
-
-                const jobRes = await fetch('/api/v1/jobs');
-                const jobData = await jobRes.json();
-                if (jobData) {
-                    renderJobs(jobData);
+                const tbody = document.getElementById('dash-containers-table');
+                if (ctrs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No containers running. Click "+ Run Container" to provision one!</td></tr>';
+                } else {
+                    tbody.innerHTML = ctrs.slice(0, 5).map(c => `
+                        <tr>
+                            <td><strong>${c.names ? c.names[0] : c.id}</strong></td>
+                            <td><code>${c.image}</code></td>
+                            <td><span class="badge badge-${c.state === 'running' ? 'running' : 'stopped'}">${c.state}</span></td>
+                            <td>${c.ports ? c.ports.join(', ') : 'None'}</td>
+                            <td>
+                                <button class="btn btn-rose" style="padding: 2px 6px; font-size:11px;" onclick="stopContainer('${c.id}')">Stop</button>
+                            </td>
+                        </tr>
+                    `).join('');
                 }
             } catch (err) {
-                console.error("Failed to refresh data", err);
+                console.error(err);
             }
         }
 
-        function renderWorkloads(workloads) {
-            const tbody = document.getElementById('workloads-table');
-            if (workloads.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No workloads deployed yet.</td></tr>';
-                return;
+        async function fetchContainers(all = false) {
+            try {
+                const res = await fetch(`/api/v1/containers${all ? '?all=true' : ''}`);
+                const list = await res.json() || [];
+                const tbody = document.getElementById('containers-table');
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No containers found.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(c => {
+                    const name = c.names ? c.names[0] : c.id;
+                    return `
+                    <tr>
+                        <td><strong>${name}</strong></td>
+                        <td><code>${c.id}</code></td>
+                        <td><code>${c.image}</code></td>
+                        <td><span class="badge badge-${c.state === 'running' ? 'running' : 'stopped'}">${c.state}</span></td>
+                        <td>${c.ports ? c.ports.join(', ') : 'None'}</td>
+                        <td>${c.created ? new Date(c.created).toLocaleTimeString() : 'n/a'}</td>
+                        <td>
+                            ${c.state === 'running'
+                                ? `<button class="btn btn-amber" style="padding: 3px 6px; font-size:11px;" onclick="stopContainer('${c.id}')">⏹ Stop</button>`
+                                : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" onclick="startContainer('${c.id}')">▶ Start</button>`
+                            }
+                            <button class="btn" style="padding: 3px 6px; font-size:11px;" onclick="restartContainer('${c.id}')">↻</button>
+                            <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" onclick="viewLogs('${name}')">📜 Logs</button>
+                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeContainer('${c.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error(err);
             }
-            tbody.innerHTML = workloads.map(w => `
-                <tr>
-                    <td><strong>${w.name}</strong></td>
-                    <td><span class="badge badge-healthy">v${w.current_release}</span></td>
-                    <td><code>${w.commit_sha ? w.commit_sha.substring(0, 7) : 'n/a'}</code></td>
-                    <td><code>${w.image_tag}</code></td>
-                    <td><span class="badge badge-${w.status === 'running' ? 'healthy' : 'warn'}">${w.status}</span></td>
-                    <td>${w.host_port ? `localhost:${w.host_port}` : 'None'}</td>
-                    <td><button class="btn" style="padding: 4px 8px; font-size:11px;" onclick="rollback('${w.name}', ${Math.max(1, w.current_release - 1)})">Rollback</button></td>
-                </tr>
-            `).join('');
         }
 
-        function renderJobs(jobs) {
-            const tbody = document.getElementById('jobs-table');
-            if (!jobs || jobs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Job queue idle</td></tr>';
-                return;
+        async function fetchPods() {
+            try {
+                const res = await fetch('/api/v1/pods');
+                const list = await res.json() || [];
+                const tbody = document.getElementById('pods-table');
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No pods created. Click "+ Create Pod" to provision a multi-container pod.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(p => `
+                    <tr>
+                        <td><strong>${p.name}</strong></td>
+                        <td><code>${p.id}</code></td>
+                        <td><span class="badge badge-${p.status.toLowerCase() === 'running' ? 'running' : 'stopped'}">${p.status}</span></td>
+                        <td>${p.number_of_containers} containers</td>
+                        <td>${p.ports ? p.ports.join(', ') : 'None'}</td>
+                        <td>
+                            ${p.status.toLowerCase() === 'running'
+                                ? `<button class="btn btn-amber" style="padding: 3px 6px; font-size:11px;" onclick="stopPod('${p.id}')">⏹</button>`
+                                : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" onclick="startPod('${p.id}')">▶</button>`
+                            }
+                            <button class="btn" style="padding: 3px 6px; font-size:11px;" onclick="restartPod('${p.id}')">↻</button>
+                            <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" onclick="viewKube('${p.id}')">📄 Kube</button>
+                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removePod('${p.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
             }
-            tbody.innerHTML = jobs.slice(0, 6).map(j => `
-                <tr>
-                    <td><code>${j.id.substring(0, 12)}...</code></td>
-                    <td>${j.type}</td>
-                    <td><span class="badge badge-${j.status === 'COMPLETED' ? 'healthy' : (j.status === 'RUNNING' ? 'running' : 'warn')}">${j.status}</span></td>
-                    <td>${j.retry_count} / ${j.max_retries}</td>
-                    <td>${new Date(j.scheduled_at).toLocaleTimeString()}</td>
-                </tr>
-            `).join('');
         }
 
-        async function triggerCheckpoint() {
-            await fetch('/api/v1/database/checkpoint', { method: 'POST' });
-            refreshData();
+        async function fetchImages() {
+            try {
+                const res = await fetch('/api/v1/images');
+                const list = await res.json() || [];
+                const tbody = document.getElementById('images-table');
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No images found.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(img => `
+                    <tr>
+                        <td><strong>${img.repository}</strong></td>
+                        <td><span class="badge badge-healthy">${img.tag}</span></td>
+                        <td><code>${img.id}</code></td>
+                        <td>${img.size}</td>
+                        <td>${img.created ? new Date(img.created).toLocaleDateString() : 'n/a'}</td>
+                        <td>
+                            <button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" onclick="quickRunImage('${img.repository}:${img.tag}')">🚀 Run</button>
+                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeImage('${img.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchVolumes() {
+            try {
+                const res = await fetch('/api/v1/podman/volumes');
+                const list = await res.json() || [];
+                const tbody = document.getElementById('volumes-table');
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No volumes found.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(v => `
+                    <tr>
+                        <td><strong>${v.name}</strong></td>
+                        <td><span class="badge">${v.driver}</span></td>
+                        <td><code>${v.mountpoint}</code></td>
+                        <td>
+                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeVolume('${v.name}')">🗑️ Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchNetworks() {
+            try {
+                const res = await fetch('/api/v1/podman/networks');
+                const list = await res.json() || [];
+                const tbody = document.getElementById('networks-table');
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No networks found.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(n => `
+                    <tr>
+                        <td><strong>${n.name}</strong></td>
+                        <td><code>${n.id}</code></td>
+                        <td><span class="badge">${n.driver}</span></td>
+                        <td>${n.subnet || 'Auto'}</td>
+                        <td>${n.gateway || 'Auto'}</td>
+                        <td>
+                            <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeNetwork('${n.name}')">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchDeployments() {
+            try {
+                const res = await fetch('/api/v1/workloads');
+                const list = await res.json() || [];
+                const tbody = document.getElementById('workloads-list-table');
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No workloads deployed yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(w => `
+                    <tr>
+                        <td><strong>${w.name}</strong></td>
+                        <td><span class="badge badge-healthy">v${w.current_release}</span></td>
+                        <td><span class="badge badge-${w.status === 'running' ? 'healthy' : 'warn'}">${w.status}</span></td>
+                        <td>${w.host_port ? `localhost:${w.host_port}` : 'None'}</td>
+                        <td>
+                            <button class="btn" style="padding: 2px 6px; font-size:11px;" onclick="rollback('${w.name}', ${Math.max(1, w.current_release - 1)})">Rollback</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchTelemetry() {
+            try {
+                const dbRes = await fetch('/api/v1/database/status');
+                const db = await dbRes.json();
+                document.getElementById('db-status-box').innerText = JSON.stringify(db, null, 2);
+
+                const jobsRes = await fetch('/api/v1/jobs');
+                const jobs = await jobsRes.json() || [];
+                const tbody = document.getElementById('jobs-telemetry-table');
+                if (jobs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No background jobs</td></tr>';
+                } else {
+                    tbody.innerHTML = jobs.slice(0, 10).map(j => `
+                        <tr>
+                            <td><code>${j.id.substring(0, 10)}...</code></td>
+                            <td>${j.type}</td>
+                            <td><span class="badge badge-${j.status === 'COMPLETED' ? 'healthy' : 'warn'}">${j.status}</span></td>
+                            <td>${new Date(j.scheduled_at).toLocaleTimeString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Container Actions
+        // -------------------------------------------------------------
+
+        async function submitRunContainer() {
+            const name = document.getElementById('ctr-name').value.trim();
+            const image = document.getElementById('ctr-image').value.trim();
+            const portsStr = document.getElementById('ctr-ports').value.trim();
+            const pod = document.getElementById('ctr-pod').value.trim();
+            const volsStr = document.getElementById('ctr-vols').value.trim();
+
+            const ports = portsStr ? [portsStr] : [];
+            const vols = volsStr ? [volsStr] : [];
+
+            const res = await fetch('/api/v1/containers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ name, image, pod, ports, volumes: vols })
+            });
+
+            if (res.ok) {
+                closeModal('run-container-modal');
+                fetchContainers();
+            } else {
+                alert('Failed to start container: ' + await res.text());
+            }
+        }
+
+        async function startContainer(id) {
+            await fetch(`/api/v1/containers/${id}/start`, { method: 'POST', headers: getAuthHeader() });
+            fetchContainers();
+        }
+
+        async function stopContainer(id) {
+            await fetch(`/api/v1/containers/${id}/stop`, { method: 'POST', headers: getAuthHeader() });
+            fetchContainers();
+        }
+
+        async function restartContainer(id) {
+            await fetch(`/api/v1/containers/${id}/restart`, { method: 'POST', headers: getAuthHeader() });
+            fetchContainers();
+        }
+
+        async function removeContainer(id) {
+            if (confirm(`Remove container ${id}?`)) {
+                await fetch(`/api/v1/containers/${id}?force=true`, { method: 'DELETE', headers: getAuthHeader() });
+                fetchContainers();
+            }
+        }
+
+        async function viewLogs(idOrName) {
+            activeContainerForLogs = idOrName;
+            document.getElementById('logs-modal-title').innerText = `📜 Logs & Shell: ${idOrName}`;
+            document.getElementById('logs-content').innerText = 'Fetching logs...';
+            openModal('logs-modal');
+
+            const res = await fetch(`/api/v1/containers/${idOrName}/logs?tail=50`);
+            const data = await res.json();
+            document.getElementById('logs-content').innerText = data.logs || 'No log output captured.';
+        }
+
+        async function submitExec() {
+            const cmdStr = document.getElementById('exec-input').value.trim();
+            if (!cmdStr || !activeContainerForLogs) return;
+
+            const res = await fetch(`/api/v1/containers/${activeContainerForLogs}/exec`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ command: cmdStr.split(' ') })
+            });
+            const data = await res.json();
+            document.getElementById('logs-content').innerText += `\n$ ${cmdStr}\n${data.output || 'Command executed.'}`;
+            document.getElementById('exec-input').value = '';
+        }
+
+        // -------------------------------------------------------------
+        // Pod Actions
+        // -------------------------------------------------------------
+
+        async function submitCreatePod() {
+            const name = document.getElementById('pod-name').value.trim();
+            const portsStr = document.getElementById('pod-ports').value.trim();
+            const ports = portsStr ? portsStr.split(',').map(s => s.trim()) : [];
+
+            const res = await fetch('/api/v1/pods', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ name, ports })
+            });
+
+            if (res.ok) {
+                closeModal('create-pod-modal');
+                fetchPods();
+            } else {
+                alert('Failed to create pod: ' + await res.text());
+            }
+        }
+
+        async function startPod(id) {
+            await fetch(`/api/v1/pods/${id}/start`, { method: 'POST', headers: getAuthHeader() });
+            fetchPods();
+        }
+
+        async function stopPod(id) {
+            await fetch(`/api/v1/pods/${id}/stop`, { method: 'POST', headers: getAuthHeader() });
+            fetchPods();
+        }
+
+        async function restartPod(id) {
+            await fetch(`/api/v1/pods/${id}/restart`, { method: 'POST', headers: getAuthHeader() });
+            fetchPods();
+        }
+
+        async function removePod(id) {
+            if (confirm(`Remove pod ${id}?`)) {
+                await fetch(`/api/v1/pods/${id}?force=true`, { method: 'DELETE', headers: getAuthHeader() });
+                fetchPods();
+            }
+        }
+
+        async function viewKube(id) {
+            const res = await fetch(`/api/v1/pods/${id}/kube`);
+            const data = await res.json();
+            document.getElementById('kube-content').innerText = data.kube_yaml || 'YAML unavailable';
+            openModal('kube-modal');
+        }
+
+        // -------------------------------------------------------------
+        // Images & Volumes & Networks
+        // -------------------------------------------------------------
+
+        async function submitPullImage() {
+            const image = document.getElementById('pull-image-name').value.trim();
+            if (!image) return;
+            const res = await fetch('/api/v1/images/pull', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ image })
+            });
+            if (res.ok) {
+                closeModal('pull-image-modal');
+                fetchImages();
+            } else {
+                alert('Pull failed: ' + await res.text());
+            }
+        }
+
+        async function removeImage(id) {
+            if (confirm(`Delete image ${id}?`)) {
+                await fetch(`/api/v1/images/${id}?force=true`, { method: 'DELETE', headers: getAuthHeader() });
+                fetchImages();
+            }
+        }
+
+        function quickRunImage(image) {
+            document.getElementById('ctr-image').value = image;
+            document.getElementById('ctr-name').value = 'app-' + Math.floor(Math.random()*1000);
+            openModal('run-container-modal');
+        }
+
+        async function submitCreateVolume() {
+            const name = document.getElementById('new-vol-name').value.trim();
+            if (!name) return;
+            await fetch('/api/v1/podman/volumes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ name })
+            });
+            closeModal('create-volume-modal');
+            fetchVolumes();
+        }
+
+        async function removeVolume(name) {
+            if (confirm(`Delete volume ${name}?`)) {
+                await fetch(`/api/v1/podman/volumes/${name}`, { method: 'DELETE', headers: getAuthHeader() });
+                fetchVolumes();
+            }
+        }
+
+        async function submitCreateNetwork() {
+            const name = document.getElementById('new-net-name').value.trim();
+            const subnet = document.getElementById('new-net-subnet').value.trim();
+            const gateway = document.getElementById('new-net-gateway').value.trim();
+            if (!name) return;
+            await fetch('/api/v1/podman/networks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({ name, subnet, gateway })
+            });
+            closeModal('create-network-modal');
+            fetchNetworks();
+        }
+
+        async function removeNetwork(name) {
+            if (confirm(`Delete network ${name}?`)) {
+                await fetch(`/api/v1/podman/networks/${name}`, { method: 'DELETE', headers: getAuthHeader() });
+                fetchNetworks();
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Deployments & Milestone
+        // -------------------------------------------------------------
+
+        async function deployManifest() {
+            const yamlText = document.getElementById('manifest-editor').value;
+            const res = await fetch('/api/v1/deployments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain', ...getAuthHeader() },
+                body: yamlText
+            });
+            if (res.ok) {
+                alert('Deployment triggered successfully!');
+                fetchDeployments();
+            } else {
+                alert('Deployment failed: ' + await res.text());
+            }
         }
 
         async function rollback(appName, targetRelease) {
             if (confirm(`Roll back ${appName} to release ${targetRelease}?`)) {
-                await fetch(`/api/v1/deployments/${appName}/rollback?release=${targetRelease}`, { method: 'POST' });
-                refreshData();
+                await fetch(`/api/v1/deployments/${appName}/rollback?release=${targetRelease}`, {
+                    method: 'POST',
+                    headers: getAuthHeader()
+                });
+                fetchDeployments();
             }
         }
 
         async function runMilestone() {
-            const logEl = document.getElementById('telemetry-log');
-            logEl.innerText = "Starting Milestone 1 Execution...\n";
-            document.getElementById('milestone-badge').innerText = "Running...";
-
+            const logBox = document.getElementById('milestone-quick-log');
+            if (logBox) logBox.innerText = 'Executing Milestone 1 (16 Steps)...\n';
             try {
-                const res = await fetch('/api/v1/milestone/run', { method: 'POST' });
+                const res = await fetch('/api/v1/milestone/run', { method: 'POST', headers: getAuthHeader() });
                 const result = await res.json();
-                
-                if (result.steps) {
-                    const stepsEl = document.getElementById('milestone-steps');
-                    stepsEl.innerHTML = result.steps.map(s => `
-                        <div class="step-item ${s.status === 'COMPLETED' ? 'success' : ''}">
-                            <span>${s.index}. ${s.name}</span>
-                            <span class="badge badge-${s.status === 'COMPLETED' ? 'healthy' : 'warn'}">${s.status}</span>
-                        </div>
-                    `).join('');
-                }
-
-                logEl.innerText += result.output || "Milestone 1 completed successfully!";
-                document.getElementById('milestone-badge').innerText = "Completed";
-                refreshData();
+                if (logBox) logBox.innerText = result.output || 'Milestone completed successfully!';
+                refreshCurrentTab();
             } catch (err) {
-                logEl.innerText += "\nMilestone execution failed: " + err;
+                if (logBox) logBox.innerText += 'Failed: ' + err;
             }
         }
 
-        setInterval(refreshData, 3000);
-        refreshData();
+        async function triggerCheckpoint() {
+            await fetch('/api/v1/database/checkpoint?mode=TRUNCATE', { method: 'POST', headers: getAuthHeader() });
+            fetchTelemetry();
+        }
+
+        async function triggerBackup() {
+            const res = await fetch('/api/v1/database/backup', { method: 'POST', headers: getAuthHeader() });
+            const data = await res.json();
+            alert('Backup created at: ' + data.path);
+            fetchTelemetry();
+        }
+
+        // -------------------------------------------------------------
+        // Auth Handlers
+        // -------------------------------------------------------------
+
+        function toggleAuthTab(tab) {
+            if (tab === 'login') {
+                document.getElementById('auth-login-form').style.display = 'block';
+                document.getElementById('auth-register-form').style.display = 'none';
+                document.getElementById('tab-login-btn').className = 'btn btn-primary';
+                document.getElementById('tab-register-btn').className = 'btn';
+            } else {
+                document.getElementById('auth-login-form').style.display = 'none';
+                document.getElementById('auth-register-form').style.display = 'block';
+                document.getElementById('tab-login-btn').className = 'btn';
+                document.getElementById('tab-register-btn').className = 'btn btn-primary';
+            }
+        }
+
+        async function submitLogin() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('procloud_token', data.token);
+                localStorage.setItem('procloud_user', JSON.stringify(data.user));
+                updateUserUI();
+                closeModal('auth-modal');
+            } else {
+                alert('Invalid credentials');
+            }
+        }
+
+        async function submitRegister() {
+            const u = document.getElementById('reg-username').value.trim();
+            const e = document.getElementById('reg-email').value.trim();
+            const p = document.getElementById('reg-password').value.trim();
+            const r = document.getElementById('reg-role').value;
+            const res = await fetch('/api/v1/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, email: e, password: p, role: r })
+            });
+            if (res.ok) {
+                alert('User created! Please log in.');
+                toggleAuthTab('login');
+            } else {
+                alert('Registration failed: ' + await res.text());
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('procloud_token');
+            localStorage.removeItem('procloud_user');
+            updateUserUI();
+        }
+
+        function updateUserUI() {
+            const userStr = localStorage.getItem('procloud_user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                document.getElementById('username-label').innerText = user.username;
+                document.getElementById('userrole-label').innerText = (user.role || 'MEMBER').toUpperCase();
+                document.getElementById('user-display').style.display = 'flex';
+                document.getElementById('login-btn').style.display = 'none';
+            } else {
+                document.getElementById('user-display').style.display = 'none';
+                document.getElementById('login-btn').style.display = 'inline-flex';
+            }
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        // Init
+        updateUserUI();
+        fetchDashboard();
+        setInterval(refreshCurrentTab, 4000);
     </script>
 </body>
 </html>
