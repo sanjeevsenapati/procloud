@@ -3650,7 +3650,10 @@ spec:
                 if (backdrop) backdrop.classList.remove('active');
             }
 
-            refreshCurrentTab();
+            // Do not call refreshCurrentTab() for container-details to prevent recursive re-inspection
+            if (tabName !== 'container-details') {
+                refreshCurrentTab();
+            }
         }
 
         function refreshCurrentTab() {
@@ -3666,10 +3669,23 @@ spec:
                 case 'telemetry': fetchTelemetry(); break;
                 case 'milestone': break;
                 case 'container-details':
-                    if (currentContainerDetails && typeof openContainerDetails === 'function') {
-                        openContainerDetails(currentContainerDetails.id);
-                    }
+                    // Refresh data in-place without re-triggering switchTab
+                    refreshCurrentContainerDetails();
                     break;
+            }
+        }
+
+        async function refreshCurrentContainerDetails() {
+            if (!currentContainerDetails || !currentContainerDetails.id) return;
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    currentContainerDetails = data;
+                    renderContainerDetails(data);
+                }
+            } catch (e) {
+                console.error("refreshCurrentContainerDetails error:", e);
             }
         }
 
