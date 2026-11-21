@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProCloud — Single-Node Sovereign Cloud Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --bg-surface: #111827;
+            --bg-card: #162032;
+            --border: #1f2d44;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --emerald: #10b981;
+            --amber: #f59e0b;
+            --rose: #f43f5e;
+            --purple: #a855f7;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .brand-badge {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .btn {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover { background: var(--border); }
+        .btn-primary {
+            background: #0284c7;
+            border-color: #38bdf8;
+            color: #fff;
+        }
+        .btn-primary:hover { background: #0369a1; }
+        .btn-emerald {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--emerald);
+            color: var(--emerald);
+        }
+        .btn-emerald:hover { background: rgba(16, 185, 129, 0.25); }
+
+        main {
+            flex: 1;
+            padding: 28px;
+            max-width: 1440px;
+            width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+        }
+
+        .stat-card {
+            grid-column: span 3;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+        }
+        .stat-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            margin-top: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .stat-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .panel-title {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .col-8 { grid-column: span 8; }
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-12 { grid-column: span 12; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            text-align: left;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(31, 45, 68, 0.4);
+            color: var(--text-secondary);
+        }
+        tr:hover td {
+            background: rgba(22, 32, 50, 0.5);
+            color: var(--text-primary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .badge-healthy { background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-running { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-warn { background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .console-log {
+            background: #050810;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #38bdf8;
+            max-height: 240px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .milestone-stepper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 380px;
+            overflow-y: auto;
+        }
+        .step-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+        .step-item.success {
+            border-color: rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <span>⚡ ProCloud</span>
+            <span class="brand-badge">Single Node • SQLite WAL</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-emerald" onclick="runMilestone()">▶ Run First Milestone (16 Steps)</button>
+            <button class="btn" onclick="triggerCheckpoint()">⚡ WAL Checkpoint</button>
+            <button class="btn btn-primary" onclick="refreshData()">↻ Refresh</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Top Stats Row -->
+        <div class="stat-card">
+            <div class="stat-title">Compute Node</div>
+            <div class="stat-value" id="node-name">Loading...</div>
+            <div class="stat-sub" id="node-sub">Podman runtime connected</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">SQLite WAL Mode</div>
+            <div class="stat-value" style="color: var(--emerald);" id="wal-status">ACTIVE</div>
+            <div class="stat-sub" id="wal-sub">Zero-downtime journal</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Workloads Active</div>
+            <div class="stat-value" style="color: var(--accent);" id="workloads-count">0</div>
+            <div class="stat-sub" id="workloads-sub">Quadlet managed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Persistent Volumes</div>
+            <div class="stat-value" style="color: var(--purple);" id="volumes-count">0</div>
+            <div class="stat-sub">Independent container lifecycle</div>
+        </div>
+
+        <!-- Left Column: Workloads & Deployments -->
+        <div class="panel col-8">
+            <div class="panel-header">
+                <div class="panel-title">🚀 Workloads & Deployments</div>
+                <span class="badge badge-running" id="dep-count-badge">0 Releases</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Application</th>
+                        <th>Release</th>
+                        <th>Commit SHA</th>
+                        <th>Image Tag</th>
+                        <th>Status</th>
+                        <th>Port / Ingress</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="workloads-table">
+                    <tr><td colspan="7" style="text-align:center; padding: 20px;">No workloads deployed yet. Click "Run First Milestone" to execute end-to-end workflow!</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Right Column: First Milestone Orchestrator -->
+        <div class="panel col-4">
+            <div class="panel-header">
+                <div class="panel-title">🏆 Milestone 1 Progress</div>
+                <span class="badge badge-healthy" id="milestone-badge">Ready</span>
+            </div>
+            <div class="milestone-stepper" id="milestone-steps">
+                <div class="step-item"><span>1. Server Initialization</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>2. SQLite WAL Verification</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>3. Administrator Account</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>4. Podman Node Registration</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>5. Tenant & Project Setup</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>6. Local VPC & Subnet</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>7. ProGit Repo Link</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>8. Containerfile Image Build</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>9. Manifest Validation</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>10. Persistent Volume Creation</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>11. Quadlet Unit Deployment</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>12. Nginx Ingress Exposure</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>13. Health Check & Logs</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>14. Push Commit & Deploy v2</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>15. Instant Rollback to v1</span><span class="badge">PENDING</span></div>
+                <div class="step-item"><span>16. Verify Persistent Storage</span><span class="badge">PENDING</span></div>
+            </div>
+        </div>
+
+        <!-- Bottom: Durable SQLite Job Queue & Database Metrics -->
+        <div class="panel col-6">
+            <div class="panel-header">
+                <div class="panel-title">📦 Background Job Engine (SQLite)</div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Retries</th>
+                        <th>Scheduled At</th>
+                    </tr>
+                </thead>
+                <tbody id="jobs-table">
+                    <tr><td colspan="5" style="text-align:center;">Job queue idle</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel col-6">
+            <div class="panel-header">
+                <div class="panel-title">🛡️ System Telemetry & WAL Health</div>
+            </div>
+            <div class="console-log" id="telemetry-log">Initializing ProCloud single-node control plane...</div>
+        </div>
+    </main>
+
+    <script>
+        async function refreshData() {
+            try {
+                const nodeRes = await fetch('/api/v1/nodes');
+                const nodeData = await nodeRes.json();
+                if (nodeData && nodeData.length > 0) {
+                    const n = nodeData[0];
+                    document.getElementById('node-name').innerText = n.hostname;
+                    document.getElementById('node-sub').innerText = `${n.arch} • ${n.os} • ${n.podman_version}`;
+                }
+
+                const dbRes = await fetch('/api/v1/database/status');
+                const dbData = await dbRes.json();
+                if (dbData) {
+                    document.getElementById('wal-status').innerText = dbData.mode.toUpperCase();
+                    document.getElementById('wal-sub').innerText = `DB: ${(dbData.db_size_bytes/1024).toFixed(1)} KB • WAL: ${(dbData.wal_size_bytes/1024).toFixed(1)} KB`;
+                }
+
+                const wlRes = await fetch('/api/v1/workloads');
+                const wlData = await wlRes.json();
+                if (wlData) {
+                    document.getElementById('workloads-count').innerText = wlData.length;
+                    renderWorkloads(wlData);
+                }
+
+                const volRes = await fetch('/api/v1/volumes');
+                const volData = await volRes.json();
+                if (volData) {
+                    document.getElementById('volumes-count').innerText = volData.length;
+                }
+
+                const jobRes = await fetch('/api/v1/jobs');
+                const jobData = await jobRes.json();
+                if (jobData) {
+                    renderJobs(jobData);
+                }
+            } catch (err) {
+                console.error("Failed to refresh data", err);
+            }
+        }
+
+        function renderWorkloads(workloads) {
+            const tbody = document.getElementById('workloads-table');
+            if (workloads.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No workloads deployed yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = workloads.map(w => `
+                <tr>
+                    <td><strong>${w.name}</strong></td>
+                    <td><span class="badge badge-healthy">v${w.current_release}</span></td>
+                    <td><code>${w.commit_sha ? w.commit_sha.substring(0, 7) : 'n/a'}</code></td>
+                    <td><code>${w.image_tag}</code></td>
+                    <td><span class="badge badge-${w.status === 'running' ? 'healthy' : 'warn'}">${w.status}</span></td>
+                    <td>${w.host_port ? `localhost:${w.host_port}` : 'None'}</td>
+                    <td><button class="btn" style="padding: 4px 8px; font-size:11px;" onclick="rollback('${w.name}', ${Math.max(1, w.current_release - 1)})">Rollback</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderJobs(jobs) {
+            const tbody = document.getElementById('jobs-table');
+            if (!jobs || jobs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Job queue idle</td></tr>';
+                return;
+            }
+            tbody.innerHTML = jobs.slice(0, 6).map(j => `
+                <tr>
+                    <td><code>${j.id.substring(0, 12)}...</code></td>
+                    <td>${j.type}</td>
+                    <td><span class="badge badge-${j.status === 'COMPLETED' ? 'healthy' : (j.status === 'RUNNING' ? 'running' : 'warn')}">${j.status}</span></td>
+                    <td>${j.retry_count} / ${j.max_retries}</td>
+                    <td>${new Date(j.scheduled_at).toLocaleTimeString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function triggerCheckpoint() {
+            await fetch('/api/v1/database/checkpoint', { method: 'POST' });
+            refreshData();
+        }
+
+        async function rollback(appName, targetRelease) {
+            if (confirm(`Roll back ${appName} to release ${targetRelease}?`)) {
+                await fetch(`/api/v1/deployments/${appName}/rollback?release=${targetRelease}`, { method: 'POST' });
+                refreshData();
+            }
+        }
+
+        async function runMilestone() {
+            const logEl = document.getElementById('telemetry-log');
+            logEl.innerText = "Starting Milestone 1 Execution...\n";
+            document.getElementById('milestone-badge').innerText = "Running...";
+
+            try {
+                const res = await fetch('/api/v1/milestone/run', { method: 'POST' });
+                const result = await res.json();
+                
+                if (result.steps) {
+                    const stepsEl = document.getElementById('milestone-steps');
+                    stepsEl.innerHTML = result.steps.map(s => `
+                        <div class="step-item ${s.status === 'COMPLETED' ? 'success' : ''}">
+                            <span>${s.index}. ${s.name}</span>
+                            <span class="badge badge-${s.status === 'COMPLETED' ? 'healthy' : 'warn'}">${s.status}</span>
+                        </div>
+                    `).join('');
+                }
+
+                logEl.innerText += result.output || "Milestone 1 completed successfully!";
+                document.getElementById('milestone-badge').innerText = "Completed";
+                refreshData();
+            } catch (err) {
+                logEl.innerText += "\nMilestone execution failed: " + err;
+            }
+        }
+
+        setInterval(refreshData, 3000);
+        refreshData();
+    </script>
+</body>
+</html>

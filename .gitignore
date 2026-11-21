@@ -1,0 +1,22 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# SQLite databases & journals
+*.db
+*.db-wal
+*.db-shm
+*.db-*
+backups/
+
+# Test temp files
+*.test
+*.out
+
+# OS & Editor
+.DS_Store
+.idea/
+.vscode/

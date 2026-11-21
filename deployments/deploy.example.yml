@@ -1,0 +1,53 @@
+apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: web-api
+  project: demo-proj
+  namespace: default
+  labels:
+    app: web-api
+    tier: backend
+spec:
+  replicas: 1
+  image:
+    repository: localhost/web-api
+    tag: v1.0.0
+    build:
+      context: .
+      containerfile: Containerfile
+  ports:
+    - containerPort: 8080
+      hostPort: 8080
+      protocol: TCP
+      ingress:
+        enabled: true
+        domain: api.procloud.local
+        path: /
+  env:
+    - name: PORT
+      value: "8080"
+    - name: ENV
+      value: "production"
+    - name: LOG_LEVEL
+      value: "info"
+  volumes:
+    - name: api-storage
+      mountPath: /data
+      size: 5Gi
+      readOnly: false
+  resources:
+    limits:
+      cpu: "1.0"
+      memory: "512Mi"
+    requests:
+      cpu: "0.2"
+      memory: "128Mi"
+  healthCheck:
+    httpGet:
+      path: /healthz
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  restartPolicy: always
