@@ -45,6 +45,7 @@ type ContainerRuntime interface {
 	RemovePod(ctx context.Context, nameOrID string, force bool) error
 	InspectPod(ctx context.Context, nameOrID string) (*PodInspect, error)
 	GenerateKube(ctx context.Context, nameOrID string) (string, error)
+	PlayKube(ctx context.Context, kubeYAML string) (*PlayKubeResult, error)
 
 	// Networks & Volumes
 	ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
@@ -85,15 +86,44 @@ type RunOptions struct {
 	Detach     bool              `json:"detach"`
 }
 
+type PlayKubeResult struct {
+	Pods       []string `json:"pods"`
+	Containers []string `json:"containers"`
+	Volumes    []string `json:"volumes"`
+	Output     string   `json:"output"`
+}
+
+type ContainerMountInfo struct {
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+	Mode        string `json:"mode,omitempty"`
+	Type        string `json:"type,omitempty"`
+}
+
 type ContainerStatus struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Image     string    `json:"image"`
-	Status    string    `json:"status"` // running, exited, stopped
-	Running   bool      `json:"running"`
-	ExitCode  int       `json:"exit_code"`
-	IPAddress string    `json:"ip_address"`
-	StartedAt time.Time `json:"started_at"`
+	ID            string               `json:"id"`
+	Name          string               `json:"name"`
+	Image         string               `json:"image"`
+	ImageID       string               `json:"image_id,omitempty"`
+	Status        string               `json:"status"` // running, exited, stopped
+	Running       bool                 `json:"running"`
+	ExitCode      int                  `json:"exit_code"`
+	IPAddress     string               `json:"ip_address"`
+	NetworkName   string               `json:"network_name,omitempty"`
+	Gateway       string               `json:"gateway,omitempty"`
+	Ports         []string             `json:"ports,omitempty"`
+	StartedAt     time.Time            `json:"started_at"`
+	FinishedAt    time.Time            `json:"finished_at,omitempty"`
+	Command       []string             `json:"command,omitempty"`
+	Entrypoint    []string             `json:"entrypoint,omitempty"`
+	Env           []string             `json:"env,omitempty"`
+	WorkingDir    string               `json:"working_dir,omitempty"`
+	User          string               `json:"user,omitempty"`
+	RestartPolicy string               `json:"restart_policy,omitempty"`
+	Mounts        []ContainerMountInfo `json:"mounts,omitempty"`
+	Labels        map[string]string    `json:"labels,omitempty"`
+	Pod           string               `json:"pod,omitempty"`
+	RawInspect    string               `json:"raw_inspect,omitempty"`
 }
 
 type ContainerSummary struct {
@@ -454,20 +484,50 @@ func (p *PodmanCLI) InspectContainer(ctx context.Context, nameOrID string) (*Con
 	}
 
 	var raw []struct {
-		ID    string `json:"Id"`
-		Name  string `json:"Name"`
-		Image string `json:"ImageName"`
-		State struct {
-			Status    string `json:"Status"`
-			Running   bool   `json:"Running"`
-			ExitCode  int    `json:"ExitCode"`
-			StartedAt string `json:"StartedAt"`
+		ID      string `json:"Id"`
+		Name    string `json:"Name"`
+		Image   string `json:"ImageName"`
+		ImageID string `json:"Image"`
+		Pod     string `json:"Pod"`
+		State   struct {
+			Status     string `json:"Status"`
+			Running    bool   `json:"Running"`
+			ExitCode   int    `json:"ExitCode"`
+			StartedAt  string `json:"StartedAt"`
+			FinishedAt string `json:"FinishedAt"`
 		} `json:"State"`
+		Config struct {
+			Cmd        []string          `json:"Cmd"`
+			Entrypoint []string          `json:"Entrypoint"`
+			Env        []string          `json:"Env"`
+			WorkingDir string            `json:"WorkingDir"`
+			User       string            `json:"User"`
+			Labels     map[string]string `json:"Labels"`
+		} `json:"Config"`
+		HostConfig struct {
+			RestartPolicy struct {
+				Name string `json:"Name"`
+			} `json:"RestartPolicy"`
+			PortBindings map[string][]struct {
+				HostPort string `json:"HostPort"`
+			} `json:"PortBindings"`
+		} `json:"HostConfig"`
+		Mounts []struct {
+			Source      string `json:"Source"`
+			Destination string `json:"Destination"`
+			Mode        string `json:"Mode"`
+			Type        string `json:"Type"`
+		} `json:"Mounts"`
 		NetworkSettings struct {
 			IPAddress string `json:"IPAddress"`
+			Gateway   string `json:"Gateway"`
 			Networks  map[string]struct {
 				IPAddress string `json:"IPAddress"`
+				Gateway   string `json:"Gateway"`
 			} `json:"Networks"`
+			Ports map[string][]struct {
+				HostPort string `json:"HostPort"`
+			} `json:"Ports"`
 		} `json:"NetworkSettings"`
 	}
 
@@ -477,25 +537,78 @@ func (p *PodmanCLI) InspectContainer(ctx context.Context, nameOrID string) (*Con
 
 	c := raw[0]
 	ip := c.NetworkSettings.IPAddress
+	gateway := c.NetworkSettings.Gateway
+	netName := "bridge"
 	if ip == "" {
-		for _, net := range c.NetworkSettings.Networks {
+		for nName, net := range c.NetworkSettings.Networks {
+			netName = nName
 			if net.IPAddress != "" {
 				ip = net.IPAddress
+				if net.Gateway != "" {
+					gateway = net.Gateway
+				}
 				break
 			}
 		}
 	}
 
+	var ports []string
+	if c.HostConfig.PortBindings != nil {
+		for cPort, bindings := range c.HostConfig.PortBindings {
+			for _, b := range bindings {
+				if b.HostPort != "" {
+					ports = append(ports, fmt.Sprintf("%s:%s", b.HostPort, cPort))
+				}
+			}
+		}
+	}
+	if len(ports) == 0 && c.NetworkSettings.Ports != nil {
+		for cPort, bindings := range c.NetworkSettings.Ports {
+			for _, b := range bindings {
+				if b.HostPort != "" {
+					ports = append(ports, fmt.Sprintf("%s:%s", b.HostPort, cPort))
+				}
+			}
+		}
+	}
+
+	var mounts []ContainerMountInfo
+	for _, m := range c.Mounts {
+		mounts = append(mounts, ContainerMountInfo{
+			Source:      m.Source,
+			Destination: m.Destination,
+			Mode:        m.Mode,
+			Type:        m.Type,
+		})
+	}
+
 	started, _ := time.Parse(time.RFC3339Nano, c.State.StartedAt)
+	finished, _ := time.Parse(time.RFC3339Nano, c.State.FinishedAt)
+
 	return &ContainerStatus{
-		ID:        c.ID,
-		Name:      strings.TrimPrefix(c.Name, "/"),
-		Image:     c.Image,
-		Status:    c.State.Status,
-		Running:   c.State.Running,
-		ExitCode:  c.State.ExitCode,
-		IPAddress: ip,
-		StartedAt: started,
+		ID:            c.ID,
+		Name:          strings.TrimPrefix(c.Name, "/"),
+		Image:         c.Image,
+		ImageID:       c.ImageID,
+		Status:        c.State.Status,
+		Running:       c.State.Running,
+		ExitCode:      c.State.ExitCode,
+		IPAddress:     ip,
+		NetworkName:   netName,
+		Gateway:       gateway,
+		Ports:         ports,
+		StartedAt:     started,
+		FinishedAt:    finished,
+		Command:       c.Config.Cmd,
+		Entrypoint:    c.Config.Entrypoint,
+		Env:           c.Config.Env,
+		WorkingDir:    c.Config.WorkingDir,
+		User:          c.Config.User,
+		RestartPolicy: c.HostConfig.RestartPolicy.Name,
+		Mounts:        mounts,
+		Labels:        c.Config.Labels,
+		Pod:           c.Pod,
+		RawInspect:    string(out),
 	}, nil
 }
 
@@ -749,6 +862,77 @@ func (p *PodmanCLI) GenerateKube(ctx context.Context, nameOrID string) (string, 
 	cmd := exec.CommandContext(ctx, p.binPath, "generate", "kube", nameOrID)
 	out, err := cmd.Output()
 	return string(out), err
+}
+
+func (p *PodmanCLI) PlayKube(ctx context.Context, kubeYAML string) (*PlayKubeResult, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	tmpFile, err := os.CreateTemp("", "kube-*.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString(kubeYAML); err != nil {
+		tmpFile.Close()
+		return nil, fmt.Errorf("failed to write kube yaml: %w", err)
+	}
+	tmpFile.Close()
+
+	cmd := exec.CommandContext(ctx, p.binPath, "play", "kube", tmpFile.Name())
+	out, err := cmd.CombinedOutput()
+	outputStr := string(out)
+	if err != nil {
+		return nil, fmt.Errorf("podman play kube failed: %w\nOutput: %s", err, outputStr)
+	}
+
+	result := &PlayKubeResult{
+		Output: outputStr,
+	}
+	lines := strings.Split(outputStr, "\n")
+	var currentSection string
+	for _, rawLine := range lines {
+		line := strings.TrimSpace(rawLine)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "Pod:") {
+			val := strings.TrimSpace(strings.TrimPrefix(line, "Pod:"))
+			if val != "" {
+				result.Pods = append(result.Pods, val)
+				currentSection = ""
+			} else {
+				currentSection = "pod"
+			}
+		} else if strings.HasPrefix(line, "Container:") {
+			val := strings.TrimSpace(strings.TrimPrefix(line, "Container:"))
+			if val != "" {
+				result.Containers = append(result.Containers, val)
+				currentSection = ""
+			} else {
+				currentSection = "container"
+			}
+		} else if strings.HasPrefix(line, "Volume:") {
+			val := strings.TrimSpace(strings.TrimPrefix(line, "Volume:"))
+			if val != "" {
+				result.Volumes = append(result.Volumes, val)
+				currentSection = ""
+			} else {
+				currentSection = "volume"
+			}
+		} else if currentSection == "pod" {
+			result.Pods = append(result.Pods, line)
+			currentSection = ""
+		} else if currentSection == "container" {
+			result.Containers = append(result.Containers, line)
+			currentSection = ""
+		} else if currentSection == "volume" {
+			result.Volumes = append(result.Volumes, line)
+			currentSection = ""
+		}
+	}
+	return result, nil
 }
 
 // -------------------------------------------------------------

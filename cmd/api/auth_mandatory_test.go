@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"procloud.io/procloud/internal/database/sqlite"
@@ -25,6 +26,10 @@ func TestMandatoryAuthentication(t *testing.T) {
 
 	repo := sqlite.NewRepository(db)
 	mockRuntime := podman.NewMockRuntime()
+	mockRuntime.RunContainer(context.Background(), podman.RunOptions{
+		Name:  "progit",
+		Image: "docker.io/library/alpine:latest",
+	})
 
 	server := NewServer(db, repo, mockRuntime)
 
@@ -44,6 +49,8 @@ func TestMandatoryAuthentication(t *testing.T) {
 		{"GET", "/api/v1/auth/me"},
 		{"GET", "/api/v1/containers/progit/top"},
 		{"GET", "/api/v1/containers/progit/stats"},
+		{"GET", "/api/v1/containers/progit/containerfile"},
+		{"GET", "/api/v1/containers/progit/kube"},
 	}
 
 	for _, ep := range protectedEndpoints {
@@ -129,6 +136,40 @@ func TestMandatoryAuthentication(t *testing.T) {
 
 	if recMe.Code != http.StatusOK {
 		t.Fatalf("[GET /api/v1/auth/me] expected 200 OK, got %d", recMe.Code)
+	}
+
+	// 7a. Verify Play Kube and Image Build with authentication
+	{
+		// Unauthenticated play kube -> 401
+		reqUnauthPlay := httptest.NewRequest("POST", "/api/v1/pods/kube/play", strings.NewReader(`apiVersion: v1`))
+		recUnauthPlay := httptest.NewRecorder()
+		server.ServeHTTP(recUnauthPlay, reqUnauthPlay)
+		if recUnauthPlay.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for unauth play kube, got %d", recUnauthPlay.Code)
+		}
+
+		// Authenticated play kube -> 200
+		reqAuthPlay := httptest.NewRequest("POST", "/api/v1/pods/kube/play", strings.NewReader("apiVersion: v1\nkind: Pod\nmetadata:\n  name: auth-pod\n"))
+		reqAuthPlay.Header.Set("Authorization", "Bearer "+loginResp.Token)
+		recAuthPlay := httptest.NewRecorder()
+		server.ServeHTTP(recAuthPlay, reqAuthPlay)
+		if recAuthPlay.Code != http.StatusOK {
+			t.Errorf("expected 200 for auth play kube, got %d: %s", recAuthPlay.Code, recAuthPlay.Body.String())
+		}
+
+		// Authenticated image build -> 201
+		buildJSON, _ := json.Marshal(map[string]string{
+			"tag":           "auth-test:v1",
+			"containerfile": "FROM alpine:latest\nCMD [\"echo\", \"ok\"]\n",
+		})
+		reqAuthBuild := httptest.NewRequest("POST", "/api/v1/images/build", bytes.NewReader(buildJSON))
+		reqAuthBuild.Header.Set("Content-Type", "application/json")
+		reqAuthBuild.Header.Set("Authorization", "Bearer "+loginResp.Token)
+		recAuthBuild := httptest.NewRecorder()
+		server.ServeHTTP(recAuthBuild, reqAuthBuild)
+		if recAuthBuild.Code != http.StatusCreated {
+			t.Errorf("expected 201 for auth build image, got %d: %s", recAuthBuild.Code, recAuthBuild.Body.String())
+		}
 	}
 
 	// 8. Test Registration of a new user and login

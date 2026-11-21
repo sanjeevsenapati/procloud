@@ -768,6 +768,59 @@
             transition: width 0.4s ease;
         }
 
+        /* Per-Container Details Page */
+        .cd-header-card {
+            background: var(--pg-card);
+            border: 1px solid var(--pg-border);
+            border-radius: 12px;
+            padding: 18px 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .cd-subnav {
+            display: flex;
+            gap: 6px;
+            border-bottom: 1px solid var(--pg-border);
+            margin-bottom: 20px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .cd-subnav-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--pg-text-secondary);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .cd-subnav-tab:hover {
+            color: var(--pg-blue-600);
+            background: #f0f6ff;
+            border-radius: 6px 6px 0 0;
+        }
+        .cd-subnav-tab.active {
+            color: var(--pg-blue-600);
+            border-bottom-color: var(--pg-blue-600);
+            background: #eff6ff;
+            border-radius: 6px 6px 0 0;
+        }
+        .cd-subcontent {
+            display: none;
+        }
+        .cd-subcontent.active {
+            display: block;
+        }
+
         /* Responsive Breakpoints */
         @media (max-width: 960px) {
             header.progit-navbar {
@@ -1082,6 +1135,497 @@
             </div>
         </div>
 
+        <!-- 2a. PER-CONTAINER DETAILS PAGE -->
+        <div id="tab-container-details" class="tab-content">
+            <!-- Header Card with Back button and Actions -->
+            <div class="cd-header-card">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <button class="btn" style="padding:5px 12px;" onclick="switchTab('containers')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                        <span>Back to Containers</span>
+                    </button>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <svg class="icon-svg icon-svg-lg" style="color:var(--pg-blue-600);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <h2 id="cd-title-name" style="font-size:18px; font-weight:800; margin:0; color:var(--pg-text);">container-name</h2>
+                                <span id="cd-state-pill" class="pill pill-running">running</span>
+                                <span id="cd-pod-badge" class="pill pill-blue" style="display:none;"></span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:4px; font-size:12px; color:var(--pg-text-muted);">
+                                <span>ID: <code id="cd-short-id" style="color:var(--pg-blue-600);"></code></span>
+                                <span>•</span>
+                                <span>Image: <code id="cd-image-badge"></code></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button id="cd-btn-start" class="btn btn-emerald" style="display:none;" onclick="startContainer(currentContainerDetails.id, currentContainerDetails.name)">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <span>Start</span>
+                    </button>
+                    <button id="cd-btn-stop" class="btn btn-rose" style="display:none;" onclick="stopContainer(currentContainerDetails.id, currentContainerDetails.name)">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                        <span>Stop</span>
+                    </button>
+                    <button class="btn" onclick="restartContainer(currentContainerDetails.id, currentContainerDetails.name)">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                        <span>Restart</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="switchContainerSubTab('terminal')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                        <span>Terminal</span>
+                    </button>
+                    <button class="btn" onclick="switchContainerSubTab('logs')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span>Logs</span>
+                    </button>
+                    <button class="btn btn-rose" onclick="removeContainer(currentContainerDetails.id, currentContainerDetails.name)">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Container Sub-Navigation Tabs Bar -->
+            <div class="cd-subnav">
+                <div class="cd-subnav-tab active" data-subtab="overview" onclick="switchContainerSubTab('overview')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Overview &amp; Details</span>
+                </div>
+                <div class="cd-subnav-tab" data-subtab="containerfile" onclick="switchContainerSubTab('containerfile')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Containerfile</span>
+                </div>
+                <div class="cd-subnav-tab" data-subtab="logs" onclick="switchContainerSubTab('logs')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span>Logs</span>
+                </div>
+                <div class="cd-subnav-tab" data-subtab="terminal" onclick="switchContainerSubTab('terminal')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                    <span>Terminal</span>
+                </div>
+                <div class="cd-subnav-tab" data-subtab="top" onclick="switchContainerSubTab('top')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    <span>Top Processes</span>
+                </div>
+                <div class="cd-subnav-tab" data-subtab="stats" onclick="switchContainerSubTab('stats')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <span>Resource Utilisation</span>
+                </div>
+                <div class="cd-subnav-tab" data-subtab="kube" onclick="switchContainerSubTab('kube')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>Kube YAML</span>
+                </div>
+                <div class="cd-subnav-tab" data-subtab="raw" onclick="switchContainerSubTab('raw')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                    <span>Raw Inspect</span>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 1: OVERVIEW & DETAILS -->
+            <div id="cd-tab-overview" class="cd-subcontent active">
+                <div class="grid-12">
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Execution State</div>
+                        <div class="stat-number" id="cd-det-state" style="font-size:18px;">Running</div>
+                        <div class="stat-hint" id="cd-det-exitcode">Exit Code: 0</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Networking</div>
+                        <div class="stat-number" id="cd-det-ip" style="font-size:18px; font-family:'JetBrains Mono',monospace;">10.89.0.2</div>
+                        <div class="stat-hint" id="cd-det-net">Network: bridge</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Port Mappings</div>
+                        <div class="stat-number" id="cd-det-ports" style="font-size:18px; font-family:'JetBrains Mono',monospace;">None</div>
+                        <div class="stat-hint" id="cd-det-gateway">Gateway: 10.89.0.1</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Started At</div>
+                        <div class="stat-number" id="cd-det-started" style="font-size:16px;">Just now</div>
+                        <div class="stat-hint" id="cd-det-restart">Restart: always</div>
+                    </div>
+
+                    <!-- Configuration Spec Box -->
+                    <div class="pg-box col-6">
+                        <div class="pg-box-header">
+                            <div class="pg-box-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                                <span>Container Specification</span>
+                            </div>
+                        </div>
+                        <div style="padding:16px;">
+                            <table class="pg-table" style="margin:0;">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:140px; font-weight:600; color:var(--pg-text-secondary);">Image Name</td>
+                                        <td><code id="cd-det-spec-image" style="color:var(--pg-blue-600);"></code></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:600; color:var(--pg-text-secondary);">Image ID</td>
+                                        <td><code id="cd-det-spec-imageid"></code></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:600; color:var(--pg-text-secondary);">Full Container ID</td>
+                                        <td><code id="cd-det-spec-fullid" style="font-size:11px;"></code></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:600; color:var(--pg-text-secondary);">Working Directory</td>
+                                        <td><code id="cd-det-spec-workdir">/</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:600; color:var(--pg-text-secondary);">User</td>
+                                        <td id="cd-det-spec-user">root</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:600; color:var(--pg-text-secondary);">Restart Policy</td>
+                                        <td id="cd-det-spec-restart">always</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:600; color:var(--pg-text-secondary);">Assigned Pod</td>
+                                        <td id="cd-det-spec-pod">None (Standalone)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Execution Details Box -->
+                    <div class="pg-box col-6">
+                        <div class="pg-box-header">
+                            <div class="pg-box-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                                <span>Command &amp; Entrypoint</span>
+                            </div>
+                        </div>
+                        <div style="padding:16px;">
+                            <div style="margin-bottom:12px;">
+                                <div style="font-size:11px; font-weight:700; color:var(--pg-text-muted); text-transform:uppercase; margin-bottom:6px;">Entrypoint</div>
+                                <pre id="cd-det-spec-entrypoint" class="code-view" style="max-height:80px; font-size:11px; margin:0;">[]</pre>
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <div style="font-size:11px; font-weight:700; color:var(--pg-text-muted); text-transform:uppercase; margin-bottom:6px;">Command</div>
+                                <pre id="cd-det-spec-command" class="code-view" style="max-height:80px; font-size:11px; margin:0;">[]</pre>
+                            </div>
+                            <div>
+                                <div style="font-size:11px; font-weight:700; color:var(--pg-text-muted); text-transform:uppercase; margin-bottom:6px;">Metadata Labels</div>
+                                <div id="cd-det-labels-container" style="display:flex; gap:6px; flex-wrap:wrap; font-size:11px;">
+                                    <span style="color:var(--pg-text-muted);">No labels defined.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Volume Mounts Box -->
+                    <div class="pg-box col-6">
+                        <div class="pg-box-header">
+                            <div class="pg-box-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                                <span>Mounted Volumes &amp; Bindings</span>
+                            </div>
+                        </div>
+                        <table class="pg-table">
+                            <thead>
+                                <tr>
+                                    <th>Host / Source</th>
+                                    <th>Container Destination</th>
+                                    <th>Mode</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cd-det-mounts-table">
+                                <tr><td colspan="4" style="text-align:center;">No storage volumes mounted.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Environment Variables Box -->
+                    <div class="pg-box col-6">
+                        <div class="pg-box-header">
+                            <div class="pg-box-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                <span>Environment Variables</span>
+                            </div>
+                        </div>
+                        <div style="max-height:260px; overflow-y:auto;">
+                            <table class="pg-table">
+                                <thead>
+                                    <tr>
+                                        <th>Key</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cd-det-env-table">
+                                    <tr><td colspan="2" style="text-align:center;">No environment variables found.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 2: CONTAINERFILE -->
+            <div id="cd-tab-containerfile" class="cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            <span>Reconstructed Containerfile / Dockerfile</span>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn" onclick="copyCdContainerfile()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>Copy</span>
+                            </button>
+                            <button class="btn" onclick="downloadCdContainerfile()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span>Download</span>
+                            </button>
+                            <button class="btn btn-primary" onclick="openBuildImageModalWithContainerfile()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                                <span>Build New Image from this Containerfile</span>
+                            </button>
+                        </div>
+                    </div>
+                    <pre class="code-view" id="cd-containerfile-view" style="max-height: 480px; font-size:12px; line-height:1.5;">Generating Containerfile...</pre>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 3: LOGS -->
+            <div id="cd-tab-logs" class="cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>Live Container Logs</span>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn" onclick="copyCdLogs()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>Copy Logs</span>
+                            </button>
+                            <button class="btn" onclick="downloadCdLogs()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span>Download</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding: 10px 16px; background:var(--pg-card); border-bottom:1px solid var(--pg-border);">
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <span style="font-size:12px; font-weight:600; color:var(--pg-text-secondary);">Tail:</span>
+                            <select id="cd-logs-tail-select" class="form-input" style="width:auto; padding:3px 8px; font-size:12px;" onchange="fetchCdLogs()">
+                                <option value="50">50 lines</option>
+                                <option value="100" selected>100 lines</option>
+                                <option value="250">250 lines</option>
+                                <option value="500">500 lines</option>
+                            </select>
+                            <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+                                <input type="checkbox" id="cd-logs-live-toggle" checked onchange="this.checked ? startCdLogsPolling() : stopCdLogsPolling()">
+                                <span>Live Stream (2s)</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+                                <input type="checkbox" id="cd-logs-autoscroll" checked>
+                                <span>Auto-scroll</span>
+                            </label>
+                        </div>
+                        <div style="flex:1; max-width:260px;">
+                            <input type="text" id="cd-logs-search" class="form-input" style="padding:4px 8px; font-size:11px;" placeholder="Search in log lines..." oninput="renderFilteredCdLogs()">
+                        </div>
+                    </div>
+
+                    <pre class="code-view" id="cd-logs-content" style="max-height: 480px; height: 440px; font-size: 11px; margin:0; border-radius:0 0 8px 8px;">Loading logs...</pre>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 4: TERMINAL -->
+            <div id="cd-tab-terminal" class="cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                            <span>Interactive Container Exec Shell</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <select id="cd-term-shell" class="form-input" style="width:auto; padding:2px 8px; font-size:11px;">
+                                <option value="/bin/sh">/bin/sh</option>
+                                <option value="/bin/bash">/bin/bash</option>
+                            </select>
+                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="toggleCdTerminalTheme()">
+                                <span id="cd-term-theme-label">Light View</span>
+                            </button>
+                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="clearCdTerminal()">Clear</button>
+                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="copyCdTerminalOutput()">Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="term-container dark-terminal" id="cd-term-box" style="height: 420px; border-radius: 0 0 8px 8px;">
+                        <div class="term-output" id="cd-term-output">
+                            <div style="color:var(--pg-text-muted); font-style:italic;">Connected to container console. Enter shell commands below.</div>
+                        </div>
+                        <div class="term-input-row">
+                            <span class="term-prompt">sh-5.2#</span>
+                            <input type="text" id="cd-term-input" class="term-input" placeholder="Type command (e.g. ls -la, ps aux, cat /etc/os-release)..." onkeydown="handleCdTermKey(event)">
+                            <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" onclick="runCdTerminalCommand()">Exec</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 5: TOP (PROCESSES) -->
+            <div id="cd-tab-top" class="cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            <span>Active Container Processes (Top)</span>
+                        </div>
+                        <button class="btn" onclick="fetchCdTop()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="pg-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>PID</th>
+                                    <th>PPID</th>
+                                    <th>%CPU</th>
+                                    <th>Elapsed</th>
+                                    <th>TTY</th>
+                                    <th>Time</th>
+                                    <th>Command</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cd-top-table-body">
+                                <tr><td colspan="8" style="text-align:center; padding:20px;">Fetching processes...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 6: RESOURCE UTILISATION -->
+            <div id="cd-tab-stats" class="cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            <span>Real-Time Resource Utilisation Telemetry</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer;">
+                                <input type="checkbox" id="cd-stats-live-toggle" checked onchange="this.checked ? startCdStatsPolling() : stopCdStatsPolling()">
+                                <span>Live Telemetry (2s)</span>
+                            </label>
+                            <button class="btn" onclick="fetchCdStats()">Refresh</button>
+                        </div>
+                    </div>
+                    <div style="padding:20px;">
+                        <div class="stats-grid">
+                            <!-- CPU Card -->
+                            <div class="metric-card">
+                                <div class="metric-title">
+                                    <span>CPU Utilisation</span>
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--pg-blue-600)"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/></svg>
+                                </div>
+                                <div class="metric-val" id="cd-stat-cpu">0.00%</div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="cd-stat-cpu-bar" style="width: 0%;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Memory Card -->
+                            <div class="metric-card">
+                                <div class="metric-title">
+                                    <span>Memory Usage &amp; Limit</span>
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--pg-purple)"><path d="M6 19v-3"/><path d="M10 19v-3"/><path d="M14 19v-3"/><path d="M18 19v-3"/><path d="M6 5v3"/><path d="M10 5v3"/><path d="M14 5v3"/><path d="M18 5v3"/><rect width="20" height="8" x="2" y="8" rx="2"/></svg>
+                                </div>
+                                <div class="metric-val" id="cd-stat-mem">0MB / 0MB</div>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="cd-stat-mem-bar" style="width: 0%; background: linear-gradient(90deg, var(--pg-purple), #c084fc);"></div>
+                                </div>
+                                <div style="font-size:11px; color:var(--pg-text-muted); margin-top:4px;" id="cd-stat-mem-pct">Percentage: 0.00%</div>
+                            </div>
+
+                            <!-- Network I/O Card -->
+                            <div class="metric-card">
+                                <div class="metric-title">
+                                    <span>Network I/O</span>
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--pg-sky)"><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                                </div>
+                                <div class="metric-val" id="cd-stat-net-io" style="font-size:18px;">0B / 0B</div>
+                                <div style="font-size:11px; color:var(--pg-text-muted);">Received (Rx) / Transmitted (Tx)</div>
+                            </div>
+
+                            <!-- Block I/O & Tasks Card -->
+                            <div class="metric-card">
+                                <div class="metric-title">
+                                    <span>Block I/O &amp; Tasks</span>
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="var(--pg-emerald)"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                                    <div>
+                                        <div class="metric-val" id="cd-stat-block-io" style="font-size:18px;">0B / 0B</div>
+                                        <div style="font-size:11px; color:var(--pg-text-muted);">Storage Read / Write</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div class="metric-val" id="cd-stat-pids" style="font-size:18px; color:var(--pg-blue-600);">1</div>
+                                        <div style="font-size:11px; color:var(--pg-text-muted);">Active PIDs</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 7: KUBE YAML -->
+            <div id="cd-tab-kube" class="cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                            <span>Kubernetes Pod Manifest (Generated from Container)</span>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn" onclick="copyCdKube()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>Copy YAML</span>
+                            </button>
+                            <button class="btn btn-primary" onclick="deployCdKube()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                                <span>Deploy with Play Kube</span>
+                            </button>
+                        </div>
+                    </div>
+                    <pre class="code-view" id="cd-kube-content" style="max-height: 480px; font-size:12px; line-height:1.45;">Generating Kubernetes YAML...</pre>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 8: RAW INSPECT -->
+            <div id="cd-tab-raw" class="cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                            <span>Raw Container Runtime Inspection (JSON)</span>
+                        </div>
+                        <button class="btn" onclick="copyCdRaw()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>Copy JSON</span>
+                        </button>
+                    </div>
+                    <pre class="code-view" id="cd-raw-content" style="max-height: 480px; font-size:11px; line-height:1.4;">Loading inspect data...</pre>
+                </div>
+            </div>
+        </div>
+
         <!-- 3. PODS TAB -->
         <div id="tab-pods" class="tab-content">
             <div class="pg-box">
@@ -1090,7 +1634,13 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
                         <span>Podman Desktop Pod Provisioning &amp; Management</span>
                     </div>
-                    <button class="btn btn-primary" onclick="openModal('create-pod-modal')">+ Create Pod</button>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-primary" onclick="openPlayKubeModal()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                            <span>Play Kube (Kube Deploy)</span>
+                        </button>
+                        <button class="btn" onclick="openModal('create-pod-modal')">+ Create Pod</button>
+                    </div>
                 </div>
                 <table class="pg-table">
                     <thead>
@@ -1118,7 +1668,13 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/></svg>
                         <span>Container Images Catalog</span>
                     </div>
-                    <button class="btn btn-primary" onclick="openModal('pull-image-modal')">+ Pull Image from Registry</button>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" onclick="openBuildImageModal()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            <span>Build Image</span>
+                        </button>
+                        <button class="btn btn-primary" onclick="openModal('pull-image-modal')">+ Pull Image from Registry</button>
+                    </div>
                 </div>
                 <table class="pg-table">
                     <thead>
@@ -1758,7 +2314,7 @@ spec:
 
     <!-- MODAL: Kube YAML Viewer -->
     <div id="kube-modal" class="modal-overlay">
-        <div class="modal-dialog">
+        <div class="modal-dialog" style="max-width: 720px; width: 95%;">
             <div class="modal-dialog-header">
                 <div class="modal-dialog-title">
                     <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -1769,10 +2325,96 @@ spec:
                         <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                         <span>Copy YAML</span>
                     </button>
+                    <button class="btn btn-primary" style="padding: 2px 8px; font-size:11px;" onclick="deployCurrentKubeYaml()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        <span>Deploy with Play Kube</span>
+                    </button>
                     <div class="modal-dialog-close" onclick="closeModal('kube-modal')">&times;</div>
                 </div>
             </div>
-            <pre class="code-view" id="kube-content" style="max-height: 380px;"></pre>
+            <pre class="code-view" id="kube-content" style="max-height: 420px; font-size:12px; line-height:1.45;"></pre>
+        </div>
+    </div>
+
+    <!-- MODAL: Play Kube (Kubernetes YAML Deployment for Pod) -->
+    <div id="play-kube-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 780px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>Play Kube (Kubernetes Pod Deployment)</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('play-kube-modal')">&times;</div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; font-weight:600; color:var(--pg-text-secondary);">Template:</span>
+                    <select id="play-kube-template-select" class="form-input" style="width:auto; padding:4px 8px; font-size:12px;" onchange="loadPlayKubeTemplate(this.value)">
+                        <option value="nginx">Standard Web Pod (Nginx)</option>
+                        <option value="multicontainer">Multi-Container Pod (Web + Redis Cache)</option>
+                        <option value="volume">Microservice with Persistent Volume</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="btn" style="padding:4px 10px; font-size:12px; cursor:pointer;">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Load YAML File</span>
+                        <input type="file" accept=".yaml,.yml" style="display:none;" onchange="handlePlayKubeFileSelect(event)">
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Kubernetes Pod Manifest (YAML)</label>
+                <textarea id="play-kube-yaml" class="form-input" style="height:320px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.45;"></textarea>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+                <button class="btn" onclick="closeModal('play-kube-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitPlayKube()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>Deploy Pod via Play Kube</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Build Image from Containerfile -->
+    <div id="build-image-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 780px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    <span>Build Image from Containerfile</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('build-image-modal')">&times;</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Image Tag (repository:tag)</label>
+                <input type="text" id="build-image-tag" class="form-input" placeholder="e.g. my-app:latest">
+            </div>
+
+            <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label class="form-label" style="margin-bottom:0;">Containerfile Instructions</label>
+                    <label class="btn" style="padding:2px 8px; font-size:11px; cursor:pointer;">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Load File</span>
+                        <input type="file" style="display:none;" onchange="handleContainerfileFileSelect(event)">
+                    </label>
+                </div>
+                <textarea id="build-image-containerfile" class="form-input" style="height:280px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.45;"></textarea>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+                <button class="btn" onclick="closeModal('build-image-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitBuildImage()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>Start Image Build</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1888,6 +2530,10 @@ spec:
         });
 
         function switchTab(tabName) {
+            if (tabName !== 'container-details') {
+                if (typeof stopCdLogsPolling === 'function') stopCdLogsPolling();
+                if (typeof stopCdStatsPolling === 'function') stopCdStatsPolling();
+            }
             currentTab = tabName;
             document.querySelectorAll('.pg-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -1911,6 +2557,11 @@ spec:
                 case 'networks': fetchNetworks(); break;
                 case 'deployments': fetchDeployments(); break;
                 case 'telemetry': fetchTelemetry(); break;
+                case 'container-details':
+                    if (currentContainerDetails && typeof openContainerDetails === 'function') {
+                        openContainerDetails(currentContainerDetails.id);
+                    }
+                    break;
             }
         }
 
@@ -2577,23 +3228,23 @@ spec:
                         const name = c.names ? c.names[0] : c.id;
                         return `
                         <tr>
-                            <td><strong>${escapeHtml(name)}</strong></td>
+                            <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openContainerDetails('${escapeHtml(c.id)}')">${escapeHtml(name)}</a></td>
                             <td><code style="color:var(--pg-blue-600);">${escapeHtml(c.image)}</code></td>
                             <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${escapeHtml(c.state)}</span></td>
                             <td>${c.ports ? escapeHtml(c.ports.join(', ')) : 'None'}</td>
                             <td>
                                 <div style="display:flex; gap:4px;">
-                                    <button class="btn btn-primary" style="padding: 2px 6px; font-size:10px;" onclick="openTerminal('${escapeHtml(name)}')">
+                                    <button class="btn btn-primary" style="padding: 2px 6px; font-size:10px;" onclick="openContainerDetails('${escapeHtml(c.id)}')">
+                                        <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                        <span>Details</span>
+                                    </button>
+                                    <button class="btn" style="padding: 2px 6px; font-size:10px;" onclick="openTerminal('${escapeHtml(name)}')">
                                         <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
                                         <span>Term</span>
                                     </button>
                                     <button class="btn" style="padding: 2px 6px; font-size:10px;" onclick="openLogs('${escapeHtml(name)}')">
                                         <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                         <span>Logs</span>
-                                    </button>
-                                    <button class="btn" style="padding: 2px 6px; font-size:10px;" onclick="openStats('${escapeHtml(name)}')">
-                                        <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                                        <span>Stats</span>
                                     </button>
                                 </div>
                             </td>
@@ -2620,7 +3271,7 @@ spec:
                     const name = c.names ? c.names[0] : c.id;
                     return `
                     <tr>
-                        <td><strong>${escapeHtml(name)}</strong></td>
+                        <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openContainerDetails('${escapeHtml(c.id)}')">${escapeHtml(name)}</a></td>
                         <td><code style="color:var(--pg-blue-600);">${escapeHtml(c.id)}</code></td>
                         <td><code>${escapeHtml(c.image)}</code></td>
                         <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${escapeHtml(c.state)}</span></td>
@@ -2628,12 +3279,16 @@ spec:
                         <td>${c.created ? new Date(c.created).toLocaleTimeString() : 'n/a'}</td>
                         <td>
                             <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" title="View Details" onclick="openContainerDetails('${escapeHtml(c.id)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    <span>Details</span>
+                                </button>
                                 ${c.state === 'running'
                                     ? `<button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Stop" onclick="stopContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> <span>Stop</span></button>`
                                     : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" title="Start" onclick="startContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> <span>Start</span></button>`
                                 }
                                 <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Restart" onclick="restartContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
-                                <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" title="Open Terminal" onclick="openTerminal('${escapeHtml(name)}')">
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Open Terminal" onclick="openTerminal('${escapeHtml(name)}')">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
                                     <span>Term</span>
                                 </button>
@@ -3483,6 +4138,608 @@ spec:
         function copyKubeYaml() {
             const text = document.getElementById('kube-content').innerText;
             navigator.clipboard.writeText(text).then(() => showToast('Kubernetes YAML copied to clipboard!', 'success'));
+        }
+
+        // -------------------------------------------------------------
+        // Per-Container Details View, Containerfile, Logs, Terminal & Kube
+        // -------------------------------------------------------------
+        let currentContainerDetails = null;
+        let currentContainerDetailsSubTab = 'overview';
+        let cdLogsPollTimer = null;
+        let cdStatsPollTimer = null;
+        let cdRawLogsText = '';
+        let cdCurrentContainerfile = '';
+        let cdCurrentKubeYaml = '';
+        let cdTermHistory = [];
+        let cdTermHistoryIdx = -1;
+
+        async function openContainerDetails(idOrName) {
+            try {
+                switchTab('container-details');
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(idOrName)}`);
+                if (!res.ok) {
+                    showToast('Failed to inspect container: ' + await res.text(), 'error');
+                    return;
+                }
+                const data = await res.json();
+                currentContainerDetails = data;
+                renderContainerDetails(data);
+                switchContainerSubTab('overview');
+            } catch (e) {
+                showToast('Error opening container details: ' + e.message, 'error');
+            }
+        }
+
+        function renderContainerDetails(c) {
+            if (!c) return;
+            const name = c.name || c.id;
+            document.getElementById('cd-title-name').innerText = name;
+            
+            const statePill = document.getElementById('cd-state-pill');
+            const isRunning = c.status === 'running' || c.running;
+            statePill.className = `pill pill-${isRunning ? 'running' : 'stopped'}`;
+            statePill.innerText = isRunning ? 'running' : (c.status || 'stopped');
+
+            const shortId = (c.id || '').substring(0, 12);
+            document.getElementById('cd-short-id').innerText = shortId;
+            document.getElementById('cd-image-badge').innerText = c.image || 'scratch';
+
+            const podBadge = document.getElementById('cd-pod-badge');
+            if (c.pod) {
+                podBadge.innerText = 'Pod: ' + c.pod;
+                podBadge.style.display = 'inline-block';
+            } else {
+                podBadge.style.display = 'none';
+            }
+
+            // Quick action buttons
+            const btnStart = document.getElementById('cd-btn-start');
+            const btnStop = document.getElementById('cd-btn-stop');
+            if (isRunning) {
+                btnStart.style.display = 'none';
+                btnStop.style.display = 'inline-flex';
+            } else {
+                btnStart.style.display = 'inline-flex';
+                btnStop.style.display = 'none';
+            }
+
+            // Overview Metric cards
+            document.getElementById('cd-det-state').innerText = isRunning ? 'Running' : 'Stopped';
+            document.getElementById('cd-det-exitcode').innerText = `Exit Code: ${c.exit_code !== undefined ? c.exit_code : 0}`;
+            document.getElementById('cd-det-ip').innerText = c.ip_address || '127.0.0.1';
+            document.getElementById('cd-det-net').innerText = `Network: ${c.network_name || 'netavark'}`;
+            document.getElementById('cd-det-ports').innerText = (c.ports && c.ports.length > 0) ? c.ports.join(', ') : 'None';
+            document.getElementById('cd-det-gateway').innerText = `Gateway: ${c.gateway || 'Auto'}`;
+            document.getElementById('cd-det-started').innerText = c.started_at ? new Date(c.started_at).toLocaleTimeString() : 'n/a';
+            document.getElementById('cd-det-restart').innerText = `Restart: ${c.restart_policy || 'always'}`;
+
+            // Spec table
+            document.getElementById('cd-det-spec-image').innerText = c.image || 'none';
+            document.getElementById('cd-det-spec-imageid').innerText = (c.image_id || '').substring(0, 16) || 'local';
+            document.getElementById('cd-det-spec-fullid').innerText = c.id || 'none';
+            document.getElementById('cd-det-spec-workdir').innerText = c.working_dir || '/';
+            document.getElementById('cd-det-spec-user').innerText = c.user || 'root';
+            document.getElementById('cd-det-spec-restart').innerText = c.restart_policy || 'always';
+            document.getElementById('cd-det-spec-pod').innerText = c.pod ? c.pod : 'None (Standalone)';
+
+            // Execution Command & Entrypoint
+            document.getElementById('cd-det-spec-entrypoint').innerText = (c.entrypoint && c.entrypoint.length > 0) ? JSON.stringify(c.entrypoint) : '[]';
+            document.getElementById('cd-det-spec-command').innerText = (c.command && c.command.length > 0) ? JSON.stringify(c.command) : '[]';
+
+            // Labels
+            const labelsContainer = document.getElementById('cd-det-labels-container');
+            if (c.labels && Object.keys(c.labels).length > 0) {
+                labelsContainer.innerHTML = Object.entries(c.labels).map(([k, v]) => `
+                    <span class="pill pill-blue" style="font-size:11px;">${escapeHtml(k)}=${escapeHtml(v)}</span>
+                `).join('');
+            } else {
+                labelsContainer.innerHTML = '<span style="color:var(--pg-text-muted);">No labels defined.</span>';
+            }
+
+            // Mounts
+            const mountsTable = document.getElementById('cd-det-mounts-table');
+            if (c.mounts && c.mounts.length > 0) {
+                mountsTable.innerHTML = c.mounts.map(m => `
+                    <tr>
+                        <td><code>${escapeHtml(m.source || m.Source || '')}</code></td>
+                        <td><code>${escapeHtml(m.destination || m.Destination || '')}</code></td>
+                        <td><span class="pill pill-blue">${escapeHtml(m.mode || m.Mode || 'rw')}</span></td>
+                        <td>${escapeHtml(m.type || m.Type || 'bind')}</td>
+                    </tr>
+                `).join('');
+            } else {
+                mountsTable.innerHTML = '<tr><td colspan="4" style="text-align:center;">No storage volumes mounted.</td></tr>';
+            }
+
+            // Environment variables
+            const envTable = document.getElementById('cd-det-env-table');
+            if (c.env && c.env.length > 0) {
+                envTable.innerHTML = c.env.map(e => {
+                    const eqIdx = e.indexOf('=');
+                    const k = eqIdx !== -1 ? e.substring(0, eqIdx) : e;
+                    const v = eqIdx !== -1 ? e.substring(eqIdx + 1) : '';
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(k)}</strong></td>
+                            <td><code>${escapeHtml(v)}</code></td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                envTable.innerHTML = '<tr><td colspan="2" style="text-align:center;">No environment variables found.</td></tr>';
+            }
+
+            // Raw inspect
+            document.getElementById('cd-raw-content').innerText = c.raw_inspect || JSON.stringify(c, null, 2);
+        }
+
+        function switchContainerSubTab(subTab) {
+            currentContainerDetailsSubTab = subTab;
+            document.querySelectorAll('.cd-subnav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.cd-subcontent').forEach(c => c.classList.remove('active'));
+
+            const tabEl = document.querySelector(`.cd-subnav-tab[data-subtab="${subTab}"]`);
+            if (tabEl) tabEl.classList.add('active');
+
+            const contentEl = document.getElementById(`cd-tab-${subTab}`);
+            if (contentEl) contentEl.classList.add('active');
+
+            if (!currentContainerDetails) return;
+
+            if (subTab === 'containerfile') {
+                fetchCdContainerfile();
+            } else if (subTab === 'logs') {
+                fetchCdLogs();
+                const liveToggle = document.getElementById('cd-logs-live-toggle');
+                if (liveToggle && liveToggle.checked) startCdLogsPolling();
+            } else if (subTab === 'terminal') {
+                const termInput = document.getElementById('cd-term-input');
+                if (termInput) setTimeout(() => termInput.focus(), 100);
+            } else if (subTab === 'top') {
+                fetchCdTop();
+            } else if (subTab === 'stats') {
+                fetchCdStats();
+                const liveToggle = document.getElementById('cd-stats-live-toggle');
+                if (liveToggle && liveToggle.checked) startCdStatsPolling();
+            } else if (subTab === 'kube') {
+                fetchCdKube();
+            }
+        }
+
+        // Subtab: Containerfile
+        async function fetchCdContainerfile() {
+            if (!currentContainerDetails) return;
+            const view = document.getElementById('cd-containerfile-view');
+            view.innerText = 'Extracting Containerfile...';
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/containerfile`);
+                if (res.ok) {
+                    const data = await res.json();
+                    cdCurrentContainerfile = data.containerfile || '# No Containerfile generated';
+                    view.innerText = cdCurrentContainerfile;
+                } else {
+                    view.innerText = '# Failed to generate Containerfile: ' + await res.text();
+                }
+            } catch (e) {
+                view.innerText = '# Error: ' + e.message;
+            }
+        }
+
+        function copyCdContainerfile() {
+            navigator.clipboard.writeText(cdCurrentContainerfile).then(() => showToast('Containerfile copied to clipboard!', 'info'));
+        }
+
+        function downloadCdContainerfile() {
+            const blob = new Blob([cdCurrentContainerfile], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Containerfile-${currentContainerDetails.name || 'app'}`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function openBuildImageModalWithContainerfile() {
+            const tag = (currentContainerDetails.image || 'app') + '-custom:v1';
+            openBuildImageModal(tag, cdCurrentContainerfile);
+        }
+
+        // Subtab: Logs
+        async function fetchCdLogs() {
+            if (!currentContainerDetails) return;
+            const tail = document.getElementById('cd-logs-tail-select').value;
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/logs?tail=${tail}`);
+                const data = await res.json();
+                cdRawLogsText = data.logs || 'No log output captured.';
+                renderFilteredCdLogs();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderFilteredCdLogs() {
+            const filter = (document.getElementById('cd-logs-search').value || '').toLowerCase();
+            const logBox = document.getElementById('cd-logs-content');
+            if (!filter) {
+                logBox.innerText = cdRawLogsText;
+            } else {
+                const filtered = cdRawLogsText.split('\n').filter(l => l.toLowerCase().includes(filter)).join('\n');
+                logBox.innerText = filtered || '(No lines matching filter)';
+            }
+            const autoScroll = document.getElementById('cd-logs-autoscroll');
+            if (autoScroll && autoScroll.checked) {
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+        }
+
+        function startCdLogsPolling() {
+            stopCdLogsPolling();
+            cdLogsPollTimer = setInterval(fetchCdLogs, 2000);
+        }
+
+        function stopCdLogsPolling() {
+            if (cdLogsPollTimer) {
+                clearInterval(cdLogsPollTimer);
+                cdLogsPollTimer = null;
+            }
+        }
+
+        function copyCdLogs() {
+            navigator.clipboard.writeText(cdRawLogsText).then(() => showToast('Logs copied to clipboard!', 'info'));
+        }
+
+        function downloadCdLogs() {
+            const blob = new Blob([cdRawLogsText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentContainerDetails.name || 'container'}-logs.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Subtab: Terminal
+        function handleCdTermKey(e) {
+            if (e.key === 'Enter') {
+                runCdTerminalCommand();
+            } else if (e.key === 'ArrowUp') {
+                if (cdTermHistory.length > 0) {
+                    if (cdTermHistoryIdx === -1) cdTermHistoryIdx = cdTermHistory.length - 1;
+                    else if (cdTermHistoryIdx > 0) cdTermHistoryIdx--;
+                    e.target.value = cdTermHistory[cdTermHistoryIdx];
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (cdTermHistory.length > 0 && cdTermHistoryIdx !== -1) {
+                    if (cdTermHistoryIdx < cdTermHistory.length - 1) {
+                        cdTermHistoryIdx++;
+                        e.target.value = cdTermHistory[cdTermHistoryIdx];
+                    } else {
+                        cdTermHistoryIdx = -1;
+                        e.target.value = '';
+                    }
+                }
+            }
+        }
+
+        async function runCdTerminalCommand() {
+            if (!currentContainerDetails) return;
+            const input = document.getElementById('cd-term-input');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            cdTermHistory.push(cmd);
+            cdTermHistoryIdx = -1;
+            input.value = '';
+
+            const outBox = document.getElementById('cd-term-output');
+            const promptLine = document.createElement('div');
+            promptLine.innerHTML = `<span style="color:var(--pg-blue-500);font-weight:700;">sh-5.2#</span> <span style="color:#ffffff;">${escapeHtml(cmd)}</span>`;
+            outBox.appendChild(promptLine);
+
+            try {
+                const shell = document.getElementById('cd-term-shell').value || '/bin/sh';
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/exec`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ raw: cmd, shell: shell })
+                });
+                const data = await res.json();
+                const respLine = document.createElement('pre');
+                respLine.style.margin = '4px 0 10px 0';
+                respLine.style.whiteSpace = 'pre-wrap';
+                respLine.style.fontFamily = "'JetBrains Mono', monospace";
+                respLine.style.color = '#e2e8f0';
+                respLine.innerText = data.output || '(No output)';
+                outBox.appendChild(respLine);
+                outBox.scrollTop = outBox.scrollHeight;
+            } catch (e) {
+                const errLine = document.createElement('div');
+                errLine.style.color = 'var(--pg-rose)';
+                errLine.innerText = 'Command execution failed: ' + e.message;
+                outBox.appendChild(errLine);
+            }
+        }
+
+        function clearCdTerminal() {
+            document.getElementById('cd-term-output').innerHTML = '<div style="color:var(--pg-text-muted);font-style:italic;">Terminal cleared.</div>';
+        }
+
+        function copyCdTerminalOutput() {
+            const text = document.getElementById('cd-term-output').innerText;
+            navigator.clipboard.writeText(text).then(() => showToast('Terminal output copied!', 'info'));
+        }
+
+        function toggleCdTerminalTheme() {
+            const term = document.getElementById('cd-term-box');
+            const label = document.getElementById('cd-term-theme-label');
+            if (term.classList.contains('dark-terminal')) {
+                term.classList.remove('dark-terminal');
+                label.innerText = 'Dark View';
+            } else {
+                term.classList.add('dark-terminal');
+                label.innerText = 'Light View';
+            }
+        }
+
+        // Subtab: Top Processes
+        async function fetchCdTop() {
+            if (!currentContainerDetails) return;
+            const tbody = document.getElementById('cd-top-table-body');
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/top`);
+                const procs = await res.json() || [];
+                if (procs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No running processes reported.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = procs.map(p => `
+                    <tr>
+                        <td><strong>${escapeHtml(p.user || 'root')}</strong></td>
+                        <td><code>${escapeHtml(p.pid || '')}</code></td>
+                        <td><code>${escapeHtml(p.ppid || '')}</code></td>
+                        <td><span class="pill pill-blue">${escapeHtml(p.cpu || '0.0%')}</span></td>
+                        <td>${escapeHtml(p.elapsed || '-')}</td>
+                        <td>${escapeHtml(p.tty || '?')}</td>
+                        <td>${escapeHtml(p.time || '-')}</td>
+                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(p.command || '')}</code></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--pg-rose); padding:20px;">Failed to inspect processes: ${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        // Subtab: Stats
+        async function fetchCdStats() {
+            if (!currentContainerDetails) return;
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/stats`);
+                const stats = await res.json();
+                if (!stats) return;
+
+                document.getElementById('cd-stat-cpu').innerText = stats.cpu_percent || '0.00%';
+                const cpuNum = parseFloat(stats.cpu_percent) || 0;
+                document.getElementById('cd-stat-cpu-bar').style.width = Math.min(100, Math.max(0, cpuNum)) + '%';
+
+                document.getElementById('cd-stat-mem').innerText = stats.mem_usage || '0 MB / 0 MB';
+                document.getElementById('cd-stat-mem-pct').innerText = `Percentage: ${stats.mem_percent || '0.00%'}`;
+                const memNum = parseFloat(stats.mem_percent) || 0;
+                document.getElementById('cd-stat-mem-bar').style.width = Math.min(100, Math.max(0, memNum)) + '%';
+
+                document.getElementById('cd-stat-net-io').innerText = stats.net_io || '0B / 0B';
+                document.getElementById('cd-stat-block-io').innerText = stats.block_io || '0B / 0B';
+                document.getElementById('cd-stat-pids').innerText = stats.pids || '1';
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function startCdStatsPolling() {
+            stopCdStatsPolling();
+            cdStatsPollTimer = setInterval(fetchCdStats, 2000);
+        }
+
+        function stopCdStatsPolling() {
+            if (cdStatsPollTimer) {
+                clearInterval(cdStatsPollTimer);
+                cdStatsPollTimer = null;
+            }
+        }
+
+        // Subtab: Kube
+        async function fetchCdKube() {
+            if (!currentContainerDetails) return;
+            const box = document.getElementById('cd-kube-content');
+            box.innerText = 'Generating Kubernetes YAML...';
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/kube`);
+                const data = await res.json();
+                cdCurrentKubeYaml = data.kube_yaml || '# YAML unavailable';
+                box.innerText = cdCurrentKubeYaml;
+            } catch (e) {
+                box.innerText = '# Error generating YAML: ' + e.message;
+            }
+        }
+
+        function copyCdKube() {
+            navigator.clipboard.writeText(cdCurrentKubeYaml).then(() => showToast('Kubernetes YAML copied!', 'info'));
+        }
+
+        function deployCdKube() {
+            if (!cdCurrentKubeYaml) return;
+            openPlayKubeModal(cdCurrentKubeYaml);
+        }
+
+        function copyCdRaw() {
+            const raw = document.getElementById('cd-raw-content').innerText;
+            navigator.clipboard.writeText(raw).then(() => showToast('Raw inspect JSON copied!', 'info'));
+        }
+
+        // -------------------------------------------------------------
+        // Play Kube (Kubernetes Deploy for Pod)
+        // -------------------------------------------------------------
+        const playKubeTemplates = {
+            nginx: `apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-web-pod
+spec:
+  containers:
+  - name: nginx
+    image: docker.io/library/nginx:alpine
+    ports:
+    - containerPort: 80
+      hostPort: 8085`,
+
+            multicontainer: `apiVersion: v1
+kind: Pod
+metadata:
+  name: web-cache-pod
+spec:
+  containers:
+  - name: frontend
+    image: docker.io/library/nginx:alpine
+    ports:
+    - containerPort: 80
+      hostPort: 8086
+  - name: redis-cache
+    image: docker.io/library/redis:alpine
+    ports:
+    - containerPort: 6379`,
+
+            volume: `apiVersion: v1
+kind: Pod
+metadata:
+  name: storage-pod
+spec:
+  containers:
+  - name: worker
+    image: docker.io/library/alpine:latest
+    command: ["sh", "-c", "while true; do echo $(date) >> /data/log.txt; sleep 5; done"]
+    volumeMounts:
+    - name: shared-vol
+      mountPath: /data
+  volumes:
+  - name: shared-vol
+    emptyDir: {}`
+        };
+
+        function openPlayKubeModal(initialYaml) {
+            const editor = document.getElementById('play-kube-yaml');
+            if (initialYaml) {
+                editor.value = initialYaml;
+            } else if (!editor.value.trim()) {
+                editor.value = playKubeTemplates.nginx;
+            }
+            openModal('play-kube-modal');
+        }
+
+        function loadPlayKubeTemplate(tpl) {
+            if (playKubeTemplates[tpl]) {
+                document.getElementById('play-kube-yaml').value = playKubeTemplates[tpl];
+            }
+        }
+
+        function handlePlayKubeFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('play-kube-yaml').value = event.target.result;
+                showToast(`Loaded ${file.name}`, 'info');
+            };
+            reader.readAsText(file);
+        }
+
+        async function submitPlayKube() {
+            const yamlText = document.getElementById('play-kube-yaml').value;
+            if (!yamlText.trim()) {
+                showToast('Kubernetes YAML manifest is required', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch('/api/v1/pods/kube/play', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ kube_yaml: yamlText })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    closeModal('play-kube-modal');
+                    showToast('Pod successfully deployed via Kubernetes YAML manifest!', 'success');
+                    switchTab('pods');
+                    fetchPods();
+                    fetchContainers();
+                } else {
+                    const txt = await res.text();
+                    showToast('Play Kube failed: ' + txt, 'error');
+                }
+            } catch (err) {
+                showToast('Play Kube error: ' + err.message, 'error');
+            }
+        }
+
+        function deployCurrentKubeYaml() {
+            const yaml = document.getElementById('kube-content').innerText;
+            closeModal('kube-modal');
+            openPlayKubeModal(yaml);
+        }
+
+        // -------------------------------------------------------------
+        // Image Build from Containerfile
+        // -------------------------------------------------------------
+        function openBuildImageModal(tag = '', initialContainerfile = '') {
+            document.getElementById('build-image-tag').value = tag || 'my-app:latest';
+            document.getElementById('build-image-containerfile').value = initialContainerfile || `FROM alpine:latest
+WORKDIR /app
+COPY . .
+RUN echo "building container image"
+CMD ["echo", "Container ready"]`;
+            openModal('build-image-modal');
+        }
+
+        function handleContainerfileFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('build-image-containerfile').value = event.target.result;
+                showToast(`Loaded ${file.name}`, 'info');
+            };
+            reader.readAsText(file);
+        }
+
+        async function submitBuildImage() {
+            const tag = document.getElementById('build-image-tag').value.trim();
+            const containerfile = document.getElementById('build-image-containerfile').value;
+            if (!tag || !containerfile.trim()) {
+                showToast('Tag and Containerfile are required', 'error');
+                return;
+            }
+
+            try {
+                showToast('Starting image build...', 'info');
+                const res = await authFetch('/api/v1/images/build', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag, containerfile })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    closeModal('build-image-modal');
+                    showToast(`Image '${data.tag}' built successfully!`, 'success');
+                    fetchImages();
+                } else {
+                    const txt = await res.text();
+                    showToast('Image build failed: ' + txt, 'error');
+                }
+            } catch (err) {
+                showToast('Build error: ' + err.message, 'error');
+            }
         }
 
         // Start session check immediately

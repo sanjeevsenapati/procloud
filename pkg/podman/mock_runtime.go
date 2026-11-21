@@ -157,15 +157,72 @@ func (m *MockRuntime) RunContainer(ctx context.Context, opts RunOptions) (string
 		ip = "10.100.1.5"
 	}
 
+	var mounts []ContainerMountInfo
+	for _, v := range opts.Volumes {
+		parts := strings.Split(v, ":")
+		src := parts[0]
+		dest := parts[0]
+		mode := "rw"
+		if len(parts) > 1 {
+			dest = parts[1]
+		}
+		if len(parts) > 2 {
+			mode = parts[2]
+		}
+		mounts = append(mounts, ContainerMountInfo{
+			Source:      src,
+			Destination: dest,
+			Mode:        mode,
+			Type:        "bind",
+		})
+	}
+
+	var envList []string
+	if opts.Env != nil {
+		for k, val := range opts.Env {
+			envList = append(envList, fmt.Sprintf("%s=%s", k, val))
+		}
+	} else {
+		envList = []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "NODE_ENV=production"}
+	}
+
+	cmd := opts.Command
+	if len(cmd) == 0 {
+		cmd = []string{"/entrypoint.sh", "run"}
+	}
+
+	rawInspect := fmt.Sprintf(`[
+  {
+    "Id": "%s",
+    "Name": "/%s",
+    "ImageName": "%s",
+    "State": { "Status": "running", "Running": true, "ExitCode": 0 },
+    "NetworkSettings": { "IPAddress": "%s" }
+  }
+]`, id, opts.Name, opts.Image, ip)
+
 	m.Containers[opts.Name] = &ContainerStatus{
-		ID:        id,
-		Name:      opts.Name,
-		Image:     opts.Image,
-		Status:    "running",
-		Running:   true,
-		ExitCode:  0,
-		IPAddress: ip,
-		StartedAt: time.Now(),
+		ID:            id,
+		Name:          opts.Name,
+		Image:         opts.Image,
+		ImageID:       fmt.Sprintf("sha256:%x", time.Now().UnixNano())[:18],
+		Status:        "running",
+		Running:       true,
+		ExitCode:      0,
+		IPAddress:     ip,
+		NetworkName:   opts.Network,
+		Gateway:       "10.100.1.1",
+		Ports:         opts.Ports,
+		StartedAt:     time.Now(),
+		Command:       cmd,
+		Entrypoint:    []string{"/bin/sh", "-c"},
+		Env:           envList,
+		WorkingDir:    "/app",
+		User:          "root",
+		RestartPolicy: opts.Restart,
+		Mounts:        mounts,
+		Pod:           opts.Pod,
+		RawInspect:    rawInspect,
 	}
 	m.Logs[opts.Name] = []string{fmt.Sprintf("Container %s started successfully", opts.Name)}
 	return id, nil
@@ -191,6 +248,36 @@ func (m *MockRuntime) InspectContainer(ctx context.Context, nameOrID string) (*C
 
 	for _, c := range m.Containers {
 		if c.Name == nameOrID || c.ID == nameOrID {
+			// Ensure enriched fields are set
+			if len(c.Env) == 0 {
+				c.Env = []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "NODE_ENV=production"}
+			}
+			if len(c.Command) == 0 {
+				c.Command = []string{"/entrypoint.sh", "start"}
+			}
+			if c.WorkingDir == "" {
+				c.WorkingDir = "/app"
+			}
+			if c.NetworkName == "" {
+				c.NetworkName = "netavark"
+			}
+			if c.Gateway == "" {
+				c.Gateway = "10.100.1.1"
+			}
+			if c.RestartPolicy == "" {
+				c.RestartPolicy = "always"
+			}
+			if c.RawInspect == "" {
+				c.RawInspect = fmt.Sprintf(`[
+  {
+    "Id": "%s",
+    "Name": "/%s",
+    "ImageName": "%s",
+    "State": { "Status": "%s", "Running": %t, "ExitCode": %d },
+    "NetworkSettings": { "IPAddress": "%s" }
+  }
+]`, c.ID, c.Name, c.Image, c.Status, c.Running, c.ExitCode, c.IPAddress)
+			}
 			return c, nil
 		}
 	}
@@ -371,16 +458,107 @@ func (m *MockRuntime) InspectPod(ctx context.Context, nameOrID string) (*PodInsp
 }
 
 func (m *MockRuntime) GenerateKube(ctx context.Context, nameOrID string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	img := fmt.Sprintf("localhost/%s:latest", nameOrID)
+	portsSection := ""
+	if c, ok := m.Containers[nameOrID]; ok {
+		img = c.Image
+		if len(c.Ports) > 0 {
+			portsSection = "    ports:\n"
+			for _, pt := range c.Ports {
+				parts := strings.Split(pt, ":")
+				cPort := parts[len(parts)-1]
+				portsSection += fmt.Sprintf("    - containerPort: %s\n", cPort)
+			}
+		}
+	}
+
 	yaml := fmt.Sprintf(`apiVersion: v1
 kind: Pod
 metadata:
   name: %s
 spec:
   containers:
-  - name: app
-    image: localhost/%s:latest
-`, nameOrID, nameOrID)
+  - name: %s
+    image: %s
+%s`, nameOrID, nameOrID, img, portsSection)
 	return yaml, nil
+}
+
+func (m *MockRuntime) PlayKube(ctx context.Context, kubeYAML string) (*PlayKubeResult, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	podName := "kube-pod"
+	imageName := "docker.io/library/nginx:alpine"
+	lines := strings.Split(kubeYAML, "\n")
+	for i, l := range lines {
+		trimmed := strings.TrimSpace(l)
+		if trimmed == "metadata:" && i+1 < len(lines) {
+			for j := i + 1; j < len(lines); j++ {
+				sub := strings.TrimSpace(lines[j])
+				if strings.HasPrefix(sub, "name:") {
+					podName = strings.TrimSpace(strings.TrimPrefix(sub, "name:"))
+					break
+				}
+			}
+		}
+		if strings.HasPrefix(trimmed, "image:") {
+			imageName = strings.TrimSpace(strings.TrimPrefix(trimmed, "image:"))
+		}
+	}
+
+	podID := fmt.Sprintf("pod-k8s-%d", time.Now().UnixNano())[:12]
+	m.Pods[podName] = &PodSummary{
+		ID:                 podID,
+		Name:               podName,
+		Status:             "Running",
+		Created:            time.Now().Format(time.RFC3339),
+		NumberOfContainers: 1,
+		Ports:              []string{"8080:80"},
+	}
+
+	ctrID := fmt.Sprintf("ctr-k8s-%d", time.Now().UnixNano())[:12]
+	ctrName := podName + "-app"
+	m.Containers[ctrName] = &ContainerStatus{
+		ID:            ctrID,
+		Name:          ctrName,
+		Image:         imageName,
+		ImageID:       fmt.Sprintf("sha256:%x", time.Now().UnixNano())[:18],
+		Status:        "running",
+		Running:       true,
+		ExitCode:      0,
+		IPAddress:     "10.89.0.42",
+		NetworkName:   "podman",
+		Gateway:       "10.89.0.1",
+		Ports:         []string{"8080:80"},
+		StartedAt:     time.Now(),
+		Command:       []string{"/docker-entrypoint.sh", "nginx", "-g", "daemon off;"},
+		Entrypoint:    []string{"/docker-entrypoint.sh"},
+		Env:           []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "NGINX_VERSION=1.25.3"},
+		WorkingDir:    "/var/www/html",
+		User:          "root",
+		RestartPolicy: "always",
+		Pod:           podName,
+		RawInspect: fmt.Sprintf(`[
+  {
+    "Id": "%s",
+    "Name": "/%s",
+    "ImageName": "%s",
+    "State": { "Status": "running", "Running": true, "ExitCode": 0 },
+    "NetworkSettings": { "IPAddress": "10.89.0.42" }
+  }
+]`, ctrID, ctrName, imageName),
+	}
+	m.Logs[ctrName] = []string{"Kubernetes pod initialized", "Nginx web server ready"}
+
+	return &PlayKubeResult{
+		Pods:       []string{podID},
+		Containers: []string{ctrID},
+		Output:     fmt.Sprintf("Pod %s (%s) and container %s successfully deployed via Kubernetes manifest.", podName, podID, ctrName),
+	}, nil
 }
 
 // -------------------------------------------------------------
