@@ -1239,13 +1239,25 @@
             background: #eff6ff;
             color: #1d4ed8;
             border-color: #bfdbfe;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
-            padding: 2px 6px;
+            padding: 1px 7px;
         }
         .sidebar-item.active .sidebar-badge.pill-blue {
             background: #ffffff;
             color: #1d4ed8;
+        }
+        .sidebar-badge.pill-purple {
+            background: #faf5ff;
+            color: #7e22ce;
+            border-color: #e9d5ff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 1px 7px;
+        }
+        .sidebar-item.active .sidebar-badge.pill-purple {
+            background: #ffffff;
+            color: #7e22ce;
         }
 
         aside.progit-sidebar.collapsed .sidebar-badge {
@@ -1832,7 +1844,7 @@
                 <a class="sidebar-item" onclick="switchTab('organizations')" data-tab="organizations" data-tooltip="Organizations">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
                     <span class="sidebar-label">Organizations</span>
-                    <span class="sidebar-badge" id="tab-badge-orgs">0</span>
+                    <span class="sidebar-badge pill-blue" id="tab-badge-orgs">0</span>
                 </a>
                 <a class="sidebar-item" onclick="switchTab('users')" data-tab="users" data-tooltip="Users & RBAC">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1861,28 +1873,40 @@
         <main class="progit-container">
         <!-- 1. OVERVIEW DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active">
-            <div class="grid-12">
-                <div class="pg-stat-card col-3">
+            <div class="dashboard-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <div class="pg-stat-card">
                     <div class="stat-label">Compute Node</div>
-                    <div class="stat-number" id="node-name">Loading...</div>
+                    <div class="stat-number" id="node-name" style="font-size:16px;">Loading...</div>
                     <div class="stat-hint" id="node-sub">Podman runtime connected</div>
                 </div>
-                <div class="pg-stat-card col-3">
+                <div class="pg-stat-card" style="cursor:pointer;" onclick="switchTab('containers')">
                     <div class="stat-label">Running Containers</div>
                     <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-containers-count">0</div>
                     <div class="stat-hint">Active OCI workloads</div>
                 </div>
-                <div class="pg-stat-card col-3">
+                <div class="pg-stat-card" style="cursor:pointer;" onclick="switchTab('pods')">
                     <div class="stat-label">Podman Pods</div>
                     <div class="stat-number" style="color: var(--pg-purple);" id="stat-pods-count">0</div>
                     <div class="stat-hint">Isolated multi-container groups</div>
                 </div>
-                <div class="pg-stat-card col-3">
-                    <div class="stat-label">SQLite Authoritative WAL</div>
+                <div class="pg-stat-card" style="cursor:pointer;" onclick="switchTab('telemetry')">
+                    <div class="stat-label">Authoritative WAL</div>
                     <div class="stat-number" style="color: var(--pg-emerald);" id="stat-wal-status">ACTIVE</div>
                     <div class="stat-hint" id="stat-wal-sub">Zero-downtime journal mode</div>
                 </div>
+                <div class="pg-stat-card rbac-admin-only" style="cursor:pointer;" onclick="switchTab('organizations')" title="View Organizations">
+                    <div class="stat-label">Organizations</div>
+                    <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-dash-orgs-count">0</div>
+                    <div class="stat-hint" id="stat-dash-orgs-sub">Active Provisioned Tenants</div>
+                </div>
+                <div class="pg-stat-card rbac-org-admin-only" style="cursor:pointer;" onclick="switchTab('users')" title="View Users & RBAC">
+                    <div class="stat-label">User Accounts</div>
+                    <div class="stat-number" style="color: var(--pg-purple);" id="stat-dash-users-count">0</div>
+                    <div class="stat-hint" id="stat-dash-users-sub">Assigned Team Members</div>
+                </div>
+            </div>
 
+            <div class="grid-12">
                 <div class="pg-box col-12">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
@@ -5079,8 +5103,11 @@ spec:
 
             applyRBAC(currentUser);
 
-            // Load organizations context for the dropdown
+            // Load organizations context for the dropdown and user directory
             loadOrganizationContext();
+            if (isOrgAdmin()) {
+                loadUserContext();
+            }
 
             refreshCurrentTab();
             if (!pollTimer) {
@@ -5669,6 +5696,27 @@ spec:
                     const b = document.getElementById('tab-badge-secrets');
                     if (b && secs) b.innerText = secs.length;
                 }).catch(() => {});
+
+                authFetch('/api/v1/images').then(r => r.json()).then(imgs => {
+                    const b = document.getElementById('tab-badge-images');
+                    if (b && imgs) b.innerText = imgs.length;
+                }).catch(() => {});
+
+                authFetch('/api/v1/podman/volumes').then(r => r.json()).then(vols => {
+                    const b = document.getElementById('tab-badge-volumes');
+                    if (b && vols) b.innerText = vols.length;
+                }).catch(() => {});
+
+                authFetch('/api/v1/podman/networks').then(r => r.json()).then(nets => {
+                    const b = document.getElementById('tab-badge-networks');
+                    if (b && nets) b.innerText = nets.length;
+                }).catch(() => {});
+
+                // Live updates for Organization & User badges and stat cards
+                loadOrganizationContext();
+                if (isOrgAdmin()) {
+                    loadUserContext();
+                }
 
                 const dbRes = await authFetch('/api/v1/database/status');
                 const db = await dbRes.json();
@@ -8723,6 +8771,11 @@ spec:
                 const entCount = allOrganizations.filter(o => (o.plan || '').toLowerCase() === 'enterprise').length;
                 const proCount = allOrganizations.filter(o => (o.plan || '').toLowerCase() === 'pro').length;
 
+                const tabBadgeOrgs = document.getElementById('tab-badge-orgs');
+                if (tabBadgeOrgs) tabBadgeOrgs.innerText = totalOrgs;
+                const dashOrgs = document.getElementById('stat-dash-orgs-count');
+                if (dashOrgs) dashOrgs.innerText = totalOrgs;
+
                 const statTotal = document.getElementById('stat-orgs-total');
                 if (statTotal) statTotal.innerText = totalOrgs;
                 const statWorkload = document.getElementById('stat-orgs-workload-limit');
@@ -8860,18 +8913,71 @@ spec:
         }
 
         async function loadOrganizationContext() {
-            if (allOrganizations.length === 0) {
-                try {
-                    const res = await authFetch('/api/v1/organizations');
-                    if (res.ok) {
-                        allOrganizations = await res.json() || [];
-                        populateOrgDropdowns();
-                    }
-                } catch (e) {
-                    console.error('loadOrganizationContext error:', e);
+            try {
+                const res = await authFetch('/api/v1/organizations');
+                if (res.ok) {
+                    allOrganizations = await res.json() || [];
+                    const orgCount = allOrganizations.length;
+
+                    const badge = document.getElementById('tab-badge-orgs');
+                    if (badge) badge.innerText = orgCount;
+
+                    const dashOrgs = document.getElementById('stat-dash-orgs-count');
+                    if (dashOrgs) dashOrgs.innerText = orgCount;
+
+                    const statTotal = document.getElementById('stat-orgs-total');
+                    if (statTotal) statTotal.innerText = orgCount;
+
+                    const totalWorkloadLimit = allOrganizations.reduce((acc, o) => acc + (o.max_containers || 0), 0);
+                    const totalMembers = allOrganizations.reduce((acc, o) => acc + (o.member_count || 0), 0);
+                    const entCount = allOrganizations.filter(o => (o.plan || '').toLowerCase() === 'enterprise').length;
+                    const proCount = allOrganizations.filter(o => (o.plan || '').toLowerCase() === 'pro').length;
+
+                    const statWorkload = document.getElementById('stat-orgs-workload-limit');
+                    if (statWorkload) statWorkload.innerText = totalWorkloadLimit;
+                    const statMembers = document.getElementById('stat-orgs-members-total');
+                    if (statMembers) statMembers.innerText = totalMembers;
+                    const statPlans = document.getElementById('stat-orgs-plans-breakdown');
+                    if (statPlans) statPlans.innerText = `${entCount} Ent / ${proCount} Pro`;
+
+                    populateOrgDropdowns();
                 }
-            } else {
-                populateOrgDropdowns();
+            } catch (e) {
+                console.error('loadOrganizationContext error:', e);
+            }
+        }
+
+        async function loadUserContext() {
+            if (!isOrgAdmin()) return;
+            try {
+                const res = await authFetch('/api/v1/users');
+                if (res.ok) {
+                    allUsers = await res.json() || [];
+                    const userCount = allUsers.length;
+
+                    const badge = document.getElementById('tab-badge-users');
+                    if (badge) badge.innerText = userCount;
+
+                    const dashUsers = document.getElementById('stat-dash-users-count');
+                    if (dashUsers) dashUsers.innerText = userCount;
+
+                    const statTotal = document.getElementById('stat-users-total');
+                    if (statTotal) statTotal.innerText = userCount;
+
+                    const superAdmins = allUsers.filter(u => u.role === 'admin' || u.role === 'superadmin').length;
+                    const orgAdmins = allUsers.filter(u => u.role === 'org_admin').length;
+                    const devCount = allUsers.filter(u => u.role === 'developer').length;
+                    const viewCount = allUsers.filter(u => u.role === 'viewer').length;
+
+                    const statSuper = document.getElementById('stat-users-superadmin');
+                    if (statSuper) statSuper.innerText = superAdmins;
+                    const statOrg = document.getElementById('stat-users-orgadmin');
+                    if (statOrg) statOrg.innerText = orgAdmins;
+                    const statDevView = document.getElementById('stat-users-dev-view');
+                    if (statDevView) statDevView.innerText = `${devCount} Dev / ${viewCount} View`;
+                }
+            } catch (e) {
+                console.error('loadUserContext error:', e);
             }
         }
 
@@ -9132,6 +9238,11 @@ spec:
                 const devCount = allUsers.filter(u => u.role === 'developer').length;
                 const viewCount = allUsers.filter(u => u.role === 'viewer').length;
 
+                const tabBadgeUsers = document.getElementById('tab-badge-users');
+                if (tabBadgeUsers) tabBadgeUsers.innerText = totalUsers;
+                const dashUsers = document.getElementById('stat-dash-users-count');
+                if (dashUsers) dashUsers.innerText = totalUsers;
+
                 const statTotal = document.getElementById('stat-users-total');
                 if (statTotal) statTotal.innerText = totalUsers;
                 const statSuper = document.getElementById('stat-users-superadmin');
@@ -9225,7 +9336,7 @@ spec:
                         <td>
                             <div style="display:flex; align-items:center; gap:6px;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
-                                <span style="font-weight:600; font-size:12px; color:var(--pg-text);">${escapeHtml(u.tenant_name || u.tenant_id || 'Default')}</span>
+                                <span style="font-weight:600; font-size:12px; color:var(--pg-text);">${escapeHtml(u.tenant_name || (u.role === 'admin' || u.role === 'superadmin' ? 'Global Platform' : (u.tenant_id || 'Default')))}</span>
                             </div>
                         </td>
                         <td>${rolePill}</td>
