@@ -8281,7 +8281,10 @@ spec:
             // Containers in Pod Table
             const tbody = document.getElementById('pd-det-containers-table');
             const logSelect = document.getElementById('pd-logs-container-select');
-            logSelect.innerHTML = '<option value="">All Non-Infra Containers</option>';
+            const prevSelectedCtr = logSelect ? logSelect.value : '';
+            if (logSelect) {
+                logSelect.innerHTML = '<option value="">All Non-Infra Containers</option>';
+            }
 
             if (ctrs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:16px;">No containers in this pod.</td></tr>';
@@ -8292,7 +8295,7 @@ spec:
                     const roleBadge = isInfra ? '<span class="pill" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd;">Infra (Pause)</span>' : '<span class="pill pill-blue">Workload</span>';
                     const cRunning = (c.state || '').toLowerCase() === 'running';
 
-                    if (!isInfra) {
+                    if (!isInfra && logSelect) {
                         const opt = document.createElement('option');
                         opt.value = cName;
                         opt.text = cName;
@@ -8326,6 +8329,9 @@ spec:
                     </tr>
                     `;
                 }).join('');
+                if (logSelect && prevSelectedCtr && Array.from(logSelect.options).some(o => o.value === prevSelectedCtr)) {
+                    logSelect.value = prevSelectedCtr;
+                }
             }
 
             // Raw inspect JSON

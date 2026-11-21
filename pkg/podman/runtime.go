@@ -996,6 +996,58 @@ func (p *PodmanCLI) TopPod(ctx context.Context, nameOrID string) ([]*ContainerPr
 }
 
 func (p *PodmanCLI) GetPodLogs(ctx context.Context, nameOrID string, container string, tailLines int) (string, error) {
+	if container == "" || container == "all" {
+		pod, err := p.InspectPod(ctx, nameOrID)
+		if err != nil {
+			return "", fmt.Errorf("failed to inspect pod for logs: %w", err)
+		}
+
+		var workloadContainers []string
+		for _, c := range pod.Containers {
+			isInfra := (pod.InfraContainerID != "" && strings.HasPrefix(c.ID, pod.InfraContainerID)) ||
+				(len(c.Names) > 0 && strings.HasSuffix(c.Names[0], "-infra"))
+			if !isInfra {
+				cName := c.ID
+				if len(c.Names) > 0 && c.Names[0] != "" {
+					cName = c.Names[0]
+				}
+				workloadContainers = append(workloadContainers, cName)
+			}
+		}
+
+		if len(workloadContainers) == 0 {
+			return "No non-infra workload containers found in this pod.", nil
+		}
+
+		if len(workloadContainers) == 1 {
+			return p.getSingleContainerPodLogs(ctx, nameOrID, workloadContainers[0], tailLines)
+		}
+
+		var b strings.Builder
+		for idx, cName := range workloadContainers {
+			if idx > 0 {
+				b.WriteString("\n")
+			}
+			b.WriteString(fmt.Sprintf("===> Container [%s] <===\n", cName))
+			logs, err := p.getSingleContainerPodLogs(ctx, nameOrID, cName, tailLines)
+			if err != nil {
+				b.WriteString(fmt.Sprintf("Error retrieving logs: %v\n", err))
+			} else if strings.TrimSpace(logs) == "" {
+				b.WriteString("(no log output)\n")
+			} else {
+				b.WriteString(logs)
+				if !strings.HasSuffix(logs, "\n") {
+					b.WriteString("\n")
+				}
+			}
+		}
+		return b.String(), nil
+	}
+
+	return p.getSingleContainerPodLogs(ctx, nameOrID, container, tailLines)
+}
+
+func (p *PodmanCLI) getSingleContainerPodLogs(ctx context.Context, nameOrID string, container string, tailLines int) (string, error) {
 	args := []string{"pod", "logs"}
 	if tailLines > 0 {
 		args = append(args, "--tail", strconv.Itoa(tailLines))
@@ -1006,10 +1058,31 @@ func (p *PodmanCLI) GetPodLogs(ctx context.Context, nameOrID string, container s
 	args = append(args, nameOrID)
 	cmd := exec.CommandContext(ctx, p.binPath, args...)
 	out, err := cmd.CombinedOutput()
-	if err != nil && len(out) == 0 {
-		return "", err
+	if err == nil {
+		return string(out), nil
 	}
-	return string(out), nil
+
+	// Fallback directly to `podman logs <container>` if `podman pod logs -c` fails
+	fallbackArgs := []string{"logs"}
+	if tailLines > 0 {
+		fallbackArgs = append(fallbackArgs, "--tail", strconv.Itoa(tailLines))
+	}
+	fallbackArgs = append(fallbackArgs, container)
+	fallbackCmd := exec.CommandContext(ctx, p.binPath, fallbackArgs...)
+	fbOut, fbErr := fallbackCmd.CombinedOutput()
+	if fbErr == nil {
+		return string(fbOut), nil
+	}
+
+	outStr := strings.TrimSpace(string(out))
+	if outStr != "" {
+		return "", fmt.Errorf("%s", outStr)
+	}
+	fbStr := strings.TrimSpace(string(fbOut))
+	if fbStr != "" {
+		return "", fmt.Errorf("%s", fbStr)
+	}
+	return "", err
 }
 
 func (p *PodmanCLI) GenerateKube(ctx context.Context, nameOrID string) (string, error) {
