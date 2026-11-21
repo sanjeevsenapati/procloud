@@ -58,6 +58,12 @@ type ContainerRuntime interface {
 	CreateVolume(ctx context.Context, name string) (string, error)
 	RemoveVolume(ctx context.Context, name string) error
 
+	// Secrets (Podman Desktop Secrets Engine)
+	ListSecrets(ctx context.Context) ([]*SecretSummary, error)
+	CreateSecret(ctx context.Context, opts SecretCreateOptions) (string, error)
+	InspectSecret(ctx context.Context, nameOrID string, showSecret bool) (*SecretInspect, error)
+	RemoveSecret(ctx context.Context, nameOrID string) error
+
 	// Quadlet Systemd Units
 	WriteQuadletUnit(ctx context.Context, unitName, content string) (string, error)
 	RemoveQuadletUnit(ctx context.Context, unitName string) error
@@ -83,9 +89,37 @@ type RunOptions struct {
 	Ports      []string          `json:"ports,omitempty"`   // "host:container"
 	Volumes    []string          `json:"volumes,omitempty"` // "host:container:Z"
 	Env        map[string]string `json:"env,omitempty"`
+	Secrets    []string          `json:"secrets,omitempty"` // Podman secrets attached: "name" or "name,type=env,target=VAR"
 	Command    []string          `json:"command,omitempty"`
 	Restart    string            `json:"restart,omitempty"`
 	Detach     bool              `json:"detach"`
+}
+
+type SecretSummary struct {
+	ID        string            `json:"id"`
+	Name      string            `json:"name"`
+	Driver    string            `json:"driver"`
+	CreatedAt string            `json:"created_at"`
+	UpdatedAt string            `json:"updated_at"`
+	Labels    map[string]string `json:"labels,omitempty"`
+}
+
+type SecretCreateOptions struct {
+	Name   string            `json:"name"`
+	Driver string            `json:"driver,omitempty"` // default "file"
+	Data   string            `json:"data"`
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
+type SecretInspect struct {
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Driver     string            `json:"driver"`
+	CreatedAt  string            `json:"created_at"`
+	UpdatedAt  string            `json:"updated_at"`
+	Labels     map[string]string `json:"labels,omitempty"`
+	SecretData string            `json:"secret_data,omitempty"`
+	Raw        any               `json:"raw,omitempty"`
 }
 
 type PlayKubeResult struct {
@@ -428,6 +462,11 @@ func (p *PodmanCLI) RunContainer(ctx context.Context, opts RunOptions) (string, 
 	}
 	for _, vol := range opts.Volumes {
 		args = append(args, "-v", vol)
+	}
+	for _, sec := range opts.Secrets {
+		if sec != "" {
+			args = append(args, "--secret", sec)
+		}
 	}
 	for k, v := range opts.Env {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
@@ -1166,6 +1205,135 @@ func (p *PodmanCLI) RemoveQuadletUnit(ctx context.Context, unitName string) erro
 	_ = os.Remove(target)
 	if _, err := exec.LookPath("systemctl"); err == nil {
 		_ = exec.CommandContext(ctx, "systemctl", "--user", "daemon-reload").Run()
+	}
+	return nil
+}
+
+// -------------------------------------------------------------
+// Podman Desktop Secrets Management Engine
+// -------------------------------------------------------------
+
+func (p *PodmanCLI) ListSecrets(ctx context.Context) ([]*SecretSummary, error) {
+	cmd := exec.CommandContext(ctx, p.binPath, "secret", "ls", "--format", "{{json .}}")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	var list []*SecretSummary
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var raw struct {
+			ID        string `json:"ID"`
+			Name      string `json:"Name"`
+			Driver    string `json:"Driver"`
+			CreatedAt string `json:"CreatedAt"`
+			UpdatedAt string `json:"UpdatedAt"`
+		}
+		if err := json.Unmarshal([]byte(line), &raw); err != nil {
+			continue
+		}
+		idShort := raw.ID
+		if len(idShort) > 12 {
+			idShort = idShort[:12]
+		}
+		list = append(list, &SecretSummary{
+			ID:        idShort,
+			Name:      raw.Name,
+			Driver:    raw.Driver,
+			CreatedAt: raw.CreatedAt,
+			UpdatedAt: raw.UpdatedAt,
+		})
+	}
+	return list, nil
+}
+
+func (p *PodmanCLI) CreateSecret(ctx context.Context, opts SecretCreateOptions) (string, error) {
+	if opts.Name == "" {
+		return "", fmt.Errorf("secret name is required")
+	}
+	args := []string{"secret", "create"}
+	if opts.Driver != "" {
+		args = append(args, "--driver", opts.Driver)
+	}
+	for k, v := range opts.Labels {
+		args = append(args, "--label", fmt.Sprintf("%s=%s", k, v))
+	}
+	args = append(args, opts.Name, "-")
+	cmd := exec.CommandContext(ctx, p.binPath, args...)
+	cmd.Stdin = strings.NewReader(opts.Data)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("podman secret create failed: %w: %s", err, stderr.String())
+	}
+	return strings.TrimSpace(stdout.String()), nil
+}
+
+func (p *PodmanCLI) InspectSecret(ctx context.Context, nameOrID string, showSecret bool) (*SecretInspect, error) {
+	args := []string{"secret", "inspect"}
+	if showSecret {
+		args = append(args, "--showsecret")
+	}
+	args = append(args, "--format", "{{json .}}", nameOrID)
+	cmd := exec.CommandContext(ctx, p.binPath, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("podman secret inspect failed: %w: %s", err, stderr.String())
+	}
+
+	var raw struct {
+		ID        string `json:"ID"`
+		CreatedAt string `json:"CreatedAt"`
+		UpdatedAt string `json:"UpdatedAt"`
+		Spec      struct {
+			Name   string `json:"Name"`
+			Driver struct {
+				Name    string            `json:"Name"`
+				Options map[string]string `json:"Options"`
+			} `json:"Driver"`
+			Labels map[string]string `json:"Labels"`
+		} `json:"Spec"`
+		SecretData string `json:"SecretData"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse secret inspect json: %w", err)
+	}
+
+	driver := raw.Spec.Driver.Name
+	if driver == "" {
+		driver = "file"
+	}
+	name := raw.Spec.Name
+	if name == "" {
+		name = nameOrID
+	}
+
+	return &SecretInspect{
+		ID:         raw.ID,
+		Name:       name,
+		Driver:     driver,
+		CreatedAt:  raw.CreatedAt,
+		UpdatedAt:  raw.UpdatedAt,
+		Labels:     raw.Spec.Labels,
+		SecretData: raw.SecretData,
+		Raw:        raw,
+	}, nil
+}
+
+func (p *PodmanCLI) RemoveSecret(ctx context.Context, nameOrID string) error {
+	cmd := exec.CommandContext(ctx, p.binPath, "secret", "rm", nameOrID)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("podman secret rm failed: %w: %s", err, stderr.String())
 	}
 	return nil
 }

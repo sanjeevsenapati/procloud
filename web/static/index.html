@@ -1809,6 +1809,11 @@
                     <span class="sidebar-label">Networks</span>
                     <span class="sidebar-badge" id="tab-badge-networks">0</span>
                 </a>
+                <a class="sidebar-item" onclick="switchTab('secrets')" data-tab="secrets" data-tooltip="Secrets">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
+                    <span class="sidebar-label">Secrets</span>
+                    <span class="sidebar-badge" id="tab-badge-secrets">0</span>
+                </a>
                 <a class="sidebar-item" onclick="switchTab('deployments')" data-tab="deployments" data-tooltip="Deployments & Quadlet">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                     <span class="sidebar-label">Deployments &amp; Quadlet</span>
@@ -3072,6 +3077,41 @@
             </div>
         </div>
 
+        <!-- 6b. SECRETS TAB (Podman Desktop Style) -->
+        <div id="tab-secrets" class="tab-content">
+            <div class="pg-box">
+                <div class="pg-box-header">
+                    <div class="pg-box-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
+                        <span>Podman Desktop Secrets Engine</span>
+                    </div>
+                    <div style="display:flex; gap: 8px;">
+                        <input type="text" id="secrets-search" class="form-input" style="width:220px; padding:4px 10px; font-size:12px;" placeholder="Filter secrets..." oninput="filterSecrets(this.value)">
+                        <button class="btn btn-primary" onclick="openCreateSecretModal()">+ Create Secret</button>
+                    </div>
+                </div>
+                <div style="padding: 10px 16px; background:#eff6ff; border-bottom:1px solid var(--pg-border); font-size:12px; color:var(--pg-text-secondary); display:flex; align-items:center; gap:8px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Store sensitive credentials, certificates, and tokens securely. Secrets are stored in Podman internal storage and can be injected into containers as environment variables or mounted files.</span>
+                </div>
+                <table class="pg-table">
+                    <thead>
+                        <tr>
+                            <th>Secret Name</th>
+                            <th>ID</th>
+                            <th>Driver</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="secrets-table">
+                        <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading secrets...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- 7. DEPLOYMENTS & QUADLET TAB -->
         <div id="tab-deployments" class="tab-content">
             <div class="grid-12">
@@ -3405,6 +3445,10 @@ spec:
                 <label class="form-label">Volume Mounts (hostPath:containerPath:Z)</label>
                 <input type="text" id="ctr-vols" class="form-input" placeholder="/data:/var/data:Z">
             </div>
+            <div class="form-group">
+                <label class="form-label">Podman Secrets (Optional, comma-separated e.g. db_password, api_token)</label>
+                <input type="text" id="ctr-secrets" class="form-input" placeholder="e.g. db_password or secretName,type=env,target=VAR">
+            </div>
             <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitRunContainer()">
                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 <span>Launch Container</span>
@@ -3598,6 +3642,125 @@ spec:
                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 <span>Create Network</span>
             </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Create Secret (Podman Desktop Style) -->
+    <div id="create-secret-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 520px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
+                    <span>Create Secret</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('create-secret-modal')">&times;</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Secret Name <span style="color:var(--pg-rose)">*</span></label>
+                <input type="text" id="new-sec-name" class="form-input" placeholder="e.g. db_password, api_key">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Secret Driver</label>
+                <select id="new-sec-driver" class="form-input">
+                    <option value="file" selected>file (Default Local Storage)</option>
+                    <option value="pass">pass (Password Store)</option>
+                    <option value="shell">shell (Command Provider)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label class="form-label" style="margin-bottom:0;">Secret Value / Data <span style="color:var(--pg-rose)">*</span></label>
+                    <button type="button" class="btn btn-sm btn-outline-slate" style="height:22px; padding:0 6px; font-size:10px;" onclick="toggleNewSecretValMask()">Toggle Mask</button>
+                </div>
+                <textarea id="new-sec-val" class="form-input" rows="4" style="font-family:'JetBrains Mono',monospace; font-size:12px;" placeholder="Enter secret plaintext data or credentials..."></textarea>
+                <div style="font-size:11px; color:var(--pg-text-muted); margin-top:3px;">Data is stored securely in Podman's internal secret store and never logged.</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Labels (Optional, comma-separated key=value)</label>
+                <input type="text" id="new-sec-labels" class="form-input" placeholder="env=prod, app=backend">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button type="button" class="btn" style="flex:1; justify-content:center;" onclick="closeModal('create-secret-modal')">Cancel</button>
+                <button type="button" class="btn btn-primary" style="flex:2; justify-content:center;" onclick="submitCreateSecret()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span>Create Secret</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Inspect Secret (Podman Desktop Style) -->
+    <div id="inspect-secret-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 640px; width:95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
+                    <span id="inspect-sec-modal-title">Secret Details</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('inspect-secret-modal')">&times;</div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; background:#f8fafc; border:1px solid var(--pg-border); border-radius:6px; padding:12px;">
+                <div>
+                    <div style="font-size:10px; font-weight:700; color:var(--pg-text-secondary); text-transform:uppercase;">Secret Name</div>
+                    <div style="font-size:13px; font-weight:700; color:var(--pg-text);" id="inspect-sec-name">—</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; font-weight:700; color:var(--pg-text-secondary); text-transform:uppercase;">Secret ID</div>
+                    <div style="font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--pg-blue-600);" id="inspect-sec-id">—</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; font-weight:700; color:var(--pg-text-secondary); text-transform:uppercase;">Driver</div>
+                    <div style="font-size:12px; font-weight:600; color:var(--pg-text);" id="inspect-sec-driver">—</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; font-weight:700; color:var(--pg-text-secondary); text-transform:uppercase;">Labels</div>
+                    <div id="inspect-sec-labels" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">None</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; font-weight:700; color:var(--pg-text-secondary); text-transform:uppercase;">Created At</div>
+                    <div style="font-size:11px; color:var(--pg-text-secondary);" id="inspect-sec-created">—</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; font-weight:700; color:var(--pg-text-secondary); text-transform:uppercase;">Updated At</div>
+                    <div style="font-size:11px; color:var(--pg-text-secondary);" id="inspect-sec-updated">—</div>
+                </div>
+            </div>
+
+            <!-- Secret Value Display Panel with Reveal & Copy -->
+            <div style="border: 1px solid var(--pg-border); border-radius:6px; overflow:hidden; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#eff6ff; padding:8px 12px; border-bottom:1px solid #bfdbfe;">
+                    <div style="display:flex; align-items:center; gap:6px; font-weight:700; font-size:12px; color:var(--pg-blue-700);">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span>Secret Payload</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <button type="button" id="btn-toggle-secret-val" class="btn btn-sm btn-outline-primary" onclick="toggleSecretValueVisibility()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <span>Show Secret</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-slate" onclick="copySecretValue()" title="Copy to clipboard">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="padding: 12px; background:#0f172a; min-height:56px; display:flex; align-items:center;">
+                    <div id="sec-val-masked" style="color:#94a3b8; font-family:'JetBrains Mono',monospace; letter-spacing:3px; font-size:14px;">
+                        ••••••••••••••••••••••••••••••••
+                    </div>
+                    <pre id="sec-val-revealed" style="display:none; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:12px; margin:0; white-space:pre-wrap; word-break:break-all;"></pre>
+                </div>
+            </div>
+
+            <!-- Raw JSON Inspect Viewer (Collapsible) -->
+            <details style="border: 1px solid var(--pg-border); border-radius:6px; padding:6px 10px; font-size:11px;">
+                <summary style="font-weight:600; color:var(--pg-text-secondary); cursor:pointer;">Raw Podman Secret JSON Inspect</summary>
+                <pre id="inspect-sec-raw" style="background:#0f172a; color:#a5f3fc; padding:10px; border-radius:4px; font-size:11px; font-family:'JetBrains Mono',monospace; margin-top:6px; max-height:180px; overflow:auto;"></pre>
+            </details>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+                <button type="button" class="btn" onclick="closeModal('inspect-secret-modal')">Close</button>
+            </div>
         </div>
     </div>
 
@@ -4703,6 +4866,7 @@ spec:
                 case 'images': fetchImages(); break;
                 case 'volumes': fetchVolumes(); break;
                 case 'networks': fetchNetworks(); break;
+                case 'secrets': fetchSecrets(); break;
                 case 'deployments': fetchDeployments(); break;
                 case 'telemetry': fetchTelemetry(); break;
                 case 'organizations': fetchOrganizations(); break;
@@ -5403,6 +5567,11 @@ spec:
                 document.getElementById('stat-pods-count').innerText = pods.length;
                 document.getElementById('tab-badge-pods').innerText = pods.length;
 
+                authFetch('/api/v1/podman/secrets').then(r => r.json()).then(secs => {
+                    const b = document.getElementById('tab-badge-secrets');
+                    if (b && secs) b.innerText = secs.length;
+                }).catch(() => {});
+
                 const dbRes = await authFetch('/api/v1/database/status');
                 const db = await dbRes.json();
                 if (db) {
@@ -5686,15 +5855,17 @@ spec:
             const portsStr = document.getElementById('ctr-ports').value.trim();
             const pod = document.getElementById('ctr-pod').value.trim();
             const volsStr = document.getElementById('ctr-vols').value.trim();
+            const secsStr = document.getElementById('ctr-secrets') ? document.getElementById('ctr-secrets').value.trim() : '';
 
             const ports = portsStr ? [portsStr] : [];
             const vols = volsStr ? [volsStr] : [];
+            const secs = secsStr ? secsStr.split(',').map(s => s.trim()).filter(Boolean) : [];
 
             try {
                 const res = await authFetch('/api/v1/containers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, image, pod, ports, volumes: vols })
+                    body: JSON.stringify({ name, image, pod, ports, volumes: vols, secrets: secs })
                 });
 
                 if (res.ok) {
@@ -6074,6 +6245,260 @@ spec:
                     await authFetch(`/api/v1/podman/networks/${name}`, { method: 'DELETE' });
                     showToast(`Network '${name}' deleted`, 'success');
                     fetchNetworks();
+                }
+            });
+        }
+
+        // -------------------------------------------------------------
+        // Podman Desktop Secrets Management Engine
+        // -------------------------------------------------------------
+
+        let allSecretsCache = [];
+        let currentInspectingSecret = null;
+        let isSecretRevealed = false;
+
+        async function fetchSecrets() {
+            try {
+                const res = await authFetch('/api/v1/podman/secrets');
+                if (!res.ok) throw new Error(await res.text());
+                allSecretsCache = await res.json() || [];
+                const badge = document.getElementById('tab-badge-secrets');
+                if (badge) badge.innerText = allSecretsCache.length;
+                renderSecrets(allSecretsCache);
+            } catch (err) {
+                console.error(err);
+                const tbody = document.getElementById('secrets-table');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load secrets: ${escapeHtml(err.message)}</td></tr>`;
+                }
+            }
+        }
+
+        function filterSecrets(q) {
+            if (!q) {
+                renderSecrets(allSecretsCache);
+                return;
+            }
+            const lower = q.toLowerCase();
+            const filtered = allSecretsCache.filter(s =>
+                (s.name || '').toLowerCase().includes(lower) ||
+                (s.id || '').toLowerCase().includes(lower) ||
+                (s.driver || '').toLowerCase().includes(lower)
+            );
+            renderSecrets(filtered);
+        }
+
+        function renderSecrets(list) {
+            const tbody = document.getElementById('secrets-table');
+            if (!tbody) return;
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 36px 20px; color:var(--pg-text-muted);">
+                            <div style="font-weight:700; font-size:14px; color:var(--pg-text); margin-bottom:6px;">No Secrets Found</div>
+                            <div style="font-size:12px; margin-bottom:14px;">Store sensitive API credentials, TLS certs, or database passwords securely in Podman.</div>
+                            <button class="btn btn-sm btn-primary" onclick="openCreateSecretModal()">+ Create First Secret</button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = list.map(s => {
+                const driver = s.driver || 'file';
+                const createdStr = s.created_at || 'Recently';
+                const updatedStr = s.updated_at || s.created_at || '—';
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div style="width:28px; height:28px; border-radius:6px; background:#eff6ff; border:1px solid #bfdbfe; display:flex; align-items:center; justify-content:center; color:#2563eb; flex-shrink:0;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                </div>
+                                <div>
+                                    <strong style="color:var(--pg-text);">${escapeHtml(s.name)}</strong>
+                                </div>
+                            </div>
+                        </td>
+                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(s.id || '—')}</code></td>
+                        <td><span class="pill pill-blue">${escapeHtml(driver)}</span></td>
+                        <td style="font-size:11px; color:var(--pg-text-secondary);">${escapeHtml(createdStr)}</td>
+                        <td style="font-size:11px; color:var(--pg-text-muted);">${escapeHtml(updatedStr)}</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="btn btn-sm btn-outline-primary" title="Inspect Secret" onclick="openInspectSecretModal('${escapeHtml(s.name)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    <span>Inspect</span>
+                                </button>
+                                <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Secret" onclick="deleteSecret('${escapeHtml(s.name)}', '${escapeHtml(s.name)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openCreateSecretModal() {
+            document.getElementById('new-sec-name').value = '';
+            document.getElementById('new-sec-driver').value = 'file';
+            document.getElementById('new-sec-val').value = '';
+            document.getElementById('new-sec-labels').value = '';
+            openModal('create-secret-modal');
+        }
+
+        function toggleNewSecretValMask() {
+            const ta = document.getElementById('new-sec-val');
+            if (ta.style.webkitTextSecurity === 'disc') {
+                ta.style.webkitTextSecurity = 'none';
+            } else {
+                ta.style.webkitTextSecurity = 'disc';
+            }
+        }
+
+        async function submitCreateSecret() {
+            const name = document.getElementById('new-sec-name').value.trim();
+            const driver = document.getElementById('new-sec-driver').value;
+            const data = document.getElementById('new-sec-val').value;
+            const labelsStr = document.getElementById('new-sec-labels').value.trim();
+
+            if (!name) {
+                showToast('Secret name is required', 'error');
+                return;
+            }
+            if (!data) {
+                showToast('Secret value is required', 'error');
+                return;
+            }
+
+            const labels = {};
+            if (labelsStr) {
+                labelsStr.split(',').forEach(pair => {
+                    const idx = pair.indexOf('=');
+                    if (idx > 0) {
+                        const k = pair.substring(0, idx).trim();
+                        const v = pair.substring(idx + 1).trim();
+                        if (k) labels[k] = v;
+                    }
+                });
+            }
+
+            try {
+                const res = await authFetch('/api/v1/podman/secrets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, driver, data, labels })
+                });
+                if (!res.ok) throw new Error(await res.text());
+                closeModal('create-secret-modal');
+                showToast(`Secret '${name}' created successfully`, 'success');
+                fetchSecrets();
+            } catch (err) {
+                showToast('Failed to create secret: ' + err.message, 'error');
+            }
+        }
+
+        async function openInspectSecretModal(nameOrID) {
+            try {
+                const res = await authFetch(`/api/v1/podman/secrets/${encodeURIComponent(nameOrID)}`);
+                if (!res.ok) throw new Error(await res.text());
+                const sec = await res.json();
+                currentInspectingSecret = sec;
+                isSecretRevealed = false;
+
+                document.getElementById('inspect-sec-modal-title').innerText = `Secret: ${sec.name}`;
+                document.getElementById('inspect-sec-name').innerText = sec.name;
+                document.getElementById('inspect-sec-id').innerText = sec.id || '—';
+                document.getElementById('inspect-sec-driver').innerText = sec.driver || 'file';
+                document.getElementById('inspect-sec-created').innerText = sec.created_at || '—';
+                document.getElementById('inspect-sec-updated').innerText = sec.updated_at || sec.created_at || '—';
+
+                const labelsContainer = document.getElementById('inspect-sec-labels');
+                if (labelsContainer) {
+                    if (sec.labels && Object.keys(sec.labels).length > 0) {
+                        labelsContainer.innerHTML = Object.entries(sec.labels).map(([k, v]) =>
+                            `<span class="pill pill-slate" style="font-size:10px;">${escapeHtml(k)}=${escapeHtml(v)}</span>`
+                        ).join(' ');
+                    } else {
+                        labelsContainer.innerHTML = '<span style="color:var(--pg-text-muted); font-size:11px;">None</span>';
+                    }
+                }
+
+                // Reset value display to masked
+                document.getElementById('sec-val-masked').style.display = 'block';
+                document.getElementById('sec-val-revealed').style.display = 'none';
+                document.getElementById('sec-val-revealed').innerText = '';
+                document.getElementById('btn-toggle-secret-val').innerHTML = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Show Secret</span>';
+
+                // Raw JSON
+                const rawEl = document.getElementById('inspect-sec-raw');
+                if (rawEl) rawEl.innerText = JSON.stringify(sec.raw || sec, null, 2);
+
+                openModal('inspect-secret-modal');
+            } catch (err) {
+                showToast('Failed to inspect secret: ' + err.message, 'error');
+            }
+        }
+
+        async function toggleSecretValueVisibility() {
+            if (!currentInspectingSecret) return;
+            const btn = document.getElementById('btn-toggle-secret-val');
+            const maskedEl = document.getElementById('sec-val-masked');
+            const revealedEl = document.getElementById('sec-val-revealed');
+
+            if (isSecretRevealed) {
+                isSecretRevealed = false;
+                maskedEl.style.display = 'block';
+                revealedEl.style.display = 'none';
+                btn.innerHTML = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Show Secret</span>';
+            } else {
+                try {
+                    const res = await authFetch(`/api/v1/podman/secrets/${encodeURIComponent(currentInspectingSecret.name)}?showsecret=true`);
+                    if (!res.ok) throw new Error(await res.text());
+                    const data = await res.json();
+                    currentInspectingSecret.secret_data = data.secret_data || '';
+                    revealedEl.innerText = data.secret_data || '(empty)';
+                    maskedEl.style.display = 'none';
+                    revealedEl.style.display = 'block';
+                    isSecretRevealed = true;
+                    btn.innerHTML = '<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg><span>Hide Secret</span>';
+                } catch (err) {
+                    showToast('Failed to reveal secret: ' + err.message, 'error');
+                }
+            }
+        }
+
+        function copySecretValue() {
+            if (!currentInspectingSecret || !currentInspectingSecret.secret_data) {
+                showToast('Reveal the secret first to copy its content', 'warning');
+                return;
+            }
+            navigator.clipboard.writeText(currentInspectingSecret.secret_data).then(() => {
+                showToast('Secret value copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Failed to copy to clipboard', 'error');
+            });
+        }
+
+        function deleteSecret(idOrName, name) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Secret',
+                name: name || idOrName,
+                id: idOrName,
+                warning: 'Deleting this secret will prevent any containers relying on it from starting or resolving credentials.',
+                onConfirm: async () => {
+                    try {
+                        const res = await authFetch(`/api/v1/podman/secrets/${encodeURIComponent(idOrName)}`, { method: 'DELETE' });
+                        if (!res.ok) throw new Error(await res.text());
+                        showToast(`Secret '${name || idOrName}' deleted`, 'success');
+                        fetchSecrets();
+                    } catch (err) {
+                        showToast('Failed to delete secret: ' + err.message, 'error');
+                    }
                 }
             });
         }

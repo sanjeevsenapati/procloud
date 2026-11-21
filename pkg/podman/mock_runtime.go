@@ -16,6 +16,7 @@ type MockRuntime struct {
 	Images     map[string]*ImageSummary
 	Networks   map[string]*NetworkSummary
 	Volumes    map[string]*VolumeSummary
+	Secrets    map[string]*SecretInspect
 	Units      map[string]string
 	Logs       map[string][]string
 }
@@ -27,8 +28,20 @@ func NewMockRuntime() *MockRuntime {
 		Images:     make(map[string]*ImageSummary),
 		Networks:   make(map[string]*NetworkSummary),
 		Volumes:    make(map[string]*VolumeSummary),
+		Secrets:    make(map[string]*SecretInspect),
 		Units:      make(map[string]string),
 		Logs:       make(map[string][]string),
+	}
+
+	// Pre-populate mock secret
+	m.Secrets["db_password"] = &SecretInspect{
+		ID:         "sec-mock-123456",
+		Name:       "db_password",
+		Driver:     "file",
+		CreatedAt:  time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		UpdatedAt:  time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		SecretData: "postgres_super_secret_password",
+		Labels:     map[string]string{"env": "production", "service": "database"},
 	}
 
 	// Pre-populate mock images
@@ -664,4 +677,80 @@ func (m *MockRuntime) RemoveQuadletUnit(ctx context.Context, unitName string) er
 	defer m.mu.Unlock()
 	delete(m.Units, unitName)
 	return nil
+}
+
+// -------------------------------------------------------------
+// Mock Secrets Engine
+// -------------------------------------------------------------
+
+func (m *MockRuntime) ListSecrets(ctx context.Context) ([]*SecretSummary, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var list []*SecretSummary
+	for _, s := range m.Secrets {
+		list = append(list, &SecretSummary{
+			ID:        s.ID,
+			Name:      s.Name,
+			Driver:    s.Driver,
+			CreatedAt: s.CreatedAt,
+			UpdatedAt: s.UpdatedAt,
+			Labels:    s.Labels,
+		})
+	}
+	return list, nil
+}
+
+func (m *MockRuntime) CreateSecret(ctx context.Context, opts SecretCreateOptions) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if opts.Name == "" {
+		return "", fmt.Errorf("secret name is required")
+	}
+	id := fmt.Sprintf("sec-%d", time.Now().UnixNano())
+	driver := opts.Driver
+	if driver == "" {
+		driver = "file"
+	}
+	now := time.Now().Format(time.RFC3339)
+	m.Secrets[opts.Name] = &SecretInspect{
+		ID:         id,
+		Name:       opts.Name,
+		Driver:     driver,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		SecretData: opts.Data,
+		Labels:     opts.Labels,
+	}
+	return id, nil
+}
+
+func (m *MockRuntime) InspectSecret(ctx context.Context, nameOrID string, showSecret bool) (*SecretInspect, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for k, s := range m.Secrets {
+		if k == nameOrID || s.ID == nameOrID || s.Name == nameOrID {
+			secCopy := *s
+			if !showSecret {
+				secCopy.SecretData = ""
+			}
+			return &secCopy, nil
+		}
+	}
+	return nil, fmt.Errorf("secret not found: %s", nameOrID)
+}
+
+func (m *MockRuntime) RemoveSecret(ctx context.Context, nameOrID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for k, s := range m.Secrets {
+		if k == nameOrID || s.ID == nameOrID || s.Name == nameOrID {
+			delete(m.Secrets, k)
+			return nil
+		}
+	}
+	return fmt.Errorf("secret not found: %s", nameOrID)
 }

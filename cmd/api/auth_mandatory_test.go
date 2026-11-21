@@ -43,6 +43,7 @@ func TestMandatoryAuthentication(t *testing.T) {
 		{"GET", "/api/v1/images"},
 		{"GET", "/api/v1/podman/networks"},
 		{"GET", "/api/v1/podman/volumes"},
+		{"GET", "/api/v1/podman/secrets"},
 		{"GET", "/api/v1/database/status"},
 		{"GET", "/api/v1/workloads"},
 		{"GET", "/api/v1/nodes"},
@@ -170,6 +171,54 @@ func TestMandatoryAuthentication(t *testing.T) {
 		server.ServeHTTP(recAuthBuild, reqAuthBuild)
 		if recAuthBuild.Code != http.StatusCreated {
 			t.Errorf("expected 201 for auth build image, got %d: %s", recAuthBuild.Code, recAuthBuild.Body.String())
+		}
+
+		// Authenticated Secret Management
+		secCreateJSON, _ := json.Marshal(podman.SecretCreateOptions{
+			Name:   "jwt_signing_key",
+			Driver: "file",
+			Data:   "super-secret-signing-token-9988",
+			Labels: map[string]string{"env": "prod"},
+		})
+		reqCreateSec := httptest.NewRequest("POST", "/api/v1/podman/secrets", bytes.NewReader(secCreateJSON))
+		reqCreateSec.Header.Set("Content-Type", "application/json")
+		reqCreateSec.Header.Set("Authorization", "Bearer "+loginResp.Token)
+		recCreateSec := httptest.NewRecorder()
+		server.ServeHTTP(recCreateSec, reqCreateSec)
+		if recCreateSec.Code != http.StatusCreated {
+			t.Errorf("expected 201 for auth create secret, got %d: %s", recCreateSec.Code, recCreateSec.Body.String())
+		}
+
+		// Authenticated Secret List
+		reqListSec := httptest.NewRequest("GET", "/api/v1/podman/secrets", nil)
+		reqListSec.Header.Set("Authorization", "Bearer "+loginResp.Token)
+		recListSec := httptest.NewRecorder()
+		server.ServeHTTP(recListSec, reqListSec)
+		if recListSec.Code != http.StatusOK {
+			t.Errorf("expected 200 for auth list secrets, got %d: %s", recListSec.Code, recListSec.Body.String())
+		}
+
+		// Authenticated Secret Inspect with Reveal
+		reqInspectSec := httptest.NewRequest("GET", "/api/v1/podman/secrets/jwt_signing_key?showsecret=true", nil)
+		reqInspectSec.Header.Set("Authorization", "Bearer "+loginResp.Token)
+		recInspectSec := httptest.NewRecorder()
+		server.ServeHTTP(recInspectSec, reqInspectSec)
+		if recInspectSec.Code != http.StatusOK {
+			t.Errorf("expected 200 for auth inspect secret, got %d: %s", recInspectSec.Code, recInspectSec.Body.String())
+		}
+		var inspectedSec podman.SecretInspect
+		_ = json.Unmarshal(recInspectSec.Body.Bytes(), &inspectedSec)
+		if inspectedSec.SecretData != "super-secret-signing-token-9988" {
+			t.Errorf("expected revealed secret data, got %s", inspectedSec.SecretData)
+		}
+
+		// Authenticated Secret Delete
+		reqDelSec := httptest.NewRequest("DELETE", "/api/v1/podman/secrets/jwt_signing_key", nil)
+		reqDelSec.Header.Set("Authorization", "Bearer "+loginResp.Token)
+		recDelSec := httptest.NewRecorder()
+		server.ServeHTTP(recDelSec, reqDelSec)
+		if recDelSec.Code != http.StatusOK {
+			t.Errorf("expected 200 for auth delete secret, got %d: %s", recDelSec.Code, recDelSec.Body.String())
 		}
 	}
 

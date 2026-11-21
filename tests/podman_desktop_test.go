@@ -141,4 +141,54 @@ func TestPodmanDesktopFeatures(t *testing.T) {
 	if err := rt.RemoveVolume(ctx, "custom-vol"); err != nil {
 		t.Errorf("remove volume failed: %v", err)
 	}
+
+	// 7. Podman Desktop Secrets Management Engine Lifecycle
+	secID, err := rt.CreateSecret(ctx, podman.SecretCreateOptions{
+		Name:   "app_api_key",
+		Driver: "file",
+		Data:   "sk_live_983748293489234",
+		Labels: map[string]string{"env": "staging", "service": "payment"},
+	})
+	if err != nil || secID == "" {
+		t.Fatalf("failed creating secret: %v", err)
+	}
+
+	secrets, err := rt.ListSecrets(ctx)
+	if err != nil || len(secrets) == 0 {
+		t.Fatalf("failed listing secrets: %v", err)
+	}
+
+	// Secret inspect without reveal
+	maskedSec, err := rt.InspectSecret(ctx, "app_api_key", false)
+	if err != nil || maskedSec.Name != "app_api_key" {
+		t.Fatalf("failed inspecting secret without reveal: %v", err)
+	}
+	if maskedSec.SecretData != "" {
+		t.Errorf("expected secret data to be masked/empty, got %s", maskedSec.SecretData)
+	}
+
+	// Secret inspect with reveal
+	revealedSec, err := rt.InspectSecret(ctx, "app_api_key", true)
+	if err != nil || revealedSec.SecretData != "sk_live_983748293489234" {
+		t.Fatalf("failed revealing secret data: %v", err)
+	}
+
+	// Container run with secret integration
+	ctrWithSecID, err := rt.RunContainer(ctx, podman.RunOptions{
+		Name:    "secure-worker",
+		Image:   "docker.io/library/redis:alpine",
+		Secrets: []string{"app_api_key", "db_password"},
+		Detach:  true,
+	})
+	if err != nil || ctrWithSecID == "" {
+		t.Fatalf("failed running container with secrets: %v", err)
+	}
+
+	if err := rt.RemoveContainer(ctx, "secure-worker", true); err != nil {
+		t.Errorf("failed removing secure-worker container: %v", err)
+	}
+
+	if err := rt.RemoveSecret(ctx, "app_api_key"); err != nil {
+		t.Errorf("failed removing secret: %v", err)
+	}
 }

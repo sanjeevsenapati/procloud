@@ -278,6 +278,14 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.authRequired(s.handleRemovePodmanVolume))
 
 	// -------------------------------------------------------------
+	// Podman Desktop Features: Secret Management (Protected)
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/podman/secrets", s.authRequired(s.handleListPodmanSecrets))
+	s.mux.HandleFunc("POST /api/v1/podman/secrets", s.authRequired(s.handleCreatePodmanSecret))
+	s.mux.HandleFunc("GET /api/v1/podman/secrets/{id}", s.authRequired(s.handleInspectPodmanSecret))
+	s.mux.HandleFunc("DELETE /api/v1/podman/secrets/{id}", s.authRequired(s.handleRemovePodmanSecret))
+
+	// -------------------------------------------------------------
 	// Organization & Multi-Tenant Management (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/organizations", s.authRequired(s.handleListOrganizations))
@@ -1056,6 +1064,80 @@ func (s *Server) handleRemovePodmanVolume(w http.ResponseWriter, r *http.Request
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]string{"message": "volume removed", "name": id})
+}
+
+// -------------------------------------------------------------
+// Podman Desktop Features: Secret Management Handlers
+// -------------------------------------------------------------
+
+func (s *Server) handleListPodmanSecrets(w http.ResponseWriter, r *http.Request) {
+	secrets, err := s.runtime.ListSecrets(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, secrets)
+}
+
+func (s *Server) handleCreatePodmanSecret(w http.ResponseWriter, r *http.Request) {
+	var opts podman.SecretCreateOptions
+	if err := json.NewDecoder(r.Body).Decode(&opts); err != nil || opts.Name == "" {
+		http.Error(w, "secret name and data are required", http.StatusBadRequest)
+		return
+	}
+	secID, err := s.runtime.CreateSecret(r.Context(), opts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "SECRET_CREATE", "Secret", opts.Name, r.RemoteAddr, fmt.Sprintf("Created secret %s (id: %s)", opts.Name, secID))
+
+	respondJSON(w, http.StatusCreated, map[string]string{
+		"message": "secret created successfully",
+		"id":      secID,
+		"name":    opts.Name,
+	})
+}
+
+func (s *Server) handleInspectPodmanSecret(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	showSecret := r.URL.Query().Get("showsecret") == "true"
+	sec, err := s.runtime.InspectSecret(r.Context(), id, showSecret)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	if showSecret {
+		s.auditSvc.Log(r.Context(), actor, "SECRET_REVEAL", "Secret", sec.Name, r.RemoteAddr, fmt.Sprintf("Revealed plaintext data for secret %s", sec.Name))
+	}
+
+	respondJSON(w, http.StatusOK, sec)
+}
+
+func (s *Server) handleRemovePodmanSecret(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.runtime.RemoveSecret(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "SECRET_DELETE", "Secret", id, r.RemoteAddr, fmt.Sprintf("Removed secret %s", id))
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "secret removed", "id": id})
 }
 
 // -------------------------------------------------------------
