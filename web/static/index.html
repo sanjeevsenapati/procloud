@@ -1826,6 +1826,53 @@ spec:
             </div>
         </div>
     </div>
+
+    <!-- MODAL: Action Confirmation (Start, Stop, Restart, Delete) -->
+    <div id="confirm-action-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 480px;">
+            <div class="modal-dialog-header" id="confirm-modal-header" style="transition: border-color 0.2s ease;">
+                <div class="modal-dialog-title" id="confirm-modal-title">
+                    <div id="confirm-modal-icon-badge" style="width:28px; height:28px; border-radius:7px; border:1px solid var(--pg-border); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    </div>
+                    <span id="confirm-modal-heading">Confirm Action</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeConfirmModal()">&times;</div>
+            </div>
+
+            <div style="padding: 2px 0 6px 0;">
+                <p id="confirm-modal-message" style="font-size: 14px; font-weight: 600; color: var(--pg-text); margin-bottom: 12px; line-height: 1.5;">
+                    Are you sure you want to proceed with this action?
+                </p>
+
+                <!-- Target Item Card -->
+                <div style="background: #f8faff; border: 1px solid var(--pg-border); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:11px; font-weight:700; color:var(--pg-text-muted); text-transform:uppercase; letter-spacing:0.5px;" id="confirm-item-type">CONTAINER</span>
+                        <span id="confirm-status-pill" class="pill pill-blue">TARGET</span>
+                    </div>
+                    <div style="font-size:15px; font-weight:700; color:var(--pg-text); font-family:'JetBrains Mono',monospace; word-break:break-all;" id="confirm-item-name">
+                        web-service
+                    </div>
+                    <div style="font-size:12px; color:var(--pg-text-secondary); margin-top:4px;" id="confirm-item-desc">
+                        ID: 0991a1943c09
+                    </div>
+                </div>
+
+                <!-- Warning Callout Box -->
+                <div id="confirm-warning-box" style="display:none; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; padding:10px 14px; font-size:12px; color:#be123c; margin-bottom:14px; align-items:flex-start; gap:8px;">
+                    <svg class="icon-svg" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;color:#e11d48;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span id="confirm-warning-text" style="line-height:1.4;">This action cannot be undone.</span>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+                    <button type="button" class="btn" style="padding:8px 16px; font-weight:600;" onclick="closeConfirmModal()">Cancel</button>
+                    <button type="button" id="confirm-action-submit-btn" class="btn btn-primary" style="padding:8px 18px; font-weight:600;" onclick="executeConfirmedAction()">
+                        <span id="confirm-submit-label">Confirm</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     </div> <!-- /#app-screen -->
 
     <script>
@@ -2001,7 +2048,7 @@ spec:
                     body: JSON.stringify({ username: u, email: e, password: p, role: r })
                 });
                 if (res.ok) {
-                    alert('Account created successfully! Signing you in...');
+                    showToast('Account created successfully! Signing you in...', 'success');
                     document.getElementById('main-login-username').value = u;
                     document.getElementById('main-login-password').value = p;
                     await doMainLogin();
@@ -2167,7 +2214,7 @@ spec:
 
         function copyTerminalOutput() {
             const text = document.getElementById('term-output').innerText;
-            navigator.clipboard.writeText(text).then(() => alert('Terminal output copied!'));
+            navigator.clipboard.writeText(text).then(() => showToast('Terminal output copied to clipboard!', 'info'));
         }
 
         // -------------------------------------------------------------
@@ -2228,7 +2275,7 @@ spec:
         }
 
         function copyLogs() {
-            navigator.clipboard.writeText(rawLogsText).then(() => alert('Logs copied to clipboard!'));
+            navigator.clipboard.writeText(rawLogsText).then(() => showToast('Logs copied to clipboard!', 'info'));
         }
 
         function downloadLogs() {
@@ -2419,7 +2466,7 @@ spec:
             const healthPath = document.getElementById('wiz-health-path').value.trim() || '/';
 
             if (!appName || !imageRepo) {
-                alert('App name and image repository are required.');
+                showToast('App name and image repository are required.', 'error');
                 return;
             }
 
@@ -2457,15 +2504,15 @@ spec:
                     body: yamlManifest
                 });
                 if (res.ok) {
-                    alert(`Workload '${appName}' deployed successfully!`);
+                    showToast(`Workload '${appName}' deployed successfully!`, 'success');
                     closeModal('create-deployment-modal');
                     switchTab('deployments');
                     fetchDeployments();
                 } else {
-                    alert('Deployment failed: ' + await res.text());
+                    showToast('Deployment failed: ' + await res.text(), 'error');
                 }
             } catch (e) {
-                alert('Deployment error: ' + e.message);
+                showToast('Deployment error: ' + e.message, 'error');
             }
         }
 
@@ -2479,15 +2526,15 @@ spec:
                     body: yamlText
                 });
                 if (res.ok) {
-                    alert('Deployment triggered successfully!');
+                    showToast('Deployment triggered successfully!', 'success');
                     closeModal('create-deployment-modal');
                     switchTab('deployments');
                     fetchDeployments();
                 } else {
-                    alert('Deployment failed: ' + await res.text());
+                    showToast('Deployment failed: ' + await res.text(), 'error');
                 }
             } catch (e) {
-                alert('Deployment error: ' + e.message);
+                showToast('Deployment error: ' + e.message, 'error');
             }
         }
 
@@ -2582,10 +2629,10 @@ spec:
                         <td>
                             <div style="display:flex; gap:4px; flex-wrap:wrap;">
                                 ${c.state === 'running'
-                                    ? `<button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Stop" onclick="stopContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> <span>Stop</span></button>`
-                                    : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" title="Start" onclick="startContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> <span>Start</span></button>`
+                                    ? `<button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Stop" onclick="stopContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg> <span>Stop</span></button>`
+                                    : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" title="Start" onclick="startContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> <span>Start</span></button>`
                                 }
-                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Restart" onclick="restartContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Restart" onclick="restartContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
                                 <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" title="Open Terminal" onclick="openTerminal('${escapeHtml(name)}')">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
                                     <span>Term</span>
@@ -2602,7 +2649,7 @@ spec:
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                                     <span>Stats</span>
                                 </button>
-                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Delete" onclick="removeContainer('${c.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Delete" onclick="removeContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                             </div>
                         </td>
                     </tr>
@@ -2633,15 +2680,15 @@ spec:
                         <td>
                             <div style="display:flex; gap:4px;">
                                 ${p.status.toLowerCase() === 'running'
-                                    ? `<button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Stop" onclick="stopPod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`
-                                    : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" title="Start" onclick="startPod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
+                                    ? `<button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Stop" onclick="stopPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`
+                                    : `<button class="btn btn-emerald" style="padding: 3px 6px; font-size:11px;" title="Start" onclick="startPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
                                 }
-                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Restart" onclick="restartPod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+                                <button class="btn" style="padding: 3px 6px; font-size:11px;" title="Restart" onclick="restartPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
                                 <button class="btn btn-primary" style="padding: 3px 6px; font-size:11px;" title="Kubernetes Pod YAML" onclick="viewKube('${p.id}')">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     <span>Kube</span>
                                 </button>
-                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Delete" onclick="removePod('${p.id}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Delete" onclick="removePod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                             </div>
                         </td>
                     </tr>
@@ -2674,7 +2721,7 @@ spec:
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                                     <span>Run</span>
                                 </button>
-                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" onclick="removeImage('${img.id}')">
+                                <button class="btn btn-rose" style="padding: 3px 6px; font-size:11px;" title="Delete Image" onclick="removeImage('${img.id}', '${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                 </button>
                             </div>
@@ -2822,42 +2869,183 @@ spec:
                 if (res.ok) {
                     closeModal('run-container-modal');
                     fetchContainers();
+                    showToast('Container started successfully!', 'success');
                 } else {
-                    alert('Failed to start container: ' + await res.text());
+                    showToast('Failed to start container: ' + await res.text(), 'error');
                 }
             } catch (e) {
                 console.error(e);
             }
         }
 
-        async function startContainer(id) {
-            try {
-                await authFetch(`/api/v1/containers/${id}/start`, { method: 'POST' });
-                fetchContainers();
-            } catch (e) { console.error(e); }
-        }
+        let pendingActionCallback = null;
 
-        async function stopContainer(id) {
-            try {
-                await authFetch(`/api/v1/containers/${id}/stop`, { method: 'POST' });
-                fetchContainers();
-            } catch (e) { console.error(e); }
-        }
+        function promptConfirmAction({ action, itemType, name, id, warning, onConfirm }) {
+            pendingActionCallback = onConfirm;
 
-        async function restartContainer(id) {
-            try {
-                await authFetch(`/api/v1/containers/${id}/restart`, { method: 'POST' });
-                fetchContainers();
-            } catch (e) { console.error(e); }
-        }
+            const modal = document.getElementById('confirm-action-modal');
+            const header = document.getElementById('confirm-modal-header');
+            const heading = document.getElementById('confirm-modal-heading');
+            const badge = document.getElementById('confirm-modal-icon-badge');
+            const message = document.getElementById('confirm-modal-message');
+            const typeLabel = document.getElementById('confirm-item-type');
+            const nameLabel = document.getElementById('confirm-item-name');
+            const descLabel = document.getElementById('confirm-item-desc');
+            const statusPill = document.getElementById('confirm-status-pill');
+            const warningBox = document.getElementById('confirm-warning-box');
+            const warningText = document.getElementById('confirm-warning-text');
+            const submitBtn = document.getElementById('confirm-action-submit-btn');
+            const submitLabel = document.getElementById('confirm-submit-label');
 
-        async function removeContainer(id) {
-            if (confirm(`Remove container ${id}?`)) {
-                try {
-                    await authFetch(`/api/v1/containers/${id}?force=true`, { method: 'DELETE' });
-                    fetchContainers();
-                } catch (e) { console.error(e); }
+            typeLabel.innerText = itemType.toUpperCase();
+            nameLabel.innerText = name || id || 'Unknown';
+            descLabel.innerText = id && id !== name ? `Identifier: ${id}` : `${itemType} component`;
+
+            if (action === 'start') {
+                heading.innerText = `Start ${itemType}`;
+                message.innerText = `Are you sure you want to start this ${itemType.toLowerCase()}?`;
+                badge.innerHTML = `<svg class="icon-svg" style="width:16px;height:16px;color:#059669;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+                badge.style.background = '#ecfdf5';
+                badge.style.borderColor = '#a7f3d0';
+                header.style.borderTop = '3px solid #10b981';
+                statusPill.className = 'pill pill-healthy';
+                statusPill.innerText = 'START';
+                submitBtn.className = 'btn btn-emerald';
+                submitLabel.innerText = `Start ${itemType}`;
+                warningBox.style.display = 'none';
+            } else if (action === 'stop') {
+                heading.innerText = `Stop ${itemType}`;
+                message.innerText = `Are you sure you want to stop this ${itemType.toLowerCase()}?`;
+                badge.innerHTML = `<svg class="icon-svg" style="width:16px;height:16px;color:#e11d48;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>`;
+                badge.style.background = '#fff1f2';
+                badge.style.borderColor = '#fecdd3';
+                header.style.borderTop = '3px solid #e11d48';
+                statusPill.className = 'pill pill-stopped';
+                statusPill.innerText = 'STOPPING';
+                submitBtn.className = 'btn btn-rose';
+                submitLabel.innerText = `Stop ${itemType}`;
+                warningBox.style.display = 'flex';
+                warningText.innerText = warning || `This will send SIGTERM and stop all running processes.`;
+            } else if (action === 'delete') {
+                heading.innerText = `Delete ${itemType}`;
+                message.innerText = `Are you sure you want to permanently delete this ${itemType.toLowerCase()}?`;
+                badge.innerHTML = `<svg class="icon-svg" style="width:16px;height:16px;color:#e11d48;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+                badge.style.background = '#fff1f2';
+                badge.style.borderColor = '#fecdd3';
+                header.style.borderTop = '3px solid #e11d48';
+                statusPill.className = 'pill pill-stopped';
+                statusPill.innerText = 'DESTRUCTIVE';
+                submitBtn.className = 'btn btn-rose';
+                submitLabel.innerText = `Delete ${itemType}`;
+                warningBox.style.display = 'flex';
+                warningText.innerText = warning || `This action is irreversible. All associated data will be removed.`;
+            } else if (action === 'restart') {
+                heading.innerText = `Restart ${itemType}`;
+                message.innerText = `Are you sure you want to restart this ${itemType.toLowerCase()}?`;
+                badge.innerHTML = `<svg class="icon-svg" style="width:16px;height:16px;color:#2563eb;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`;
+                badge.style.background = '#eff6ff';
+                badge.style.borderColor = '#bfdbfe';
+                header.style.borderTop = '3px solid #2563eb';
+                statusPill.className = 'pill pill-blue';
+                statusPill.innerText = 'RESTART';
+                submitBtn.className = 'btn btn-primary';
+                submitLabel.innerText = `Restart ${itemType}`;
+                warningBox.style.display = 'none';
+            } else {
+                heading.innerText = `Confirm ${action}`;
+                message.innerText = `Proceed with ${action} on this ${itemType.toLowerCase()}?`;
+                badge.innerHTML = `<svg class="icon-svg" style="width:16px;height:16px;color:#2563eb;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+                badge.style.background = '#eff6ff';
+                badge.style.borderColor = '#bfdbfe';
+                header.style.borderTop = '3px solid #2563eb';
+                statusPill.className = 'pill pill-blue';
+                statusPill.innerText = 'ACTION';
+                submitBtn.className = 'btn btn-primary';
+                submitLabel.innerText = `Proceed`;
+                if (warning) {
+                    warningBox.style.display = 'flex';
+                    warningText.innerText = warning;
+                } else {
+                    warningBox.style.display = 'none';
+                }
             }
+
+            openModal('confirm-action-modal');
+        }
+
+        function closeConfirmModal() {
+            closeModal('confirm-action-modal');
+            pendingActionCallback = null;
+        }
+
+        async function executeConfirmedAction() {
+            const cb = pendingActionCallback;
+            closeConfirmModal();
+            if (typeof cb === 'function') {
+                try {
+                    await cb();
+                } catch (e) {
+                    showToast('Action failed: ' + e.message, 'error');
+                }
+            }
+        }
+
+        function startContainer(id, name) {
+            promptConfirmAction({
+                action: 'start',
+                itemType: 'Container',
+                name: name || id,
+                id: id,
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/containers/${id}/start`, { method: 'POST' });
+                    showToast(`Container '${name || id}' started`, 'success');
+                    fetchContainers();
+                }
+            });
+        }
+
+        function stopContainer(id, name) {
+            promptConfirmAction({
+                action: 'stop',
+                itemType: 'Container',
+                name: name || id,
+                id: id,
+                warning: 'Active processes inside this container will receive SIGTERM and halt.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/containers/${id}/stop`, { method: 'POST' });
+                    showToast(`Container '${name || id}' stopped`, 'info');
+                    fetchContainers();
+                }
+            });
+        }
+
+        function restartContainer(id, name) {
+            promptConfirmAction({
+                action: 'restart',
+                itemType: 'Container',
+                name: name || id,
+                id: id,
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/containers/${id}/restart`, { method: 'POST' });
+                    showToast(`Container '${name || id}' restarted`, 'success');
+                    fetchContainers();
+                }
+            });
+        }
+
+        function removeContainer(id, name) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Container',
+                name: name || id,
+                id: id,
+                warning: 'The container will be force removed. Any ephemeral container state will be lost.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/containers/${id}?force=true`, { method: 'DELETE' });
+                    showToast(`Container '${name || id}' deleted`, 'success');
+                    fetchContainers();
+                }
+            });
         }
 
         async function submitCreatePod() {
@@ -2875,40 +3063,71 @@ spec:
                 if (res.ok) {
                     closeModal('create-pod-modal');
                     fetchPods();
+                    showToast(`Pod '${name}' created successfully`, 'success');
                 } else {
-                    alert('Failed to create pod: ' + await res.text());
+                    showToast('Failed to create pod: ' + await res.text(), 'error');
                 }
-            } catch (e) { console.error(e); }
-        }
-
-        async function startPod(id) {
-            try {
-                await authFetch(`/api/v1/pods/${id}/start`, { method: 'POST' });
-                fetchPods();
-            } catch (e) { console.error(e); }
-        }
-
-        async function stopPod(id) {
-            try {
-                await authFetch(`/api/v1/pods/${id}/stop`, { method: 'POST' });
-                fetchPods();
-            } catch (e) { console.error(e); }
-        }
-
-        async function restartPod(id) {
-            try {
-                await authFetch(`/api/v1/pods/${id}/restart`, { method: 'POST' });
-                fetchPods();
-            } catch (e) { console.error(e); }
-        }
-
-        async function removePod(id) {
-            if (confirm(`Remove pod ${id}?`)) {
-                try {
-                    await authFetch(`/api/v1/pods/${id}?force=true`, { method: 'DELETE' });
-                    fetchPods();
-                } catch (e) { console.error(e); }
+            } catch (e) {
+                showToast('Pod creation error: ' + e.message, 'error');
             }
+        }
+
+        function startPod(id, name) {
+            promptConfirmAction({
+                action: 'start',
+                itemType: 'Pod',
+                name: name || id,
+                id: id,
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/pods/${id}/start`, { method: 'POST' });
+                    showToast(`Pod '${name || id}' started`, 'success');
+                    fetchPods();
+                }
+            });
+        }
+
+        function stopPod(id, name) {
+            promptConfirmAction({
+                action: 'stop',
+                itemType: 'Pod',
+                name: name || id,
+                id: id,
+                warning: 'All container workloads inside this pod namespace will be stopped.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/pods/${id}/stop`, { method: 'POST' });
+                    showToast(`Pod '${name || id}' stopped`, 'info');
+                    fetchPods();
+                }
+            });
+        }
+
+        function restartPod(id, name) {
+            promptConfirmAction({
+                action: 'restart',
+                itemType: 'Pod',
+                name: name || id,
+                id: id,
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/pods/${id}/restart`, { method: 'POST' });
+                    showToast(`Pod '${name || id}' restarted`, 'success');
+                    fetchPods();
+                }
+            });
+        }
+
+        function removePod(id, name) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Pod',
+                name: name || id,
+                id: id,
+                warning: 'The pod and all nested containers will be force removed.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/pods/${id}?force=true`, { method: 'DELETE' });
+                    showToast(`Pod '${name || id}' deleted`, 'success');
+                    fetchPods();
+                }
+            });
         }
 
         async function viewKube(id) {
@@ -2932,19 +3151,28 @@ spec:
                 if (res.ok) {
                     closeModal('pull-image-modal');
                     fetchImages();
+                    showToast(`Image '${image}' pulled successfully`, 'success');
                 } else {
-                    alert('Pull failed: ' + await res.text());
+                    showToast('Pull failed: ' + await res.text(), 'error');
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                showToast('Pull error: ' + e.message, 'error');
+            }
         }
 
-        async function removeImage(id) {
-            if (confirm(`Delete image ${id}?`)) {
-                try {
+        function removeImage(id, repoTag) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Image',
+                name: repoTag || id,
+                id: id,
+                warning: 'The image will be purged from local container image storage.',
+                onConfirm: async () => {
                     await authFetch(`/api/v1/images/${id}?force=true`, { method: 'DELETE' });
+                    showToast(`Image '${repoTag || id}' deleted`, 'success');
                     fetchImages();
-                } catch (e) { console.error(e); }
-            }
+                }
+            });
         }
 
         function quickRunImage(image) {
@@ -2964,16 +3192,25 @@ spec:
                 });
                 closeModal('create-volume-modal');
                 fetchVolumes();
-            } catch (e) { console.error(e); }
+                showToast(`Volume '${name}' created successfully`, 'success');
+            } catch (e) {
+                showToast('Volume creation failed: ' + e.message, 'error');
+            }
         }
 
-        async function removeVolume(name) {
-            if (confirm(`Delete volume ${name}?`)) {
-                try {
+        function removeVolume(name) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Volume',
+                name: name,
+                id: name,
+                warning: 'All persistent data residing in this volume will be permanently erased.',
+                onConfirm: async () => {
                     await authFetch(`/api/v1/podman/volumes/${name}`, { method: 'DELETE' });
+                    showToast(`Volume '${name}' deleted`, 'success');
                     fetchVolumes();
-                } catch (e) { console.error(e); }
-            }
+                }
+            });
         }
 
         async function submitCreateNetwork() {
@@ -2989,16 +3226,25 @@ spec:
                 });
                 closeModal('create-network-modal');
                 fetchNetworks();
-            } catch (e) { console.error(e); }
+                showToast(`Network '${name}' created successfully`, 'success');
+            } catch (e) {
+                showToast('Network creation failed: ' + e.message, 'error');
+            }
         }
 
-        async function removeNetwork(name) {
-            if (confirm(`Delete network ${name}?`)) {
-                try {
+        function removeNetwork(name) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Network',
+                name: name,
+                id: name,
+                warning: 'Any containers attached to this Netavark network will lose bridge connectivity.',
+                onConfirm: async () => {
                     await authFetch(`/api/v1/podman/networks/${name}`, { method: 'DELETE' });
+                    showToast(`Network '${name}' deleted`, 'success');
                     fetchNetworks();
-                } catch (e) { console.error(e); }
-            }
+                }
+            });
         }
 
         async function deployManifest() {
@@ -3010,23 +3256,31 @@ spec:
                     body: yamlText
                 });
                 if (res.ok) {
-                    alert('Deployment triggered successfully!');
+                    showToast('Deployment triggered successfully!', 'success');
                     fetchDeployments();
                 } else {
-                    alert('Deployment failed: ' + await res.text());
+                    showToast('Deployment failed: ' + await res.text(), 'error');
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                showToast('Deployment error: ' + e.message, 'error');
+            }
         }
 
-        async function rollback(appName, targetRelease) {
-            if (confirm(`Roll back ${appName} to release ${targetRelease}?`)) {
-                try {
+        function rollback(appName, targetRelease) {
+            promptConfirmAction({
+                action: 'rollback',
+                itemType: 'Deployment',
+                name: `${appName} (Target: Release v${targetRelease})`,
+                id: appName,
+                warning: `Systemd Quadlet units will be regenerated and rolled back to release v${targetRelease}.`,
+                onConfirm: async () => {
                     await authFetch(`/api/v1/deployments/${appName}/rollback?release=${targetRelease}`, {
                         method: 'POST'
                     });
+                    showToast(`Workload '${appName}' rolled back to release v${targetRelease}`, 'success');
                     fetchDeployments();
-                } catch (e) { console.error(e); }
-            }
+                }
+            });
         }
 
         async function runMilestone() {
@@ -3053,7 +3307,7 @@ spec:
             try {
                 const res = await authFetch('/api/v1/database/backup', { method: 'POST' });
                 const data = await res.json();
-                alert('Backup created at: ' + data.path);
+                showToast('Backup created at: ' + data.path, 'success');
                 fetchTelemetry();
             } catch (e) { console.error(e); }
         }
