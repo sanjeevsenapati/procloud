@@ -4,24 +4,46 @@ import (
 	"time"
 )
 
-// User represents an authenticated platform user.
+// RBAC Roles Constants
+const (
+	RoleSuperAdmin = "admin"       // Platform / Support Admin (Global)
+	RoleOrgAdmin   = "org_admin"   // Organization Administrator
+	RoleDeveloper  = "developer"   // Developer / Operator
+	RoleViewer     = "viewer"      // Read-only Auditor / Viewer
+)
+
+// User represents an authenticated platform user with RBAC role and organization affiliation.
 type User struct {
-	ID           string    `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"`
-	Role         string    `json:"role"` // admin, member, viewer
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           string     `json:"id"`
+	Username     string     `json:"username"`
+	Email        string     `json:"email"`
+	PasswordHash string     `json:"-"`
+	Role         string     `json:"role"` // superadmin, org_admin, developer, viewer
+	TenantID     string     `json:"tenant_id,omitempty"`
+	TenantName   string     `json:"tenant_name,omitempty"`
+	DisplayName  string     `json:"display_name,omitempty"`
+	Status       string     `json:"status"` // active, suspended
+	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
-// Tenant represents an organization or workspace boundary.
+// Tenant represents an organization or workspace boundary with resource quotas.
 type Tenant struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Slug          string    `json:"slug"`
+	Description   string    `json:"description,omitempty"`
+	Plan          string    `json:"plan"` // free, developer, pro, enterprise
+	Status        string    `json:"status"` // active, suspended
+	MaxContainers int       `json:"max_containers"`
+	MaxPods       int       `json:"max_pods"`
+	MaxCPUCores   int       `json:"max_cpu_cores"`
+	MaxMemoryMB   int       `json:"max_memory_mb"`
+	MaxStorageGB  int       `json:"max_storage_gb"`
+	MemberCount   int       `json:"member_count"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // Project represents a tenant's project hosting applications and resources.

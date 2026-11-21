@@ -104,27 +104,102 @@ func scanNode(row *sql.Row) (*protocol.Node, error) {
 // -------------------------------------------------------------
 
 func (r *Repository) CreateUser(ctx context.Context, u *protocol.User) error {
+	status := u.Status
+	if status == "" {
+		status = "active"
+	}
 	_, err := r.db.sqlDB.ExecContext(ctx, `
-		INSERT INTO users (id, username, email, password_hash, role, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, u.ID, u.Username, u.Email, u.PasswordHash, u.Role, u.CreatedAt, u.UpdatedAt)
+		INSERT INTO users (id, username, email, password_hash, role, tenant_id, display_name, status, last_login_at, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, u.ID, u.Username, u.Email, u.PasswordHash, u.Role, u.TenantID, u.DisplayName, status, u.LastLoginAt, u.CreatedAt, u.UpdatedAt)
 	return err
 }
 
 func (r *Repository) GetUserByUsername(ctx context.Context, username string) (*protocol.User, error) {
 	row := r.db.sqlDB.QueryRowContext(ctx, `
-		SELECT id, username, email, password_hash, role, created_at, updated_at
-		FROM users WHERE username = ?
+		SELECT u.id, u.username, u.email, u.password_hash, u.role,
+		       COALESCE(u.tenant_id, ''), COALESCE(t.name, ''), COALESCE(u.display_name, ''),
+		       COALESCE(u.status, 'active'), u.last_login_at, u.created_at, u.updated_at
+		FROM users u
+		LEFT JOIN tenants t ON u.tenant_id = t.id
+		WHERE u.username = ?
 	`, username)
 	return scanUser(row)
 }
 
 func (r *Repository) GetUserByID(ctx context.Context, id string) (*protocol.User, error) {
 	row := r.db.sqlDB.QueryRowContext(ctx, `
-		SELECT id, username, email, password_hash, role, created_at, updated_at
-		FROM users WHERE id = ?
+		SELECT u.id, u.username, u.email, u.password_hash, u.role,
+		       COALESCE(u.tenant_id, ''), COALESCE(t.name, ''), COALESCE(u.display_name, ''),
+		       COALESCE(u.status, 'active'), u.last_login_at, u.created_at, u.updated_at
+		FROM users u
+		LEFT JOIN tenants t ON u.tenant_id = t.id
+		WHERE u.id = ?
 	`, id)
 	return scanUser(row)
+}
+
+func (r *Repository) ListUsers(ctx context.Context, tenantID, role string) ([]*protocol.User, error) {
+	query := `
+		SELECT u.id, u.username, u.email, u.password_hash, u.role,
+		       COALESCE(u.tenant_id, ''), COALESCE(t.name, ''), COALESCE(u.display_name, ''),
+		       COALESCE(u.status, 'active'), u.last_login_at, u.created_at, u.updated_at
+		FROM users u
+		LEFT JOIN tenants t ON u.tenant_id = t.id
+		WHERE (? = '' OR u.tenant_id = ?)
+		  AND (? = '' OR u.role = ?)
+		ORDER BY u.created_at DESC
+	`
+	rows, err := r.db.sqlDB.QueryContext(ctx, query, tenantID, tenantID, role, role)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []*protocol.User
+	for rows.Next() {
+		var u protocol.User
+		var lastLogin sql.NullTime
+		if err := rows.Scan(
+			&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role,
+			&u.TenantID, &u.TenantName, &u.DisplayName,
+			&u.Status, &lastLogin, &u.CreatedAt, &u.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		if lastLogin.Valid {
+			u.LastLoginAt = &lastLogin.Time
+		}
+		list = append(list, &u)
+	}
+	return list, nil
+}
+
+func (r *Repository) UpdateUser(ctx context.Context, u *protocol.User) error {
+	status := u.Status
+	if status == "" {
+		status = "active"
+	}
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE users
+		SET role = ?, tenant_id = ?, display_name = ?, status = ?, last_login_at = ?, updated_at = ?
+		WHERE id = ?
+	`, u.Role, u.TenantID, u.DisplayName, status, u.LastLoginAt, u.UpdatedAt, u.ID)
+	return err
+}
+
+func (r *Repository) UpdateUserPassword(ctx context.Context, id, passwordHash string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE users
+		SET password_hash = ?, updated_at = ?
+		WHERE id = ?
+	`, passwordHash, time.Now(), id)
+	return err
+}
+
+func (r *Repository) DeleteUser(ctx context.Context, id string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, "DELETE FROM users WHERE id = ?", id)
+	return err
 }
 
 func (r *Repository) CountUsers(ctx context.Context) (int, error) {
@@ -135,11 +210,22 @@ func (r *Repository) CountUsers(ctx context.Context) (int, error) {
 
 func scanUser(row *sql.Row) (*protocol.User, error) {
 	var u protocol.User
-	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt)
+	var lastLogin sql.NullTime
+	err := row.Scan(
+		&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role,
+		&u.TenantID, &u.TenantName, &u.DisplayName,
+		&u.Status, &lastLogin, &u.CreatedAt, &u.UpdatedAt,
+	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("user not found")
 	}
-	return &u, err
+	if err != nil {
+		return nil, err
+	}
+	if lastLogin.Valid {
+		u.LastLoginAt = &lastLogin.Time
+	}
+	return &u, nil
 }
 
 // -------------------------------------------------------------
@@ -147,35 +233,84 @@ func scanUser(row *sql.Row) (*protocol.User, error) {
 // -------------------------------------------------------------
 
 func (r *Repository) CreateTenant(ctx context.Context, t *protocol.Tenant) error {
+	plan := t.Plan
+	if plan == "" {
+		plan = "free"
+	}
+	status := t.Status
+	if status == "" {
+		status = "active"
+	}
+	maxCtrs := t.MaxContainers
+	if maxCtrs <= 0 {
+		maxCtrs = 20
+	}
+	maxPods := t.MaxPods
+	if maxPods <= 0 {
+		maxPods = 10
+	}
+	maxCPU := t.MaxCPUCores
+	if maxCPU <= 0 {
+		maxCPU = 8
+	}
+	maxMem := t.MaxMemoryMB
+	if maxMem <= 0 {
+		maxMem = 16384
+	}
+	maxStorage := t.MaxStorageGB
+	if maxStorage <= 0 {
+		maxStorage = 100
+	}
+
 	_, err := r.db.sqlDB.ExecContext(ctx, `
-		INSERT INTO tenants (id, name, slug, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?)
-	`, t.ID, t.Name, t.Slug, t.CreatedAt, t.UpdatedAt)
+		INSERT INTO tenants (
+			id, name, slug, description, plan, status,
+			max_containers, max_pods, max_cpu_cores, max_memory_mb, max_storage_gb,
+			created_at, updated_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, t.ID, t.Name, t.Slug, t.Description, plan, status,
+		maxCtrs, maxPods, maxCPU, maxMem, maxStorage,
+		t.CreatedAt, t.UpdatedAt)
 	return err
 }
 
 func (r *Repository) GetTenantByID(ctx context.Context, id string) (*protocol.Tenant, error) {
-	row := r.db.sqlDB.QueryRowContext(ctx, "SELECT id, name, slug, created_at, updated_at FROM tenants WHERE id = ?", id)
-	var t protocol.Tenant
-	err := row.Scan(&t.ID, &t.Name, &t.Slug, &t.CreatedAt, &t.UpdatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("tenant not found")
-	}
-	return &t, err
+	row := r.db.sqlDB.QueryRowContext(ctx, `
+		SELECT t.id, t.name, t.slug, COALESCE(t.description, ''), COALESCE(t.plan, 'free'), COALESCE(t.status, 'active'),
+		       COALESCE(t.max_containers, 20), COALESCE(t.max_pods, 10), COALESCE(t.max_cpu_cores, 8),
+		       COALESCE(t.max_memory_mb, 16384), COALESCE(t.max_storage_gb, 100),
+		       (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id) AS member_count,
+		       t.created_at, t.updated_at
+		FROM tenants t
+		WHERE t.id = ?
+	`, id)
+	return scanTenant(row)
 }
 
 func (r *Repository) GetTenantBySlug(ctx context.Context, slug string) (*protocol.Tenant, error) {
-	row := r.db.sqlDB.QueryRowContext(ctx, "SELECT id, name, slug, created_at, updated_at FROM tenants WHERE slug = ?", slug)
-	var t protocol.Tenant
-	err := row.Scan(&t.ID, &t.Name, &t.Slug, &t.CreatedAt, &t.UpdatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("tenant not found")
-	}
-	return &t, err
+	row := r.db.sqlDB.QueryRowContext(ctx, `
+		SELECT t.id, t.name, t.slug, COALESCE(t.description, ''), COALESCE(t.plan, 'free'), COALESCE(t.status, 'active'),
+		       COALESCE(t.max_containers, 20), COALESCE(t.max_pods, 10), COALESCE(t.max_cpu_cores, 8),
+		       COALESCE(t.max_memory_mb, 16384), COALESCE(t.max_storage_gb, 100),
+		       (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id) AS member_count,
+		       t.created_at, t.updated_at
+		FROM tenants t
+		WHERE t.slug = ?
+	`, slug)
+	return scanTenant(row)
 }
 
 func (r *Repository) ListTenants(ctx context.Context) ([]*protocol.Tenant, error) {
-	rows, err := r.db.sqlDB.QueryContext(ctx, "SELECT id, name, slug, created_at, updated_at FROM tenants ORDER BY name ASC")
+	rows, err := r.db.sqlDB.QueryContext(ctx, `
+		SELECT t.id, t.name, t.slug, COALESCE(t.description, ''), COALESCE(t.plan, 'free'), COALESCE(t.status, 'active'),
+		       COALESCE(t.max_containers, 20), COALESCE(t.max_pods, 10), COALESCE(t.max_cpu_cores, 8),
+		       COALESCE(t.max_memory_mb, 16384), COALESCE(t.max_storage_gb, 100),
+		       (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id) AS member_count,
+		       t.created_at, t.updated_at
+		FROM tenants t
+		ORDER BY t.name ASC
+	`)
 	if err != nil {
 		return nil, err
 	}
@@ -184,12 +319,82 @@ func (r *Repository) ListTenants(ctx context.Context) ([]*protocol.Tenant, error
 	var list []*protocol.Tenant
 	for rows.Next() {
 		var t protocol.Tenant
-		if err := rows.Scan(&t.ID, &t.Name, &t.Slug, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&t.ID, &t.Name, &t.Slug, &t.Description, &t.Plan, &t.Status,
+			&t.MaxContainers, &t.MaxPods, &t.MaxCPUCores, &t.MaxMemoryMB, &t.MaxStorageGB,
+			&t.MemberCount, &t.CreatedAt, &t.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		list = append(list, &t)
 	}
 	return list, nil
+}
+
+func (r *Repository) UpdateTenant(ctx context.Context, t *protocol.Tenant) error {
+	plan := t.Plan
+	if plan == "" {
+		plan = "free"
+	}
+	status := t.Status
+	if status == "" {
+		status = "active"
+	}
+	maxCtrs := t.MaxContainers
+	if maxCtrs <= 0 {
+		maxCtrs = 20
+	}
+	maxPods := t.MaxPods
+	if maxPods <= 0 {
+		maxPods = 10
+	}
+	maxCPU := t.MaxCPUCores
+	if maxCPU <= 0 {
+		maxCPU = 8
+	}
+	maxMem := t.MaxMemoryMB
+	if maxMem <= 0 {
+		maxMem = 16384
+	}
+	maxStorage := t.MaxStorageGB
+	if maxStorage <= 0 {
+		maxStorage = 100
+	}
+
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE tenants
+		SET name = ?, slug = ?, description = ?, plan = ?, status = ?,
+		    max_containers = ?, max_pods = ?, max_cpu_cores = ?, max_memory_mb = ?, max_storage_gb = ?,
+		    updated_at = ?
+		WHERE id = ?
+	`, t.Name, t.Slug, t.Description, plan, status,
+		maxCtrs, maxPods, maxCPU, maxMem, maxStorage,
+		t.UpdatedAt, t.ID)
+	return err
+}
+
+func (r *Repository) DeleteTenant(ctx context.Context, id string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, "DELETE FROM tenants WHERE id = ?", id)
+	return err
+}
+
+func (r *Repository) GetTenantMemberCount(ctx context.Context, tenantID string) (int, error) {
+	var count int
+	err := r.db.sqlDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE tenant_id = ?", tenantID).Scan(&count)
+	return count, err
+}
+
+func scanTenant(row *sql.Row) (*protocol.Tenant, error) {
+	var t protocol.Tenant
+	err := row.Scan(
+		&t.ID, &t.Name, &t.Slug, &t.Description, &t.Plan, &t.Status,
+		&t.MaxContainers, &t.MaxPods, &t.MaxCPUCores, &t.MaxMemoryMB, &t.MaxStorageGB,
+		&t.MemberCount, &t.CreatedAt, &t.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("tenant not found")
+	}
+	return &t, err
 }
 
 func (r *Repository) CreateProject(ctx context.Context, p *protocol.Project) error {

@@ -19,6 +19,10 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *protocol.User) error
 	GetUserByUsername(ctx context.Context, username string) (*protocol.User, error)
 	GetUserByID(ctx context.Context, id string) (*protocol.User, error)
+	ListUsers(ctx context.Context, tenantID, role string) ([]*protocol.User, error)
+	UpdateUser(ctx context.Context, user *protocol.User) error
+	UpdateUserPassword(ctx context.Context, id, passwordHash string) error
+	DeleteUser(ctx context.Context, id string) error
 	CountUsers(ctx context.Context) (int, error)
 }
 
@@ -27,6 +31,9 @@ type TenantRepository interface {
 	GetTenantByID(ctx context.Context, id string) (*protocol.Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (*protocol.Tenant, error)
 	ListTenants(ctx context.Context) ([]*protocol.Tenant, error)
+	UpdateTenant(ctx context.Context, tenant *protocol.Tenant) error
+	DeleteTenant(ctx context.Context, id string) error
+	GetTenantMemberCount(ctx context.Context, tenantID string) (int, error)
 
 	CreateProject(ctx context.Context, project *protocol.Project) error
 	GetProjectByID(ctx context.Context, id string) (*protocol.Project, error)

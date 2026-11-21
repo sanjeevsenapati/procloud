@@ -209,4 +209,23 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
 CREATE INDEX IF NOT EXISTS idx_workflow_runs_created ON workflow_runs(created_at DESC);
 `,
 	},
+	{
+		Version:     3,
+		Description: "Organization quotas, user RBAC roles, and tenant associations",
+		SQL: `
+ALTER TABLE tenants ADD COLUMN description TEXT DEFAULT '';
+ALTER TABLE tenants ADD COLUMN plan TEXT DEFAULT 'free';
+ALTER TABLE tenants ADD COLUMN status TEXT DEFAULT 'active';
+ALTER TABLE tenants ADD COLUMN max_containers INTEGER DEFAULT 20;
+ALTER TABLE tenants ADD COLUMN max_pods INTEGER DEFAULT 10;
+ALTER TABLE tenants ADD COLUMN max_cpu_cores INTEGER DEFAULT 8;
+ALTER TABLE tenants ADD COLUMN max_memory_mb INTEGER DEFAULT 16384;
+ALTER TABLE tenants ADD COLUMN max_storage_gb INTEGER DEFAULT 100;
+
+ALTER TABLE users ADD COLUMN tenant_id TEXT DEFAULT '';
+ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT '';
+ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active';
+ALTER TABLE users ADD COLUMN last_login_at DATETIME;
+`,
+	},
 }

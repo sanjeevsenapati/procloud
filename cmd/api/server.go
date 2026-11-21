@@ -100,17 +100,83 @@ func NewServer(
 		wfEngine:      wfEngine,
 	}
 
-	// Ensure default administrator account exists (admin / admin123)
-	if _, err := repo.GetUserByUsername(context.Background(), "admin"); err != nil {
-		_, regErr := authSvc.Register(context.Background(), "admin", "admin@procloud.io", "admin123", "admin")
-		if regErr != nil {
-			_, regErr = authSvc.Register(context.Background(), "admin", "admin@procloud.local", "admin123", "admin")
+	// -------------------------------------------------------------
+	// Initial Bootstrap: Organizations & RBAC Users
+	// -------------------------------------------------------------
+	ctx := context.Background()
+	defaultOrg, _ := repo.GetTenantBySlug(ctx, "default-org")
+	if defaultOrg == nil {
+		defaultOrg = &protocol.Tenant{
+			ID:            "tnt-default",
+			Name:          "Default Organization",
+			Slug:          "default-org",
+			Description:   "Core sovereign cloud platform infrastructure and administrative tenant",
+			Plan:          "enterprise",
+			Status:        "active",
+			MaxContainers: 50,
+			MaxPods:       25,
+			MaxCPUCores:   16,
+			MaxMemoryMB:   32768,
+			MaxStorageGB:  500,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
 		}
+		_ = repo.CreateTenant(ctx, defaultOrg)
+		log.Printf("[Bootstrap] Default Organization initialized (tnt-default)")
+
+		demoOrg := &protocol.Tenant{
+			ID:            "tnt-acme",
+			Name:          "Acme Innovations",
+			Slug:          "acme-innovations",
+			Description:   "Production product workloads, microservices, and client portals",
+			Plan:          "pro",
+			Status:        "active",
+			MaxContainers: 25,
+			MaxPods:       15,
+			MaxCPUCores:   8,
+			MaxMemoryMB:   16384,
+			MaxStorageGB:  250,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		_ = repo.CreateTenant(ctx, demoOrg)
+	}
+
+	// Ensure default administrator account exists (admin / admin123) with Super Admin role
+	adminUser, err := repo.GetUserByUsername(ctx, "admin")
+	if err != nil {
+		_, regErr := authSvc.CreateUserWithOrg(ctx, "admin", "admin@procloud.io", "admin123", protocol.RoleSuperAdmin, defaultOrg.ID, "Support Administrator")
 		if regErr != nil {
 			log.Printf("[Auth] Notice: failed to register default admin: %v", regErr)
 		} else {
-			log.Printf("[Auth] Default admin account created: admin / admin123")
+			log.Printf("[Auth] Support Admin account created: admin / admin123")
 		}
+	} else {
+		needsUpdate := false
+		if adminUser.Role != protocol.RoleSuperAdmin {
+			adminUser.Role = protocol.RoleSuperAdmin
+			needsUpdate = true
+		}
+		if adminUser.TenantID == "" && defaultOrg != nil {
+			adminUser.TenantID = defaultOrg.ID
+			needsUpdate = true
+		}
+		if adminUser.DisplayName == "" {
+			adminUser.DisplayName = "Support Administrator"
+			needsUpdate = true
+		}
+		if needsUpdate {
+			_ = repo.UpdateUser(ctx, adminUser)
+		}
+	}
+
+	// Seed secondary demo users for RBAC demonstration if few users exist
+	userCount, _ := repo.CountUsers(ctx)
+	if userCount <= 1 && defaultOrg != nil {
+		_, _ = authSvc.CreateUserWithOrg(ctx, "sarah.ops", "sarah@acme.io", "sarah123", protocol.RoleOrgAdmin, "tnt-acme", "Sarah Jenkins (Org Admin)")
+		_, _ = authSvc.CreateUserWithOrg(ctx, "alex.dev", "alex@acme.io", "alex123", protocol.RoleDeveloper, "tnt-acme", "Alex Rivera (Developer)")
+		_, _ = authSvc.CreateUserWithOrg(ctx, "auditor.chen", "chen@procloud.io", "chen123", protocol.RoleViewer, defaultOrg.ID, "David Chen (Auditor)")
+		log.Printf("[Auth] Seeded RBAC demo team members across organizations")
 	}
 
 	s.registerRoutes()
@@ -210,6 +276,26 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/podman/volumes", s.authRequired(s.handleListPodmanVolumes))
 	s.mux.HandleFunc("POST /api/v1/podman/volumes", s.authRequired(s.handleCreatePodmanVolume))
 	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.authRequired(s.handleRemovePodmanVolume))
+
+	// -------------------------------------------------------------
+	// Organization & Multi-Tenant Management (Protected)
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/organizations", s.authRequired(s.handleListOrganizations))
+	s.mux.HandleFunc("POST /api/v1/organizations", s.authRequired(s.handleCreateOrganization))
+	s.mux.HandleFunc("GET /api/v1/organizations/{id}", s.authRequired(s.handleGetOrganization))
+	s.mux.HandleFunc("PUT /api/v1/organizations/{id}", s.authRequired(s.handleUpdateOrganization))
+	s.mux.HandleFunc("DELETE /api/v1/organizations/{id}", s.authRequired(s.handleDeleteOrganization))
+
+	// -------------------------------------------------------------
+	// User Management & RBAC Roles (Protected)
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/users", s.authRequired(s.handleListUsers))
+	s.mux.HandleFunc("POST /api/v1/users", s.authRequired(s.handleCreateUser))
+	s.mux.HandleFunc("GET /api/v1/users/{id}", s.authRequired(s.handleGetUser))
+	s.mux.HandleFunc("PUT /api/v1/users/{id}", s.authRequired(s.handleUpdateUser))
+	s.mux.HandleFunc("POST /api/v1/users/{id}/password", s.authRequired(s.handleResetUserPassword))
+	s.mux.HandleFunc("DELETE /api/v1/users/{id}", s.authRequired(s.handleDeleteUser))
+	s.mux.HandleFunc("GET /api/v1/rbac/roles", s.authRequired(s.handleListRBACRoles))
 
 	// Tenants & Projects (Protected)
 	s.mux.HandleFunc("GET /api/v1/tenants", s.authRequired(s.handleListTenants))
@@ -992,6 +1078,269 @@ func (s *Server) handleRegisterNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, node)
+}
+
+// -------------------------------------------------------------
+// Organization Management Handlers
+// -------------------------------------------------------------
+
+func (s *Server) handleListOrganizations(w http.ResponseWriter, r *http.Request) {
+	list, err := s.tenantSvc.ListOrganizations(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if list == nil {
+		list = []*protocol.Tenant{}
+	}
+	respondJSON(w, http.StatusOK, list)
+}
+
+func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name          string `json:"name"`
+		Description   string `json:"description"`
+		Plan          string `json:"plan"`
+		Status        string `json:"status"`
+		MaxContainers int    `json:"max_containers"`
+		MaxPods       int    `json:"max_pods"`
+		MaxCPUCores   int    `json:"max_cpu_cores"`
+		MaxMemoryMB   int    `json:"max_memory_mb"`
+		MaxStorageGB  int    `json:"max_storage_gb"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		http.Error(w, "organization name is required", http.StatusBadRequest)
+		return
+	}
+	t, err := s.tenantSvc.CreateOrganization(
+		r.Context(), req.Name, req.Description, req.Plan,
+		req.MaxContainers, req.MaxPods, req.MaxCPUCores, req.MaxMemoryMB, req.MaxStorageGB,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.Status != "" && req.Status != "active" {
+		if updated, uerr := s.tenantSvc.UpdateOrganization(
+			r.Context(), t.ID, t.Name, t.Description, t.Plan, req.Status,
+			t.MaxContainers, t.MaxPods, t.MaxCPUCores, t.MaxMemoryMB, t.MaxStorageGB,
+		); uerr == nil {
+			t = updated
+		}
+	}
+	claims := s.checkAuth(r)
+	actor := "admin"
+	if claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "ORG_CREATE", "Tenant", t.ID, r.RemoteAddr, fmt.Sprintf("Created organization %s (%s)", t.Name, t.Plan))
+	respondJSON(w, http.StatusCreated, t)
+}
+
+func (s *Server) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	t, err := s.tenantSvc.GetOrganization(r.Context(), id)
+	if err != nil {
+		http.Error(w, "organization not found", http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, t)
+}
+
+func (s *Server) handleUpdateOrganization(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req struct {
+		Name          string `json:"name"`
+		Description   string `json:"description"`
+		Plan          string `json:"plan"`
+		Status        string `json:"status"`
+		MaxContainers int    `json:"max_containers"`
+		MaxPods       int    `json:"max_pods"`
+		MaxCPUCores   int    `json:"max_cpu_cores"`
+		MaxMemoryMB   int    `json:"max_memory_mb"`
+		MaxStorageGB  int    `json:"max_storage_gb"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	t, err := s.tenantSvc.UpdateOrganization(
+		r.Context(), id, req.Name, req.Description, req.Plan, req.Status,
+		req.MaxContainers, req.MaxPods, req.MaxCPUCores, req.MaxMemoryMB, req.MaxStorageGB,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	claims := s.checkAuth(r)
+	actor := "admin"
+	if claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "ORG_UPDATE", "Tenant", t.ID, r.RemoteAddr, fmt.Sprintf("Updated organization %s", t.Name))
+	respondJSON(w, http.StatusOK, t)
+}
+
+func (s *Server) handleDeleteOrganization(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "tnt-default" {
+		http.Error(w, "cannot delete the default system organization", http.StatusForbidden)
+		return
+	}
+	if err := s.tenantSvc.DeleteOrganization(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	claims := s.checkAuth(r)
+	actor := "admin"
+	if claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "ORG_DELETE", "Tenant", id, r.RemoteAddr, fmt.Sprintf("Deleted organization %s", id))
+	respondJSON(w, http.StatusOK, map[string]string{"message": "organization deleted", "id": id})
+}
+
+// -------------------------------------------------------------
+// User Management & RBAC Handlers
+// -------------------------------------------------------------
+
+func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
+	tenantID := r.URL.Query().Get("tenant_id")
+	role := r.URL.Query().Get("role")
+	list, err := s.authSvc.ListUsers(r.Context(), tenantID, role)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if list == nil {
+		list = []*protocol.User{}
+	}
+	respondJSON(w, http.StatusOK, list)
+}
+
+func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Username    string `json:"username"`
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+		Role        string `json:"role"`
+		TenantID    string `json:"tenant_id"`
+		DisplayName string `json:"display_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		http.Error(w, "username, email, and password are required", http.StatusBadRequest)
+		return
+	}
+	u, err := s.authSvc.CreateUserWithOrg(r.Context(), req.Username, req.Email, req.Password, req.Role, req.TenantID, req.DisplayName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	claims := s.checkAuth(r)
+	actor := "admin"
+	if claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "USER_CREATE", "User", u.ID, r.RemoteAddr, fmt.Sprintf("Created user %s (%s, %s)", u.Username, u.Role, u.TenantID))
+	respondJSON(w, http.StatusCreated, u)
+}
+
+func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	u, err := s.authSvc.GetUser(r.Context(), id)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, u)
+}
+
+func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req struct {
+		Role        string `json:"role"`
+		TenantID    string `json:"tenant_id"`
+		Status      string `json:"status"`
+		DisplayName string `json:"display_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	u, err := s.authSvc.UpdateUser(r.Context(), id, req.Role, req.TenantID, req.Status, req.DisplayName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	claims := s.checkAuth(r)
+	actor := "admin"
+	if claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "USER_UPDATE", "User", u.ID, r.RemoteAddr, fmt.Sprintf("Updated user %s (%s)", u.Username, u.Role))
+	respondJSON(w, http.StatusOK, u)
+}
+
+func (s *Server) handleResetUserPassword(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req struct {
+		Password    string `json:"password"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	pw := req.Password
+	if pw == "" {
+		pw = req.NewPassword
+	}
+	if len(pw) < 6 {
+		http.Error(w, "password must be at least 6 characters", http.StatusBadRequest)
+		return
+	}
+	if err := s.authSvc.ResetPassword(r.Context(), id, pw); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	claims := s.checkAuth(r)
+	actor := "admin"
+	if claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "USER_PASSWORD_RESET", "User", id, r.RemoteAddr, "Password reset by administrator")
+	respondJSON(w, http.StatusOK, map[string]string{"message": "password updated successfully", "id": id, "status": "success"})
+}
+
+func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	claims := s.checkAuth(r)
+	if claims != nil && claims.UserID == id {
+		http.Error(w, "cannot delete your own active administrator account", http.StatusForbidden)
+		return
+	}
+	if err := s.authSvc.DeleteUser(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	actor := "admin"
+	if claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "USER_DELETE", "User", id, r.RemoteAddr, fmt.Sprintf("Deleted user %s", id))
+	respondJSON(w, http.StatusOK, map[string]string{"message": "user deleted", "id": id})
+}
+
+func (s *Server) handleListRBACRoles(w http.ResponseWriter, r *http.Request) {
+	respondJSON(w, http.StatusOK, auth.GetRBACRoles())
 }
 
 func (s *Server) handleListTenants(w http.ResponseWriter, r *http.Request) {

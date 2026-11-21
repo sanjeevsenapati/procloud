@@ -432,6 +432,26 @@
             color: var(--pg-blue-600);
             border: 1px solid var(--pg-border);
         }
+        .pill-purple {
+            background: #f5f3ff;
+            color: #7c3aed;
+            border: 1px solid #ddd6fe;
+        }
+        .pill-cyan {
+            background: #ecfeff;
+            color: #0891b2;
+            border: 1px solid #a5f3fc;
+        }
+        .pill-amber {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+        .pill-slate {
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
 
         /* Modals - ProGit White & Light Blue Theme */
         .modal-overlay {
@@ -1578,6 +1598,14 @@
                 <span>ProGit Service</span>
             </a>
 
+            <!-- Organization Context Switcher -->
+            <div id="org-selector-container" style="display:flex; align-items:center; gap:6px; background:#eff6ff; border:1px solid #bfdbfe; padding:3px 9px; border-radius:6px;" title="Filter resources by active Organization context">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                <select id="active-org-select" style="background:transparent; border:none; font-size:11px; font-weight:700; color:#1d4ed8; font-family:'JetBrains Mono',monospace; outline:none; cursor:pointer;" onchange="changeActiveOrganization(this.value)">
+                    <option value="">All Organizations</option>
+                </select>
+            </div>
+
             <div id="user-display" class="user-profile-badge">
                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <span id="username-label">admin</span>
@@ -1660,6 +1688,18 @@
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                     <span class="sidebar-label">Milestone 1</span>
                     <span class="sidebar-badge pill-emerald">16 Steps</span>
+                </a>
+
+                <div class="sidebar-section-title" style="padding: 12px 14px 4px 14px; font-size: 10px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; letter-spacing: 0.6px;">Administration</div>
+                <a class="sidebar-item" onclick="switchTab('organizations')" data-tab="organizations" data-tooltip="Organizations">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                    <span class="sidebar-label">Organizations</span>
+                    <span class="sidebar-badge" id="tab-badge-orgs">0</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('users')" data-tab="users" data-tooltip="Users & RBAC">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span class="sidebar-label">Users &amp; RBAC</span>
+                    <span class="sidebar-badge pill-purple" id="tab-badge-users">0</span>
                 </a>
             </nav>
 
@@ -3016,6 +3056,189 @@ spec:
                 </div>
             </div>
         </div>
+
+        <!-- 9. ORGANIZATIONS TAB -->
+        <div id="tab-organizations" class="tab-content">
+            <div class="wf-hero-card" style="margin-bottom: 20px;">
+                <div class="wf-hero-top">
+                    <div class="wf-hero-title-group">
+                        <div class="wf-hero-icon-badge" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #bfdbfe; color: #2563eb;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="wf-hero-title">Organization &amp; Tenant Governance</div>
+                            <div class="wf-hero-subtitle">Multi-tenant boundary control, resource quota enforcement (Containers, Pods, CPU, RAM, Storage), and team allocation</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-primary" onclick="openCreateOrgModal()">+ New Organization</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid-12" style="margin-bottom: 20px;">
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-orgs-total">0</div>
+                    <div class="stat-label">Total Organizations</div>
+                    <div class="stat-sub">Active &amp; Provisioned Tenants</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-orgs-workload-limit">0</div>
+                    <div class="stat-label">Cluster Container Quota</div>
+                    <div class="stat-sub">Sum of Max Allocated Workloads</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-orgs-members-total">0</div>
+                    <div class="stat-label">Assigned Team Members</div>
+                    <div class="stat-sub">Across All Organizations</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-orgs-plans-breakdown">0 Ent / 0 Pro</div>
+                    <div class="stat-label">Enterprise / Pro Tiers</div>
+                    <div class="stat-sub">High-Capacity Workload Quotas</div>
+                </div>
+            </div>
+
+            <!-- Organizations Table Box -->
+            <div class="pg-box">
+                <div class="pg-box-header">
+                    <div class="pg-box-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                        <span>Organizations &amp; Quota Matrix</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="text" id="orgs-search-input" class="form-input" style="padding:4px 10px; font-size:11px; width:220px;" placeholder="Search organization..." oninput="filterOrgsTable()">
+                        <select id="orgs-plan-filter" class="form-input" style="width:auto; padding:3px 8px; font-size:11px;" onchange="filterOrgsTable()">
+                            <option value="">All Subscription Plans</option>
+                            <option value="enterprise">Enterprise</option>
+                            <option value="pro">Pro</option>
+                            <option value="developer">Developer</option>
+                            <option value="free">Free</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchOrganizations()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th>Organization</th>
+                                <th>Plan / Tier</th>
+                                <th>Status</th>
+                                <th>Resource Quotas (Workloads • Pods • Cores • RAM)</th>
+                                <th>Members</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orgs-table-body">
+                            <tr><td colspan="7" style="text-align:center; padding: 24px;">Loading organizations...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. USERS & RBAC TAB -->
+        <div id="tab-users" class="tab-content">
+            <div class="wf-hero-card" style="margin-bottom: 20px;">
+                <div class="wf-hero-top">
+                    <div class="wf-hero-title-group">
+                        <div class="wf-hero-icon-badge" style="background: linear-gradient(135deg, #f5f3ff, #ede9fe); border-color: #ddd6fe; color: #7c3aed;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="wf-hero-title">User Directory &amp; Role-Based Access Control (RBAC)</div>
+                            <div class="wf-hero-subtitle">Support Admin control over identity, credentials, tenant boundaries, and least-privilege permission grants</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" onclick="openRbacMatrixModal()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <span>RBAC Role Matrix</span>
+                        </button>
+                        <button class="btn btn-primary" onclick="openCreateUserModal()">+ Add User</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid-12" style="margin-bottom: 20px;">
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-users-total">0</div>
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-sub">Across All Organizations</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-users-superadmin">0</div>
+                    <div class="stat-label">Support / Super Admins</div>
+                    <div class="stat-sub">Unrestricted Cluster Authority</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-users-orgadmin">0</div>
+                    <div class="stat-label">Organization Admins</div>
+                    <div class="stat-sub">Tenant Workload &amp; Team Managers</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" id="stat-users-dev-view">0 Dev / 0 View</div>
+                    <div class="stat-label">Developers &amp; Auditors</div>
+                    <div class="stat-sub">Workload Operators &amp; Read-Only</div>
+                </div>
+            </div>
+
+            <!-- Users Table Box -->
+            <div class="pg-box">
+                <div class="pg-box-header">
+                    <div class="pg-box-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                        <span>Platform User Accounts &amp; Permissions</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <input type="text" id="users-search-input" class="form-input" style="padding:4px 10px; font-size:11px; width:200px;" placeholder="Search by name, email..." oninput="filterUsersTable()">
+                        <select id="users-org-filter" class="form-input" style="width:auto; padding:3px 8px; font-size:11px;" onchange="filterUsersTable()">
+                            <option value="">All Organizations</option>
+                        </select>
+                        <select id="users-role-filter" class="form-input" style="width:auto; padding:3px 8px; font-size:11px;" onchange="filterUsersTable()">
+                            <option value="">All RBAC Roles</option>
+                            <option value="admin">Super Admin / Support Admin</option>
+                            <option value="org_admin">Organization Admin</option>
+                            <option value="developer">Developer / Operator</option>
+                            <option value="viewer">Auditor / Viewer</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchUsers()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th>User Profile</th>
+                                <th>Organization</th>
+                                <th>RBAC Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr><td colspan="7" style="text-align:center; padding: 24px;">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </main>
     </div> <!-- /.progit-app-body -->
 
@@ -4006,6 +4229,251 @@ spec:
             </div>
         </div>
     </div>
+
+    <!-- MODAL: Organization / Tenant Management -->
+    <div id="org-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                    <span id="org-modal-title">Create Organization</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('org-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="org-modal-id">
+            <div class="form-group">
+                <label class="form-label">Organization Name *</label>
+                <input type="text" id="org-modal-name" class="form-input" placeholder="e.g. Acme Innovations">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description / Purpose</label>
+                <input type="text" id="org-modal-desc" class="form-input" placeholder="e.g. Core product engineering and edge workloads">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                <div>
+                    <label class="form-label">Subscription Tier / Plan</label>
+                    <select id="org-modal-plan" class="form-input">
+                        <option value="enterprise">Enterprise (High capacity)</option>
+                        <option value="pro" selected>Pro (Standard commercial)</option>
+                        <option value="developer">Developer (Sandbox &amp; preview)</option>
+                        <option value="free">Free (Evaluation tier)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Tenant Status</label>
+                    <select id="org-modal-status" class="form-input">
+                        <option value="active" selected>Active</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                </div>
+            </div>
+            <div style="background:#f8faff; border:1px solid #dbeafe; border-radius:8px; padding:12px 14px; margin-bottom:16px;">
+                <div style="font-size:11px; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <span>Resource Quota Limits</span>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label class="form-label" style="font-size:10px;">Max Workloads</label>
+                        <input type="number" id="org-modal-containers" class="form-input" value="50" min="1">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:10px;">Max Pods</label>
+                        <input type="number" id="org-modal-pods" class="form-input" value="25" min="1">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:10px;">Max CPU (Cores)</label>
+                        <input type="number" id="org-modal-cpu" class="form-input" value="8" step="1" min="1">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:10px;">Max RAM (MB)</label>
+                        <input type="number" id="org-modal-memory" class="form-input" value="16384" step="512" min="256">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:10px;">Max Disk (GB)</label>
+                        <input type="number" id="org-modal-storage" class="form-input" value="100" min="1">
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn" onclick="closeModal('org-modal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitOrgForm()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <span id="org-modal-submit-label">Save Organization</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: User Account & RBAC Role Assignment -->
+    <div id="user-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 580px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span id="user-modal-title">Create User Account</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('user-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="user-modal-id">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label class="form-label">Username *</label>
+                    <input type="text" id="user-modal-username" class="form-input" placeholder="e.g. j.doe">
+                </div>
+                <div>
+                    <label class="form-label">Full / Display Name *</label>
+                    <input type="text" id="user-modal-display-name" class="form-input" placeholder="e.g. John Doe">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address *</label>
+                <input type="email" id="user-modal-email" class="form-input" placeholder="e.g. j.doe@example.com">
+            </div>
+            <div class="form-group" id="user-modal-password-group">
+                <label class="form-label">Password *</label>
+                <input type="password" id="user-modal-password" class="form-input" placeholder="Enter secure password">
+                <div style="font-size:10px; color:var(--pg-text-muted); margin-top:3px;">Minimum 6 characters. Can be reset anytime by Support Admin.</div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label class="form-label">Assigned Organization *</label>
+                    <select id="user-modal-org" class="form-input"></select>
+                </div>
+                <div>
+                    <label class="form-label">Account Status</label>
+                    <select id="user-modal-status" class="form-input">
+                        <option value="active" selected>Active</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">RBAC Authorization Role *</label>
+                <select id="user-modal-role" class="form-input">
+                    <option value="admin">Super Admin / Support Admin — Unrestricted Platform Authority</option>
+                    <option value="org_admin">Organization Admin — Tenant Workloads, Quotas &amp; Team Management</option>
+                    <option value="developer" selected>Developer / Operator — Deploy, Shell Exec &amp; Workload Management</option>
+                    <option value="viewer">Auditor / Viewer — Strictly Read-Only Observability &amp; Logs</option>
+                </select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                <button type="button" class="btn" onclick="closeModal('user-modal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitUserForm()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <span id="user-modal-submit-label">Create User</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Reset Password -->
+    <div id="user-password-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 440px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span>Reset User Password</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('user-password-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="user-password-modal-id">
+            <p style="font-size:12px; color:var(--pg-text-secondary); margin-bottom:12px;">
+                Reset credentials for user <strong id="user-password-modal-username" style="color:var(--pg-primary);"></strong>. The new password will take effect immediately.
+            </p>
+            <div class="form-group">
+                <label class="form-label">New Password *</label>
+                <input type="password" id="user-password-modal-new" class="form-input" placeholder="Enter new password">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Confirm New Password *</label>
+                <input type="password" id="user-password-modal-confirm" class="form-input" placeholder="Repeat new password">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                <button type="button" class="btn" onclick="closeModal('user-password-modal')">Cancel</button>
+                <button type="button" class="btn btn-rose" onclick="submitResetPassword()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Update Password</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RBAC Role & Permission Authority Matrix -->
+    <div id="rbac-matrix-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 780px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>RBAC Role &amp; Permission Authority Matrix</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('rbac-matrix-modal')">&times;</div>
+            </div>
+            <p style="font-size:12px; color:var(--pg-text-secondary); margin-bottom:16px;">
+                ProCloud enforces strict multi-tenant Role-Based Access Control (RBAC) across compute, networking, builds, telemetry, and organization boundaries.
+            </p>
+            <div style="overflow-x:auto;">
+                <table class="pg-table" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>Platform Capability / Operation</th>
+                            <th style="text-align:center;"><span class="pill pill-purple">Super Admin</span></th>
+                            <th style="text-align:center;"><span class="pill pill-blue">Org Admin</span></th>
+                            <th style="text-align:center;"><span class="pill pill-emerald">Developer</span></th>
+                            <th style="text-align:center;"><span class="pill pill-slate">Viewer</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Manage Organizations &amp; Quotas</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Create, edit, suspend, allocate cluster limits</span></td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
+                            <td style="text-align:center; color:#64748b;">Read Quotas</td>
+                            <td style="text-align:center; color:#94a3b8;">None</td>
+                            <td style="text-align:center; color:#94a3b8;">None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Platform User Management</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Provision users, change roles, reset passwords</span></td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">All Tenants</td>
+                            <td style="text-align:center; color:#2563eb; font-weight:600;">Tenant Team</td>
+                            <td style="text-align:center; color:#94a3b8;">None</td>
+                            <td style="text-align:center; color:#94a3b8;">None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Deploy &amp; Run Workloads</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Launch containers, create pods, stop/delete</span></td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Cluster-wide</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Within Tenant</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Within Tenant</td>
+                            <td style="text-align:center; color:#dc2626;">Read-Only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Interactive Container Shell / Exec</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Direct PTY console, command execution</span></td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Allowed</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Allowed</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Allowed</td>
+                            <td style="text-align:center; color:#dc2626; font-weight:600;">Blocked</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CI/CD Pipelines (Build &amp; Deploy)</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Containerfile, Deploy.yaml synthesis, build execution</span></td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
+                            <td style="text-align:center; color:#dc2626;">Read-Only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Observability, Metrics &amp; Live Logs</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Telemetry, top processes, container log streaming</span></td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
+                            <td style="text-align:center; color:#16a34a; font-weight:700;">Audit Logs</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+                <button type="button" class="btn btn-primary" onclick="closeModal('rbac-matrix-modal')">Close Matrix</button>
+            </div>
+        </div>
+    </div>
     </div> <!-- /#app-screen -->
 
     <script>
@@ -4104,6 +4572,8 @@ spec:
                 case 'networks': fetchNetworks(); break;
                 case 'deployments': fetchDeployments(); break;
                 case 'telemetry': fetchTelemetry(); break;
+                case 'organizations': fetchOrganizations(); break;
+                case 'users': fetchUsers(); break;
                 case 'milestone': break;
                 case 'container-details':
                     // Refresh data in-place without re-triggering switchTab
@@ -4190,9 +4660,32 @@ spec:
             if (appEl) appEl.style.display = 'block';
 
             if (user) {
-                document.getElementById('username-label').innerText = user.username || 'admin';
-                document.getElementById('userrole-label').innerText = (user.role || 'ADMIN').toUpperCase();
+                const displayName = user.display_name || user.username || 'admin';
+                document.getElementById('username-label').innerText = displayName;
+                let role = (user.role || 'admin').toLowerCase();
+                const roleLabelEl = document.getElementById('userrole-label');
+                if (roleLabelEl) {
+                    if (role === 'admin' || role === 'superadmin') {
+                        roleLabelEl.className = 'pill pill-purple';
+                        roleLabelEl.innerText = 'SUPER ADMIN';
+                    } else if (role === 'org_admin') {
+                        roleLabelEl.className = 'pill pill-blue';
+                        roleLabelEl.innerText = 'ORG ADMIN';
+                    } else if (role === 'developer') {
+                        roleLabelEl.className = 'pill pill-emerald';
+                        roleLabelEl.innerText = 'DEVELOPER';
+                    } else if (role === 'viewer') {
+                        roleLabelEl.className = 'pill pill-slate';
+                        roleLabelEl.innerText = 'VIEWER';
+                    } else {
+                        roleLabelEl.className = 'pill pill-blue';
+                        roleLabelEl.innerText = role.toUpperCase();
+                    }
+                }
             }
+
+            // Load organizations context for the dropdown
+            loadOrganizationContext();
 
             refreshCurrentTab();
             if (!pollTimer) {
@@ -7475,6 +7968,672 @@ spec:
                     }
                 }, 300);
             }
+        }
+
+        // ==========================================
+        // ORGANIZATIONS & TENANT MANAGEMENT CONTROLLER
+        // ==========================================
+        let allOrganizations = [];
+        let allUsers = [];
+        let activeOrgFilter = '';
+
+        async function fetchOrganizations() {
+            try {
+                const res = await authFetch('/api/v1/organizations');
+                if (!res.ok) throw new Error('Failed to fetch organizations: ' + res.statusText);
+                allOrganizations = await res.json() || [];
+                
+                // Update stats
+                const totalOrgs = allOrganizations.length;
+                const totalWorkloadLimit = allOrganizations.reduce((acc, o) => acc + (o.max_containers || 0), 0);
+                const totalMembers = allOrganizations.reduce((acc, o) => acc + (o.member_count || 0), 0);
+                const entCount = allOrganizations.filter(o => (o.plan || '').toLowerCase() === 'enterprise').length;
+                const proCount = allOrganizations.filter(o => (o.plan || '').toLowerCase() === 'pro').length;
+
+                const statTotal = document.getElementById('stat-orgs-total');
+                if (statTotal) statTotal.innerText = totalOrgs;
+                const statWorkload = document.getElementById('stat-orgs-workload-limit');
+                if (statWorkload) statWorkload.innerText = totalWorkloadLimit;
+                const statMembers = document.getElementById('stat-orgs-members-total');
+                if (statMembers) statMembers.innerText = totalMembers;
+                const statPlans = document.getElementById('stat-orgs-plans-breakdown');
+                if (statPlans) statPlans.innerText = `${entCount} Ent / ${proCount} Pro`;
+
+                // Update dropdown selectors
+                populateOrgDropdowns();
+                
+                // Render table
+                filterOrgsTable();
+            } catch (err) {
+                console.error('fetchOrganizations error:', err);
+                const tbody = document.getElementById('orgs-table-body');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--pg-danger); padding:20px;">Failed to load organizations: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        function populateOrgDropdowns() {
+            // Header Active Org Selector
+            const headerSelect = document.getElementById('active-org-select');
+            if (headerSelect) {
+                const prev = headerSelect.value;
+                let html = '<option value="">All Organizations</option>';
+                allOrganizations.forEach(o => {
+                    html += `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}</option>`;
+                });
+                headerSelect.innerHTML = html;
+                if (prev && allOrganizations.some(o => o.id === prev)) {
+                    headerSelect.value = prev;
+                }
+            }
+
+            // Users Table Filter Org Selector
+            const usersFilterSelect = document.getElementById('users-org-filter');
+            if (usersFilterSelect) {
+                const prev = usersFilterSelect.value;
+                let html = '<option value="">All Organizations</option>';
+                allOrganizations.forEach(o => {
+                    html += `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}</option>`;
+                });
+                usersFilterSelect.innerHTML = html;
+                if (prev && allOrganizations.some(o => o.id === prev)) {
+                    usersFilterSelect.value = prev;
+                }
+            }
+
+            // User Modal Org Selector
+            const userModalOrg = document.getElementById('user-modal-org');
+            if (userModalOrg) {
+                const prev = userModalOrg.value;
+                let html = '';
+                allOrganizations.forEach(o => {
+                    html += `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)} (${escapeHtml(o.plan || 'pro')})</option>`;
+                });
+                userModalOrg.innerHTML = html;
+                if (prev && allOrganizations.some(o => o.id === prev)) {
+                    userModalOrg.value = prev;
+                }
+            }
+        }
+
+        async function loadOrganizationContext() {
+            if (allOrganizations.length === 0) {
+                try {
+                    const res = await authFetch('/api/v1/organizations');
+                    if (res.ok) {
+                        allOrganizations = await res.json() || [];
+                        populateOrgDropdowns();
+                    }
+                } catch (e) {
+                    console.error('loadOrganizationContext error:', e);
+                }
+            } else {
+                populateOrgDropdowns();
+            }
+        }
+
+        function changeActiveOrganization(orgId) {
+            activeOrgFilter = orgId;
+            const orgObj = allOrganizations.find(o => o.id === orgId);
+            if (orgId) {
+                showToast(`Switched active context to: ${orgObj ? orgObj.name : orgId}`, 'info');
+            } else {
+                showToast('Viewing cluster across all organizations', 'info');
+            }
+            // Sync with users filter if on users tab
+            const usersFilterSelect = document.getElementById('users-org-filter');
+            if (usersFilterSelect) {
+                usersFilterSelect.value = orgId;
+                filterUsersTable();
+            }
+            if (currentTab === 'organizations') {
+                filterOrgsTable();
+            }
+        }
+
+        function filterOrgsTable() {
+            const query = (document.getElementById('orgs-search-input')?.value || '').toLowerCase().trim();
+            const planFilter = (document.getElementById('orgs-plan-filter')?.value || '').toLowerCase().trim();
+
+            let filtered = allOrganizations;
+            if (query) {
+                filtered = filtered.filter(o => 
+                    (o.name || '').toLowerCase().includes(query) ||
+                    (o.id || '').toLowerCase().includes(query) ||
+                    (o.description || '').toLowerCase().includes(query)
+                );
+            }
+            if (planFilter) {
+                filtered = filtered.filter(o => (o.plan || '').toLowerCase() === planFilter);
+            }
+            renderOrganizations(filtered);
+        }
+
+        function renderOrganizations(list) {
+            const tbody = document.getElementById('orgs-table-body');
+            if (!tbody) return;
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No organizations found matching the criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(o => {
+                const plan = (o.plan || 'developer').toLowerCase();
+                let planPill = '<span class="pill pill-cyan">Developer</span>';
+                if (plan === 'enterprise') planPill = '<span class="pill pill-purple">Enterprise</span>';
+                else if (plan === 'pro') planPill = '<span class="pill pill-blue">Pro</span>';
+                else if (plan === 'free') planPill = '<span class="pill pill-slate">Free</span>';
+
+                const status = (o.status || 'active').toLowerCase();
+                const statusPill = status === 'active'
+                    ? '<span class="pill pill-emerald"><span class="status-dot dot-running"></span> Active</span>'
+                    : '<span class="pill pill-rose"><span class="status-dot dot-stopped"></span> Suspended</span>';
+
+                const createdStr = o.created_at ? new Date(o.created_at).toLocaleDateString() : '—';
+                const isDefault = o.id === 'tnt-default';
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div style="width:32px; height:32px; border-radius:6px; background:#eff6ff; border:1px solid #bfdbfe; display:flex; align-items:center; justify-content:center; color:#2563eb; flex-shrink:0;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; color:var(--pg-text);">${escapeHtml(o.name)}</div>
+                                    <div style="font-size:11px; color:var(--pg-text-secondary); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        ${escapeHtml(o.description || 'No description provided')}
+                                    </div>
+                                    <div style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--pg-text-muted);">${escapeHtml(o.id)}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${planPill}</td>
+                        <td>${statusPill}</td>
+                        <td>
+                            <div style="font-size:11px; line-height:1.4;">
+                                <div><strong style="color:var(--pg-primary);">${o.max_containers || 50}</strong> Workloads &bull; <strong style="color:var(--pg-primary);">${o.max_pods || 25}</strong> Pods</div>
+                                <div style="color:var(--pg-text-muted); font-size:10px;">
+                                    ${o.max_cpu_cores || 8} Cores &bull; ${Math.round((o.max_memory_mb || 16384)/1024)} GB RAM &bull; ${o.max_storage_gb || 100} GB Disk
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                <span style="font-weight:600; font-size:12px;">${o.member_count || 0}</span>
+                            </div>
+                        </td>
+                        <td style="font-size:11px; color:var(--pg-text-muted);">${createdStr}</td>
+                        <td>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-sm" onclick="openEditOrgModal('${escapeHtml(o.id)}')" title="Edit Organization & Quotas">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    <span>Edit</span>
+                                </button>
+                                ${!isDefault ? `
+                                    <button class="btn btn-sm btn-rose" onclick="deleteOrg('${escapeHtml(o.id)}', '${escapeHtml(o.name)}')" title="Delete Organization">
+                                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openCreateOrgModal() {
+            document.getElementById('org-modal-id').value = '';
+            document.getElementById('org-modal-title').innerText = 'Create Organization';
+            document.getElementById('org-modal-submit-label').innerText = 'Create Organization';
+            document.getElementById('org-modal-name').value = '';
+            document.getElementById('org-modal-desc').value = '';
+            document.getElementById('org-modal-plan').value = 'pro';
+            document.getElementById('org-modal-status').value = 'active';
+            document.getElementById('org-modal-containers').value = 50;
+            document.getElementById('org-modal-pods').value = 25;
+            document.getElementById('org-modal-cpu').value = 8;
+            document.getElementById('org-modal-memory').value = 16384;
+            document.getElementById('org-modal-storage').value = 100;
+            openModal('org-modal');
+        }
+
+        function openEditOrgModal(id) {
+            const org = allOrganizations.find(o => o.id === id);
+            if (!org) {
+                showToast('Organization not found', 'error');
+                return;
+            }
+            document.getElementById('org-modal-id').value = org.id;
+            document.getElementById('org-modal-title').innerText = `Edit Organization: ${org.name}`;
+            document.getElementById('org-modal-submit-label').innerText = 'Save Changes';
+            document.getElementById('org-modal-name').value = org.name || '';
+            document.getElementById('org-modal-desc').value = org.description || '';
+            document.getElementById('org-modal-plan').value = org.plan || 'pro';
+            document.getElementById('org-modal-status').value = org.status || 'active';
+            document.getElementById('org-modal-containers').value = org.max_containers || 50;
+            document.getElementById('org-modal-pods').value = org.max_pods || 25;
+            document.getElementById('org-modal-cpu').value = org.max_cpu_cores || 8;
+            document.getElementById('org-modal-memory').value = org.max_memory_mb || 16384;
+            document.getElementById('org-modal-storage').value = org.max_storage_gb || 100;
+            openModal('org-modal');
+        }
+
+        async function submitOrgForm() {
+            const id = document.getElementById('org-modal-id').value.trim();
+            const name = document.getElementById('org-modal-name').value.trim();
+            const desc = document.getElementById('org-modal-desc').value.trim();
+            const plan = document.getElementById('org-modal-plan').value;
+            const status = document.getElementById('org-modal-status').value;
+            const maxContainers = parseInt(document.getElementById('org-modal-containers').value) || 50;
+            const maxPods = parseInt(document.getElementById('org-modal-pods').value) || 25;
+            const maxCPU = parseInt(document.getElementById('org-modal-cpu').value) || 8;
+            const maxMemory = parseInt(document.getElementById('org-modal-memory').value) || 16384;
+            const maxStorage = parseInt(document.getElementById('org-modal-storage').value) || 100;
+
+            if (!name) {
+                showToast('Organization name is required', 'error');
+                return;
+            }
+
+            const payload = {
+                name: name,
+                description: desc,
+                plan: plan,
+                status: status,
+                max_containers: maxContainers,
+                max_pods: maxPods,
+                max_cpu_cores: maxCPU,
+                max_memory_mb: maxMemory,
+                max_storage_gb: maxStorage
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await authFetch(`/api/v1/organizations/${encodeURIComponent(id)}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await authFetch('/api/v1/organizations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Operation failed');
+                }
+
+                closeModal('org-modal');
+                showToast(id ? 'Organization updated successfully' : 'Organization created successfully', 'success');
+                await fetchOrganizations();
+                await fetchUsers();
+            } catch (err) {
+                console.error('submitOrgForm error:', err);
+                showToast('Error saving organization: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteOrg(id, name) {
+            if (id === 'tnt-default') {
+                showToast('The primary default organization cannot be deleted', 'error');
+                return;
+            }
+            if (!confirm(`Are you sure you want to delete organization "${name}"?\nAll associated quotas and configurations will be permanently removed.`)) {
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/organizations/${encodeURIComponent(id)}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Failed deleting organization');
+                }
+                showToast(`Organization "${name}" deleted successfully`, 'success');
+                await fetchOrganizations();
+                await fetchUsers();
+            } catch (err) {
+                console.error('deleteOrg error:', err);
+                showToast('Error deleting organization: ' + err.message, 'error');
+            }
+        }
+
+        // ==========================================
+        // USER DIRECTORY & RBAC CONTROLLER
+        // ==========================================
+        async function fetchUsers() {
+            try {
+                const res = await authFetch('/api/v1/users');
+                if (!res.ok) throw new Error('Failed to fetch users: ' + res.statusText);
+                allUsers = await res.json() || [];
+
+                // Update stats
+                const totalUsers = allUsers.length;
+                const superAdmins = allUsers.filter(u => u.role === 'admin' || u.role === 'superadmin').length;
+                const orgAdmins = allUsers.filter(u => u.role === 'org_admin').length;
+                const devCount = allUsers.filter(u => u.role === 'developer').length;
+                const viewCount = allUsers.filter(u => u.role === 'viewer').length;
+
+                const statTotal = document.getElementById('stat-users-total');
+                if (statTotal) statTotal.innerText = totalUsers;
+                const statSuper = document.getElementById('stat-users-superadmin');
+                if (statSuper) statSuper.innerText = superAdmins;
+                const statOrg = document.getElementById('stat-users-orgadmin');
+                if (statOrg) statOrg.innerText = orgAdmins;
+                const statDevView = document.getElementById('stat-users-dev-view');
+                if (statDevView) statDevView.innerText = `${devCount} Dev / ${viewCount} View`;
+
+                filterUsersTable();
+            } catch (err) {
+                console.error('fetchUsers error:', err);
+                const tbody = document.getElementById('users-table-body');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--pg-danger); padding:20px;">Failed to load user directory: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        function filterUsersTable() {
+            const query = (document.getElementById('users-search-input')?.value || '').toLowerCase().trim();
+            const orgFilter = (document.getElementById('users-org-filter')?.value || '').trim();
+            const roleFilter = (document.getElementById('users-role-filter')?.value || '').trim();
+
+            let filtered = allUsers;
+            if (query) {
+                filtered = filtered.filter(u => 
+                    (u.username || '').toLowerCase().includes(query) ||
+                    (u.display_name || '').toLowerCase().includes(query) ||
+                    (u.email || '').toLowerCase().includes(query) ||
+                    (u.tenant_name || '').toLowerCase().includes(query)
+                );
+            }
+            if (orgFilter) {
+                filtered = filtered.filter(u => u.tenant_id === orgFilter);
+            }
+            if (roleFilter) {
+                filtered = filtered.filter(u => {
+                    if (roleFilter === 'admin') return u.role === 'admin' || u.role === 'superadmin';
+                    return u.role === roleFilter;
+                });
+            }
+            renderUsers(filtered);
+        }
+
+        function renderUsers(list) {
+            const tbody = document.getElementById('users-table-body');
+            if (!tbody) return;
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No platform users found matching the filter criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(u => {
+                const initial = (u.display_name || u.username || 'U').charAt(0).toUpperCase();
+                const role = (u.role || 'developer').toLowerCase();
+                let rolePill = '<span class="pill pill-emerald">Developer</span>';
+                if (role === 'admin' || role === 'superadmin') {
+                    rolePill = '<span class="pill pill-purple">Super Admin</span>';
+                } else if (role === 'org_admin') {
+                    rolePill = '<span class="pill pill-blue">Org Admin</span>';
+                } else if (role === 'viewer') {
+                    rolePill = '<span class="pill pill-slate">Viewer</span>';
+                }
+
+                const status = (u.status || 'active').toLowerCase();
+                const statusPill = status === 'active'
+                    ? '<span class="pill pill-emerald"><span class="status-dot dot-running"></span> Active</span>'
+                    : '<span class="pill pill-rose"><span class="status-dot dot-stopped"></span> Suspended</span>';
+
+                const lastLoginStr = u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'Never';
+                const createdStr = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+                const isRootAdmin = u.username === 'admin';
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:34px; height:34px; border-radius:50%; background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    ${escapeHtml(initial)}
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; color:var(--pg-text);">${escapeHtml(u.display_name || u.username)}</div>
+                                    <div style="font-size:11px; color:var(--pg-text-secondary); display:flex; gap:6px;">
+                                        <span>@${escapeHtml(u.username)}</span>
+                                        <span>&bull;</span>
+                                        <span>${escapeHtml(u.email || 'no-email')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                                <span style="font-weight:600; font-size:12px; color:var(--pg-text);">${escapeHtml(u.tenant_name || u.tenant_id || 'Default')}</span>
+                            </div>
+                        </td>
+                        <td>${rolePill}</td>
+                        <td>${statusPill}</td>
+                        <td style="font-size:11px; color:var(--pg-text-secondary); font-family:'JetBrains Mono',monospace;">${escapeHtml(lastLoginStr)}</td>
+                        <td style="font-size:11px; color:var(--pg-text-muted);">${createdStr}</td>
+                        <td>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-sm" onclick="openEditUserModal('${escapeHtml(u.id)}')" title="Edit User Profile">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    <span>Edit</span>
+                                </button>
+                                <button class="btn btn-sm" onclick="openResetPasswordModal('${escapeHtml(u.id)}', '${escapeHtml(u.username)}')" title="Reset Credentials">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    <span>Password</span>
+                                </button>
+                                ${!isRootAdmin ? `
+                                    <button class="btn btn-sm btn-rose" onclick="deleteUser('${escapeHtml(u.id)}', '${escapeHtml(u.username)}')" title="Delete User">
+                                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openCreateUserModal() {
+            document.getElementById('user-modal-id').value = '';
+            document.getElementById('user-modal-title').innerText = 'Create Platform User';
+            document.getElementById('user-modal-submit-label').innerText = 'Create User';
+            const uInput = document.getElementById('user-modal-username');
+            uInput.value = '';
+            uInput.removeAttribute('disabled');
+            document.getElementById('user-modal-display-name').value = '';
+            document.getElementById('user-modal-email').value = '';
+            document.getElementById('user-modal-password').value = '';
+            document.getElementById('user-modal-password-group').style.display = 'block';
+            document.getElementById('user-modal-role').value = 'developer';
+            document.getElementById('user-modal-status').value = 'active';
+
+            // Ensure org dropdown is filled
+            populateOrgDropdowns();
+            openModal('user-modal');
+        }
+
+        function openEditUserModal(id) {
+            const user = allUsers.find(u => u.id === id);
+            if (!user) {
+                showToast('User not found', 'error');
+                return;
+            }
+            document.getElementById('user-modal-id').value = user.id;
+            document.getElementById('user-modal-title').innerText = `Edit User: ${user.display_name || user.username}`;
+            document.getElementById('user-modal-submit-label').innerText = 'Save Changes';
+            const uInput = document.getElementById('user-modal-username');
+            uInput.value = user.username || '';
+            uInput.setAttribute('disabled', 'disabled');
+            document.getElementById('user-modal-display-name').value = user.display_name || '';
+            document.getElementById('user-modal-email').value = user.email || '';
+            document.getElementById('user-modal-password-group').style.display = 'none';
+            document.getElementById('user-modal-role').value = user.role || 'developer';
+            document.getElementById('user-modal-status').value = user.status || 'active';
+
+            populateOrgDropdowns();
+            const orgSelect = document.getElementById('user-modal-org');
+            if (orgSelect && user.tenant_id) {
+                orgSelect.value = user.tenant_id;
+            }
+            openModal('user-modal');
+        }
+
+        async function submitUserForm() {
+            const id = document.getElementById('user-modal-id').value.trim();
+            const username = document.getElementById('user-modal-username').value.trim();
+            const displayName = document.getElementById('user-modal-display-name').value.trim();
+            const email = document.getElementById('user-modal-email').value.trim();
+            const password = document.getElementById('user-modal-password').value.trim();
+            const orgId = document.getElementById('user-modal-org').value;
+            const role = document.getElementById('user-modal-role').value;
+            const status = document.getElementById('user-modal-status').value;
+
+            if (!id) {
+                if (!username || !email || !password) {
+                    showToast('Username, email, and password are required', 'error');
+                    return;
+                }
+                if (password.length < 6) {
+                    showToast('Password must be at least 6 characters', 'error');
+                    return;
+                }
+            } else {
+                if (!email) {
+                    showToast('Email address is required', 'error');
+                    return;
+                }
+            }
+
+            try {
+                let res;
+                if (id) {
+                    const payload = {
+                        display_name: displayName,
+                        email: email,
+                        tenant_id: orgId,
+                        role: role,
+                        status: status
+                    };
+                    res = await authFetch(`/api/v1/users/${encodeURIComponent(id)}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    const payload = {
+                        username: username,
+                        password: password,
+                        display_name: displayName,
+                        email: email,
+                        tenant_id: orgId,
+                        role: role,
+                        status: status
+                    };
+                    res = await authFetch('/api/v1/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Operation failed');
+                }
+
+                closeModal('user-modal');
+                showToast(id ? 'User updated successfully' : 'User account created successfully', 'success');
+                await fetchUsers();
+                await fetchOrganizations();
+            } catch (err) {
+                console.error('submitUserForm error:', err);
+                showToast('Error saving user: ' + err.message, 'error');
+            }
+        }
+
+        function openResetPasswordModal(id, username) {
+            document.getElementById('user-password-modal-id').value = id;
+            document.getElementById('user-password-modal-username').innerText = `@${username}`;
+            document.getElementById('user-password-modal-new').value = '';
+            document.getElementById('user-password-modal-confirm').value = '';
+            openModal('user-password-modal');
+        }
+
+        async function submitResetPassword() {
+            const id = document.getElementById('user-password-modal-id').value;
+            const p1 = document.getElementById('user-password-modal-new').value.trim();
+            const p2 = document.getElementById('user-password-modal-confirm').value.trim();
+
+            if (!p1 || !p2) {
+                showToast('Both password fields are required', 'error');
+                return;
+            }
+            if (p1 !== p2) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+            if (p1.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/users/${encodeURIComponent(id)}/password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password: p1 })
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Failed resetting password');
+                }
+                closeModal('user-password-modal');
+                showToast('Password reset successfully', 'success');
+            } catch (err) {
+                console.error('submitResetPassword error:', err);
+                showToast('Password reset error: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteUser(id, username) {
+            if (username === 'admin') {
+                showToast('Cannot delete default platform administrator', 'error');
+                return;
+            }
+            if (!confirm(`Are you sure you want to permanently delete user account "@${username}"?`)) {
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/users/${encodeURIComponent(id)}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Failed deleting user');
+                }
+                showToast(`User "@${username}" deleted successfully`, 'success');
+                await fetchUsers();
+                await fetchOrganizations();
+            } catch (err) {
+                console.error('deleteUser error:', err);
+                showToast('Error deleting user: ' + err.message, 'error');
+            }
+        }
+
+        function openRbacMatrixModal() {
+            openModal('rbac-matrix-modal');
         }
 
         // Start session check immediately
