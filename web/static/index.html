@@ -1,39 +1,49 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProCloud — Sovereign Cloud & Podman Desktop Platform</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z'/></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* ProGit Blue-Tint Dark Theme Palette */
-            --pg-bg: #0b1120;
-            --pg-header: #0f172a;
-            --pg-surface: #131e36;
-            --pg-card: #182644;
-            --pg-card-hover: #1e3157;
-            --pg-border: #243656;
-            --pg-border-subtle: #1a2942;
+            /* White and Light Blue Theme Palette */
+            --pg-bg: #f0f6ff;                  /* Fresh light blue-tinted white base */
+            --pg-header: #ffffff;              /* Pure white header */
+            --pg-surface: #ffffff;             /* Crisp pure white surface/panel */
+            --pg-card: #f8faff;                /* Soft light blue card */
+            --pg-card-hover: #eef6ff;          /* Light blue hover */
+            --pg-border: #dbeafe;              /* Soft sky/light blue border */
+            --pg-border-subtle: #edf4fe;       /* Subtle row divider */
             
-            --pg-blue-500: #3b82f6;
-            --pg-blue-600: #2563eb;
-            --pg-blue-700: #1d4ed8;
-            --pg-blue-glow: rgba(59, 130, 246, 0.18);
+            --pg-blue-500: #3b82f6;            /* Vibrant blue */
+            --pg-blue-600: #2563eb;            /* Primary blue */
+            --pg-blue-700: #1d4ed8;            /* Deep hover blue */
+            --pg-blue-glow: rgba(37, 99, 235, 0.12);
+            --pg-light-blue: #eff6ff;          /* Light blue pill / background */
+            --pg-light-blue-active: #dbeafe;   /* Active tab light blue */
             
-            --pg-sky: #38bdf8;
-            --pg-emerald: #10b981;
-            --pg-emerald-glow: rgba(16, 185, 129, 0.15);
-            --pg-amber: #f59e0b;
-            --pg-rose: #f43f5e;
-            --pg-purple: #8b5cf6;
+            --pg-sky: #0284c7;                 /* Sky accent */
+            --pg-emerald: #059669;             /* Crisp emerald */
+            --pg-emerald-bg: #ecfdf5;          /* Light emerald pill */
+            --pg-emerald-border: #a7f3d0;
+            --pg-amber: #d97706;               /* Amber */
+            --pg-amber-bg: #fffbeb;
+            --pg-amber-border: #fde68a;
+            --pg-rose: #e11d48;                /* Rose */
+            --pg-rose-bg: #fff1f2;
+            --pg-rose-border: #fecdd3;
+            --pg-purple: #7c3aed;              /* Purple */
+            --pg-purple-bg: #f5f3ff;
+            --pg-purple-border: #ddd6fe;
             
-            --pg-text: #f1f5f9;
-            --pg-text-secondary: #cbd5e1;
-            --pg-text-muted: #64748b;
-            --pg-code-bg: #070d18;
+            --pg-text: #0f172a;                /* Deep slate text for high contrast */
+            --pg-text-secondary: #334155;      /* Secondary slate text */
+            --pg-text-muted: #64748b;          /* Muted labels and headers */
+            --pg-code-bg: #f8fafc;             /* Clean light code background */
+            --pg-code-border: #cbd5e1;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,19 +57,19 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ProGit Header */
+        /* Top Navbar */
         header.progit-navbar {
             background: var(--pg-header);
             border-bottom: 1px solid var(--pg-border);
-            padding: 0 20px;
-            height: 58px;
+            padding: 0 24px;
+            height: 60px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 2px 12px rgba(37, 99, 235, 0.06);
         }
 
         .navbar-brand {
@@ -68,19 +78,19 @@
             gap: 12px;
             text-decoration: none;
             color: var(--pg-text);
-            font-size: 17px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
         }
         .navbar-brand svg {
-            color: var(--pg-blue-500);
-            filter: drop-shadow(0 0 8px var(--pg-blue-glow));
+            color: var(--pg-blue-600);
+            filter: drop-shadow(0 2px 6px rgba(37, 99, 235, 0.25));
         }
         .brand-badge {
-            background: linear-gradient(135deg, var(--pg-blue-600), var(--pg-sky));
-            color: #fff;
-            padding: 2px 7px;
-            border-radius: 5px;
+            background: linear-gradient(135deg, var(--pg-blue-600), #38bdf8);
+            color: #ffffff;
+            padding: 3px 8px;
+            border-radius: 6px;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
@@ -89,33 +99,34 @@
 
         .search-container {
             position: relative;
-            width: 280px;
+            width: 290px;
         }
         .search-input {
             width: 100%;
-            background: var(--pg-card);
+            background: var(--pg-light-blue);
             border: 1px solid var(--pg-border);
-            padding: 6px 32px 6px 12px;
-            border-radius: 6px;
+            padding: 7px 32px 7px 14px;
+            border-radius: 8px;
             color: var(--pg-text);
             font-size: 12px;
             transition: all 0.2s ease;
         }
         .search-input:focus {
             outline: none;
-            border-color: var(--pg-blue-500);
+            border-color: var(--pg-blue-600);
             box-shadow: 0 0 0 3px var(--pg-blue-glow);
-            background: var(--pg-surface);
+            background: #ffffff;
         }
         .search-kbd {
             position: absolute;
-            right: 8px;
+            right: 10px;
             top: 50%;
             transform: translateY(-50%);
             font-size: 10px;
             color: var(--pg-text-muted);
-            background: var(--pg-border);
-            padding: 2px 5px;
+            background: #ffffff;
+            border: 1px solid var(--pg-border);
+            padding: 2px 6px;
             border-radius: 4px;
             font-family: 'JetBrains Mono', monospace;
             pointer-events: none;
@@ -127,17 +138,17 @@
             gap: 12px;
         }
 
-        /* ProGit Navigation Tabs */
+        /* Navigation Tabs */
         nav.progit-tabs-nav {
-            background: var(--pg-surface);
+            background: #ffffff;
             border-bottom: 1px solid var(--pg-border);
-            padding: 0 20px;
+            padding: 0 24px;
             display: flex;
             gap: 4px;
             overflow-x: auto;
         }
         .pg-tab {
-            padding: 12px 14px;
+            padding: 13px 16px;
             font-size: 13px;
             font-weight: 600;
             color: var(--pg-text-secondary);
@@ -152,35 +163,39 @@
         }
         .pg-tab svg { width: 16px; height: 16px; stroke-width: 2; opacity: 0.8; }
         .pg-tab:hover {
-            color: var(--pg-text);
-            background: rgba(59, 130, 246, 0.05);
+            color: var(--pg-blue-700);
+            background: var(--pg-light-blue);
+            border-radius: 6px 6px 0 0;
         }
         .pg-tab.active {
-            color: var(--pg-sky);
-            border-bottom-color: var(--pg-blue-500);
+            color: var(--pg-blue-600);
+            border-bottom-color: var(--pg-blue-600);
+            background: var(--pg-light-blue);
+            border-radius: 6px 6px 0 0;
         }
         .pg-tab .tab-badge {
-            background: var(--pg-card);
+            background: #ffffff;
             border: 1px solid var(--pg-border);
             color: var(--pg-text-muted);
-            padding: 1px 6px;
+            padding: 1px 7px;
             border-radius: 10px;
             font-size: 11px;
             font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
         }
         .pg-tab.active .tab-badge {
-            background: var(--pg-blue-glow);
-            border-color: rgba(59, 130, 246, 0.4);
-            color: var(--pg-sky);
+            background: var(--pg-blue-600);
+            border-color: var(--pg-blue-600);
+            color: #ffffff;
         }
 
         /* Buttons */
         .btn {
-            background: var(--pg-card);
-            color: var(--pg-text);
+            background: #ffffff;
+            color: var(--pg-text-secondary);
             border: 1px solid var(--pg-border);
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: 7px 13px;
+            border-radius: 7px;
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
@@ -189,35 +204,44 @@
             align-items: center;
             gap: 6px;
             text-decoration: none;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
         .btn:hover {
-            background: var(--pg-card-hover);
+            background: var(--pg-light-blue);
             border-color: var(--pg-blue-500);
+            color: var(--pg-blue-700);
         }
         .btn-primary {
             background: var(--pg-blue-600);
-            border-color: var(--pg-blue-500);
-            color: #fff;
+            border-color: var(--pg-blue-600);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
         }
         .btn-primary:hover {
             background: var(--pg-blue-700);
-            box-shadow: 0 0 12px var(--pg-blue-glow);
+            border-color: var(--pg-blue-700);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
         }
         .btn-emerald {
-            background: var(--pg-emerald-glow);
-            border-color: rgba(16, 185, 129, 0.4);
-            color: #34d399;
+            background: var(--pg-emerald-bg);
+            border-color: var(--pg-emerald-border);
+            color: var(--pg-emerald);
         }
         .btn-emerald:hover {
-            background: rgba(16, 185, 129, 0.25);
+            background: #d1fae5;
             border-color: var(--pg-emerald);
+            color: #047857;
         }
         .btn-rose {
-            background: rgba(244, 63, 94, 0.15);
-            border-color: rgba(244, 63, 94, 0.4);
-            color: #fb7185;
+            background: var(--pg-rose-bg);
+            border-color: var(--pg-rose-border);
+            color: var(--pg-rose);
         }
-        .btn-rose:hover { background: rgba(244, 63, 94, 0.25); }
+        .btn-rose:hover {
+            background: #ffe4e6;
+            color: #be123c;
+        }
 
         /* Main Container */
         main.progit-container {
@@ -236,7 +260,7 @@
         .grid-12 {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
-            gap: 18px;
+            gap: 20px;
         }
         .col-3 { grid-column: span 3; }
         .col-4 { grid-column: span 4; }
@@ -246,21 +270,21 @@
         .col-8 { grid-column: span 8; }
         .col-12 { grid-column: span 12; }
 
-        /* ProGit Summary Stat Card */
+        /* Stat Card */
         .pg-stat-card {
-            background: var(--pg-surface);
+            background: #ffffff;
             border: 1px solid var(--pg-border);
-            border-radius: 8px;
-            padding: 16px;
+            border-radius: 10px;
+            padding: 18px;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.05);
         }
         .pg-stat-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, var(--pg-blue-500), var(--pg-sky));
+            background: linear-gradient(90deg, var(--pg-blue-600), #38bdf8);
         }
         .stat-label {
             font-size: 11px;
@@ -270,104 +294,104 @@
             letter-spacing: 0.5px;
         }
         .stat-number {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 800;
             margin-top: 6px;
             font-family: 'JetBrains Mono', monospace;
             color: var(--pg-text);
         }
         .stat-hint {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--pg-text-secondary);
             margin-top: 4px;
         }
 
-        /* ProGit Box Panel */
+        /* Panel Box */
         .pg-box {
-            background: var(--pg-surface);
+            background: #ffffff;
             border: 1px solid var(--pg-border);
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
             margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.04);
         }
         .pg-box-header {
             background: var(--pg-card);
             border-bottom: 1px solid var(--pg-border);
-            padding: 12px 16px;
+            padding: 14px 18px;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
         .pg-box-title {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 700;
             display: flex;
             align-items: center;
             gap: 8px;
             color: var(--pg-text);
         }
-        .pg-box-title svg { color: var(--pg-blue-500); }
+        .pg-box-title svg { color: var(--pg-blue-600); }
 
-        /* ProGit Styled Table */
+        /* Table */
         table.pg-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
         }
         table.pg-table th {
-            background: rgba(15, 23, 42, 0.6);
+            background: #f8faff;
             color: var(--pg-text-muted);
             font-weight: 600;
-            padding: 10px 14px;
+            padding: 11px 16px;
             text-align: left;
             border-bottom: 1px solid var(--pg-border);
             font-size: 12px;
         }
         table.pg-table td {
-            padding: 12px 14px;
+            padding: 13px 16px;
             border-bottom: 1px solid var(--pg-border-subtle);
             color: var(--pg-text-secondary);
             vertical-align: middle;
         }
         table.pg-table tr:hover td {
-            background: var(--pg-card);
+            background: #f0f7ff;
             color: var(--pg-text);
         }
 
-        /* Pills and Badges */
+        /* Status Pills */
         .pill {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 2px 8px;
+            padding: 3px 9px;
             border-radius: 12px;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 700;
             font-family: 'JetBrains Mono', monospace;
         }
         .pill-running, .pill-healthy {
-            background: var(--pg-emerald-glow);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.35);
+            background: var(--pg-emerald-bg);
+            color: var(--pg-emerald);
+            border: 1px solid var(--pg-emerald-border);
         }
         .pill-stopped {
-            background: rgba(244, 63, 94, 0.15);
-            color: #fb7185;
-            border: 1px solid rgba(244, 63, 94, 0.35);
+            background: var(--pg-rose-bg);
+            color: var(--pg-rose);
+            border: 1px solid var(--pg-rose-border);
         }
         .pill-blue {
-            background: var(--pg-blue-glow);
-            color: var(--pg-sky);
-            border: 1px solid rgba(59, 130, 246, 0.35);
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-600);
+            border: 1px solid var(--pg-border);
         }
 
-        /* Modals with ProGit Dark Styling */
+        /* Modals */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(6, 11, 20, 0.8);
-            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(6px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -375,27 +399,28 @@
         }
         .modal-overlay.open { display: flex; animation: fadeIn 0.15s ease; }
         .modal-dialog {
-            background: var(--pg-surface);
+            background: #ffffff;
             border: 1px solid var(--pg-border);
-            border-radius: 10px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 22px;
             max-width: 580px;
             width: 90%;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 25px 50px rgba(30, 58, 138, 0.15);
         }
         .modal-dialog-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
-            padding-bottom: 10px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--pg-border);
         }
         .modal-dialog-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
+            color: var(--pg-text);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -409,7 +434,7 @@
         .modal-dialog-close:hover { color: var(--pg-text); }
 
         /* Form Controls */
-        .form-group { margin-bottom: 14px; }
+        .form-group { margin-bottom: 15px; }
         .form-label {
             display: block;
             font-size: 12px;
@@ -419,28 +444,29 @@
         }
         .form-input {
             width: 100%;
-            background: var(--pg-card);
-            border: 1px solid var(--pg-border);
-            padding: 8px 12px;
-            border-radius: 6px;
+            background: #ffffff;
+            border: 1px solid var(--pg-code-border);
+            padding: 9px 12px;
+            border-radius: 7px;
             color: var(--pg-text);
             font-size: 13px;
             font-family: inherit;
+            transition: all 0.2s ease;
         }
         .form-input:focus {
             outline: none;
-            border-color: var(--pg-blue-500);
-            box-shadow: 0 0 0 3px var(--pg-blue-glow);
+            border-color: var(--pg-blue-600);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
 
         .code-view {
             background: var(--pg-code-bg);
-            border: 1px solid var(--pg-border);
-            border-radius: 6px;
+            border: 1px solid var(--pg-code-border);
+            border-radius: 8px;
             padding: 12px;
             font-family: 'JetBrains Mono', ui-monospace, monospace;
             font-size: 12px;
-            color: var(--pg-sky);
+            color: #0369a1;
             max-height: 280px;
             overflow-y: auto;
             white-space: pre-wrap;
@@ -448,24 +474,25 @@
         }
 
         .user-profile-badge {
-            background: var(--pg-card);
+            background: #ffffff;
             border: 1px solid var(--pg-border);
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
     </style>
 </head>
 <body>
-    <!-- ProGit Brand Navbar -->
+    <!-- Top Brand Navbar (White & Light Blue Accent) -->
     <header class="progit-navbar">
         <div style="display: flex; align-items: center; gap: 20px;">
             <a href="/" class="navbar-brand">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/>
                 </svg>
                 <span>ProCloud</span>
@@ -488,7 +515,7 @@
             <div id="user-display" class="user-profile-badge">
                 <span id="username-label">👤 admin</span>
                 <span class="pill pill-blue" id="userrole-label">ADMIN</span>
-                <button class="btn btn-rose" style="padding: 2px 6px; font-size:10px;" onclick="logout()">Logout</button>
+                <button class="btn btn-rose" style="padding: 2px 7px; font-size:10px; margin-left: 4px;" onclick="logout()">Logout</button>
             </div>
             <button class="btn btn-primary" id="login-btn" style="display:none;" onclick="openModal('auth-modal')">Log In</button>
 
@@ -497,7 +524,7 @@
         </div>
     </header>
 
-    <!-- ProGit Sub-Navigation Tabs with Blue Tint Highlights -->
+    <!-- Sub-Navigation Tabs Bar (White & Light Blue) -->
     <nav class="progit-tabs-nav">
         <div class="pg-tab active" onclick="switchTab('dashboard')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
@@ -538,7 +565,7 @@
         </div>
     </nav>
 
-    <!-- Main Content Area -->
+    <!-- Main Container -->
     <main class="progit-container">
         <!-- 1. OVERVIEW DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active">
@@ -550,7 +577,7 @@
                 </div>
                 <div class="pg-stat-card col-3">
                     <div class="stat-label">Running Containers</div>
-                    <div class="stat-number" style="color: var(--pg-sky);" id="stat-containers-count">0</div>
+                    <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-containers-count">0</div>
                     <div class="stat-hint">Active OCI workloads</div>
                 </div>
                 <div class="pg-stat-card col-3">
@@ -567,7 +594,7 @@
                 <div class="pg-box col-8">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/></svg>
                             <span>Active Container Workloads</span>
                         </div>
                         <button class="btn btn-primary" onclick="openModal('run-container-modal')">+ Run Container</button>
@@ -583,7 +610,7 @@
                             </tr>
                         </thead>
                         <tbody id="dash-containers-table">
-                            <tr><td colspan="5" style="text-align:center; padding: 24px;">No running containers.</td></tr>
+                            <tr><td colspan="5" style="text-align:center; padding: 24px;">No containers running.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -591,16 +618,16 @@
                 <div class="pg-box col-4">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                             <span>First Milestone (16 Steps)</span>
                         </div>
                     </div>
-                    <div style="padding: 16px;">
+                    <div style="padding: 18px;">
                         <p style="font-size:12px; color: var(--pg-text-secondary); line-height: 1.6;">
                             Single-node workflow verification: Podman, systemd Quadlet, Netavark, Nginx ingress, SQLite WAL persistence, and 1-click rollback.
                         </p>
                         <button class="btn btn-emerald" style="margin-top: 14px; width: 100%; justify-content: center;" onclick="runMilestone()">▶ Execute 16-Step Verification</button>
-                        <div class="code-view" style="margin-top: 12px; max-height: 190px;" id="milestone-quick-log">Ready to run.</div>
+                        <div class="code-view" style="margin-top: 14px; max-height: 180px;" id="milestone-quick-log">Ready to run.</div>
                     </div>
                 </div>
             </div>
@@ -611,7 +638,7 @@
             <div class="pg-box">
                 <div class="pg-box-header">
                     <div class="pg-box-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/></svg>
                         <span>Podman Desktop Container Provisioning</span>
                     </div>
                     <div style="display:flex; gap: 8px;">
@@ -643,7 +670,7 @@
             <div class="pg-box">
                 <div class="pg-box-header">
                     <div class="pg-box-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
                         <span>Podman Desktop Pod Provisioning &amp; Management</span>
                     </div>
                     <button class="btn btn-primary" onclick="openModal('create-pod-modal')">+ Create Pod</button>
@@ -671,7 +698,7 @@
             <div class="pg-box">
                 <div class="pg-box-header">
                     <div class="pg-box-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/></svg>
                         <span>Container Images Catalog</span>
                     </div>
                     <button class="btn btn-primary" onclick="openModal('pull-image-modal')">+ Pull Image from Registry</button>
@@ -699,7 +726,7 @@
             <div class="pg-box">
                 <div class="pg-box-header">
                     <div class="pg-box-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
                         <span>Persistent Storage Volumes</span>
                     </div>
                     <button class="btn btn-primary" onclick="openModal('create-volume-modal')">+ Create Volume</button>
@@ -725,7 +752,7 @@
             <div class="pg-box">
                 <div class="pg-box-header">
                     <div class="pg-box-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
                         <span>Netavark Isolated Bridge Networks</span>
                     </div>
                     <button class="btn btn-primary" onclick="openModal('create-network-modal')">+ Create Network</button>
@@ -754,12 +781,12 @@
                 <div class="pg-box col-7">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                             <span>GitOps Manifest Deployment (deploy.yml v1alpha1)</span>
                         </div>
                         <button class="btn btn-primary" onclick="deployManifest()">🚀 Deploy Manifest</button>
                     </div>
-                    <div style="padding: 14px;">
+                    <div style="padding: 16px;">
                         <textarea id="manifest-editor" class="form-input" style="height: 380px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.5;">apiVersion: procloud.io/v1alpha1
 kind: Deployment
 metadata:
@@ -792,7 +819,7 @@ spec:
                 <div class="pg-box col-5">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                             <span>Active Workload Releases</span>
                         </div>
                     </div>
@@ -820,7 +847,7 @@ spec:
                 <div class="pg-box col-6">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                             <span>SQLite WAL Persistence &amp; Backups</span>
                         </div>
                         <div style="display:flex; gap: 8px;">
@@ -828,7 +855,7 @@ spec:
                             <button class="btn btn-primary" onclick="triggerBackup()">Hot Backup (VACUUM INTO)</button>
                         </div>
                     </div>
-                    <div style="padding: 14px;">
+                    <div style="padding: 16px;">
                         <pre class="code-view" id="db-status-box">Loading database status...</pre>
                     </div>
                 </div>
@@ -836,7 +863,7 @@ spec:
                 <div class="pg-box col-6">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             <span>Durable SQLite Job Queue</span>
                         </div>
                     </div>
@@ -983,7 +1010,7 @@ spec:
                 <div class="modal-dialog-title">📄 Kubernetes Pod YAML</div>
                 <div class="modal-dialog-close" onclick="closeModal('kube-modal')">&times;</div>
             </div>
-            <pre class="code-view" id="kube-content" style="max-height: 380px; color:#c084fc;"></pre>
+            <pre class="code-view" id="kube-content" style="max-height: 380px; color:#7c3aed; background:#f5f3ff; border-color:#ddd6fe;"></pre>
         </div>
     </div>
 
@@ -1126,7 +1153,7 @@ spec:
                     tbody.innerHTML = ctrs.slice(0, 5).map(c => `
                         <tr>
                             <td><strong>${c.names ? c.names[0] : c.id}</strong></td>
-                            <td><code style="color:var(--pg-sky);">${c.image}</code></td>
+                            <td><code style="color:var(--pg-blue-600);">${c.image}</code></td>
                             <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${c.state}</span></td>
                             <td>${c.ports ? c.ports.join(', ') : 'None'}</td>
                             <td>
@@ -1155,7 +1182,7 @@ spec:
                     return `
                     <tr>
                         <td><strong>${name}</strong></td>
-                        <td><code style="color:var(--pg-sky);">${c.id}</code></td>
+                        <td><code style="color:var(--pg-blue-600);">${c.id}</code></td>
                         <td><code>${c.image}</code></td>
                         <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${c.state}</span></td>
                         <td>${c.ports ? c.ports.join(', ') : 'None'}</td>
@@ -1190,7 +1217,7 @@ spec:
                 tbody.innerHTML = list.map(p => `
                     <tr>
                         <td><strong>${p.name}</strong></td>
-                        <td><code style="color:var(--pg-sky);">${p.id}</code></td>
+                        <td><code style="color:var(--pg-blue-600);">${p.id}</code></td>
                         <td><span class="pill pill-${p.status.toLowerCase() === 'running' ? 'running' : 'stopped'}">${p.status}</span></td>
                         <td>${p.number_of_containers} containers</td>
                         <td>${p.ports ? p.ports.join(', ') : 'None'}</td>
@@ -1224,7 +1251,7 @@ spec:
                     <tr>
                         <td><strong>${img.repository}</strong></td>
                         <td><span class="pill pill-blue">${img.tag}</span></td>
-                        <td><code style="color:var(--pg-sky);">${img.id}</code></td>
+                        <td><code style="color:var(--pg-blue-600);">${img.id}</code></td>
                         <td>${img.size}</td>
                         <td>${img.created ? new Date(img.created).toLocaleDateString() : 'n/a'}</td>
                         <td>
@@ -1276,7 +1303,7 @@ spec:
                 tbody.innerHTML = list.map(n => `
                     <tr>
                         <td><strong>${n.name}</strong></td>
-                        <td><code style="color:var(--pg-sky);">${n.id}</code></td>
+                        <td><code style="color:var(--pg-blue-600);">${n.id}</code></td>
                         <td><span class="pill pill-blue">${n.driver}</span></td>
                         <td>${n.subnet || 'Auto'}</td>
                         <td>${n.gateway || 'Auto'}</td>
@@ -1342,7 +1369,7 @@ spec:
         }
 
         // -------------------------------------------------------------
-        // Container Actions
+        // Actions
         // -------------------------------------------------------------
 
         async function submitRunContainer() {
@@ -1416,10 +1443,6 @@ spec:
             document.getElementById('exec-input').value = '';
         }
 
-        // -------------------------------------------------------------
-        // Pod Actions
-        // -------------------------------------------------------------
-
         async function submitCreatePod() {
             const name = document.getElementById('pod-name').value.trim();
             const portsStr = document.getElementById('pod-ports').value.trim();
@@ -1467,10 +1490,6 @@ spec:
             document.getElementById('kube-content').innerText = data.kube_yaml || 'YAML unavailable';
             openModal('kube-modal');
         }
-
-        // -------------------------------------------------------------
-        // Images & Volumes & Networks
-        // -------------------------------------------------------------
 
         async function submitPullImage() {
             const image = document.getElementById('pull-image-name').value.trim();
@@ -1540,10 +1559,6 @@ spec:
                 fetchNetworks();
             }
         }
-
-        // -------------------------------------------------------------
-        // Deployments & Milestone
-        // -------------------------------------------------------------
 
         async function deployManifest() {
             const yamlText = document.getElementById('manifest-editor').value;
