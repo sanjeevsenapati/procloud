@@ -537,6 +537,43 @@
             border-bottom: 1px solid var(--pg-border);
             font-size: 12px;
         }
+        table.pg-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        table.pg-table th.sortable:hover {
+            background: #eff6ff;
+            color: var(--pg-blue-700);
+        }
+        table.pg-table th .th-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        table.pg-table th .sort-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            color: #94a3b8;
+            transition: color 0.15s ease;
+        }
+        table.pg-table th.sortable:hover .sort-indicator {
+            color: var(--pg-blue-600);
+        }
+        table.pg-table th.sorted-asc,
+        table.pg-table th.sorted-desc {
+            background: #eef5ff;
+            color: var(--pg-blue-700);
+            font-weight: 700;
+        }
+        table.pg-table th.sorted-asc .sort-indicator,
+        table.pg-table th.sorted-desc .sort-indicator {
+            color: var(--pg-blue-600);
+        }
         table.pg-table td {
             padding: 13px 16px;
             border-bottom: 1px solid var(--pg-border-subtle);
@@ -2289,28 +2326,61 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/></svg>
                         <span>Podman Desktop Container Provisioning</span>
                     </div>
-                    <div style="display:flex; gap: 8px;">
-                        <button class="btn" onclick="fetchContainers(true)">Show All</button>
-                        <button class="btn btn-primary rbac-write-only" onclick="openModal('run-container-modal')">+ Create &amp; Run Container</button>
+                    <div style="display:flex; gap: 8px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; display:inline-flex; align-items:center;">
+                            <svg class="icon-svg" style="position:absolute; left:8px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="ctr-search-input" class="form-input form-input-sm" style="width:180px; padding-left:26px;" placeholder="Filter containers..." oninput="filterAndRenderContainers()">
+                        </div>
+                        <select id="ctr-state-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderContainers()" title="Filter by State">
+                            <option value="">All States</option>
+                            <option value="running">Running</option>
+                            <option value="stopped">Stopped / Exited</option>
+                            <option value="created">Created</option>
+                            <option value="paused">Paused</option>
+                        </select>
+                        <select id="ctr-org-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderContainers()" title="Filter by Organization">
+                            <option value="">All Organizations</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchContainers(true)" title="Fetch and refresh all containers">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openModal('run-container-modal')">+ Create &amp; Run Container</button>
                     </div>
                 </div>
-                <table class="pg-table">
-                    <thead>
-                        <tr>
-                            <th>Container Name</th>
-                            <th>Organization</th>
-                            <th>ID</th>
-                            <th>Image</th>
-                            <th>State</th>
-                            <th>Ports</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="containers-table">
-                        <tr><td colspan="8" style="text-align:center;">Loading containers...</td></tr>
-                    </tbody>
-                </table>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortContainers('name')" title="Click to sort by Container Name">
+                                    <div class="th-content"><span>Container Name</span><span class="sort-indicator" id="sort-ctr-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortContainers('org')" title="Click to sort by Organization">
+                                    <div class="th-content"><span>Organization</span><span class="sort-indicator" id="sort-ctr-org"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortContainers('id')" title="Click to sort by Container ID">
+                                    <div class="th-content"><span>ID</span><span class="sort-indicator" id="sort-ctr-id"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortContainers('image')" title="Click to sort by Image">
+                                    <div class="th-content"><span>Image</span><span class="sort-indicator" id="sort-ctr-image"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortContainers('state')" title="Click to sort by State">
+                                    <div class="th-content"><span>State</span><span class="sort-indicator" id="sort-ctr-state"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortContainers('ports')" title="Click to sort by Port Forwardings">
+                                    <div class="th-content"><span>Ports</span><span class="sort-indicator" id="sort-ctr-ports"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortContainers('created')" title="Click to sort by Creation Time">
+                                    <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-ctr-created"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="containers-table">
+                            <tr><td colspan="8" style="text-align:center;">Loading containers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -2845,30 +2915,64 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
                         <span>Podman Desktop Pod Provisioning &amp; Management</span>
                     </div>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-primary rbac-write-only" onclick="openPlayKubeModal()">
-                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                            <span>Play Kube (Kube Deploy)</span>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; display:inline-flex; align-items:center;">
+                            <svg class="icon-svg" style="position:absolute; left:8px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="pod-search-input" class="form-input form-input-sm" style="width:180px; padding-left:26px;" placeholder="Filter pods..." oninput="filterAndRenderPods()">
+                        </div>
+                        <select id="pod-status-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderPods()" title="Filter by Status">
+                            <option value="">All Statuses</option>
+                            <option value="running">Running</option>
+                            <option value="stopped">Stopped</option>
+                            <option value="degraded">Degraded</option>
+                        </select>
+                        <select id="pod-org-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderPods()" title="Filter by Organization">
+                            <option value="">All Organizations</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchPods()" title="Refresh pods list">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
                         </button>
-                        <button class="btn rbac-write-only" onclick="openModal('create-pod-modal')">+ Create Pod</button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openPlayKubeModal()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                            <span>Play Kube</span>
+                        </button>
+                        <button class="btn btn-sm rbac-write-only" onclick="openModal('create-pod-modal')">+ Create Pod</button>
                     </div>
                 </div>
-                <table class="pg-table">
-                    <thead>
-                        <tr>
-                            <th>Pod Name</th>
-                            <th>Organization</th>
-                            <th>ID</th>
-                            <th>Status</th>
-                            <th>Containers</th>
-                            <th>Ports</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pods-table">
-                        <tr><td colspan="7" style="text-align:center;">Loading pods...</td></tr>
-                    </tbody>
-                </table>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortPods('name')" title="Click to sort by Pod Name">
+                                    <div class="th-content"><span>Pod Name</span><span class="sort-indicator" id="sort-pod-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortPods('org')" title="Click to sort by Organization">
+                                    <div class="th-content"><span>Organization</span><span class="sort-indicator" id="sort-pod-org"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortPods('id')" title="Click to sort by Pod ID">
+                                    <div class="th-content"><span>ID</span><span class="sort-indicator" id="sort-pod-id"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortPods('status')" title="Click to sort by Status">
+                                    <div class="th-content"><span>Status</span><span class="sort-indicator" id="sort-pod-status"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortPods('containers')" title="Click to sort by Container Count">
+                                    <div class="th-content"><span>Containers</span><span class="sort-indicator" id="sort-pod-containers"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortPods('ports')" title="Click to sort by Port Forwardings">
+                                    <div class="th-content"><span>Ports</span><span class="sort-indicator" id="sort-pod-ports"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortPods('created')" title="Click to sort by Creation Time">
+                                    <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-pod-created"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pods-table">
+                            <tr><td colspan="8" style="text-align:center;">Loading pods...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -3150,29 +3254,49 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/></svg>
                         <span>Container Images Catalog</span>
                     </div>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn rbac-write-only" onclick="openBuildImageModal()">
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; display:inline-flex; align-items:center;">
+                            <svg class="icon-svg" style="position:absolute; left:8px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="img-search-input" class="form-input form-input-sm" style="width:180px; padding-left:26px;" placeholder="Filter images..." oninput="filterAndRenderImages()">
+                        </div>
+                        <button class="btn btn-sm" onclick="fetchImages()" title="Refresh images list">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-sm rbac-write-only" onclick="openBuildImageModal()">
                             <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                             <span>Build Image</span>
                         </button>
-                        <button class="btn btn-primary rbac-write-only" onclick="openModal('pull-image-modal')">+ Pull Image from Registry</button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openModal('pull-image-modal')">+ Pull Image</button>
                     </div>
                 </div>
-                <table class="pg-table">
-                    <thead>
-                        <tr>
-                            <th>Repository</th>
-                            <th>Tag</th>
-                            <th>Image ID</th>
-                            <th>Size</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="images-table">
-                        <tr><td colspan="6" style="text-align:center;">Loading images...</td></tr>
-                    </tbody>
-                </table>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortImages('repo')" title="Click to sort by Repository">
+                                    <div class="th-content"><span>Repository</span><span class="sort-indicator" id="sort-img-repo"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortImages('tag')" title="Click to sort by Tag">
+                                    <div class="th-content"><span>Tag</span><span class="sort-indicator" id="sort-img-tag"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortImages('id')" title="Click to sort by Image ID">
+                                    <div class="th-content"><span>Image ID</span><span class="sort-indicator" id="sort-img-id"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortImages('size')" title="Click to sort by Size">
+                                    <div class="th-content"><span>Size</span><span class="sort-indicator" id="sort-img-size"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortImages('created')" title="Click to sort by Creation Date">
+                                    <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-img-created"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="images-table">
+                            <tr><td colspan="6" style="text-align:center;">Loading images...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -3184,21 +3308,43 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
                         <span>Persistent Storage Volumes</span>
                     </div>
-                    <button class="btn btn-primary rbac-write-only" onclick="openModal('create-volume-modal')">+ Create Volume</button>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; display:inline-flex; align-items:center;">
+                            <svg class="icon-svg" style="position:absolute; left:8px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="vol-search-input" class="form-input form-input-sm" style="width:180px; padding-left:26px;" placeholder="Filter volumes..." oninput="filterAndRenderVolumes()">
+                        </div>
+                        <select id="vol-driver-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderVolumes()" title="Filter by Driver">
+                            <option value="">All Drivers</option>
+                            <option value="local">local</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchVolumes()" title="Refresh volumes">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openModal('create-volume-modal')">+ Create Volume</button>
+                    </div>
                 </div>
-                <table class="pg-table">
-                    <thead>
-                        <tr>
-                            <th>Volume Name</th>
-                            <th>Driver</th>
-                            <th>Mountpoint</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="volumes-table">
-                        <tr><td colspan="4" style="text-align:center;">Loading volumes...</td></tr>
-                    </tbody>
-                </table>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortVolumes('name')" title="Click to sort by Volume Name">
+                                    <div class="th-content"><span>Volume Name</span><span class="sort-indicator" id="sort-vol-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortVolumes('driver')" title="Click to sort by Driver">
+                                    <div class="th-content"><span>Driver</span><span class="sort-indicator" id="sort-vol-driver"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortVolumes('mountpoint')" title="Click to sort by Mountpoint">
+                                    <div class="th-content"><span>Mountpoint</span><span class="sort-indicator" id="sort-vol-mountpoint"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="volumes-table">
+                            <tr><td colspan="4" style="text-align:center;">Loading volumes...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -3210,23 +3356,51 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
                         <span>Netavark Isolated Bridge Networks</span>
                     </div>
-                    <button class="btn btn-primary rbac-write-only" onclick="openModal('create-network-modal')">+ Create Network</button>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; display:inline-flex; align-items:center;">
+                            <svg class="icon-svg" style="position:absolute; left:8px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="net-search-input" class="form-input form-input-sm" style="width:180px; padding-left:26px;" placeholder="Filter networks..." oninput="filterAndRenderNetworks()">
+                        </div>
+                        <select id="net-driver-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderNetworks()" title="Filter by Driver">
+                            <option value="">All Drivers</option>
+                            <option value="bridge">bridge</option>
+                            <option value="macvlan">macvlan</option>
+                            <option value="ipvlan">ipvlan</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchNetworks()" title="Refresh networks">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openModal('create-network-modal')">+ Create Network</button>
+                    </div>
                 </div>
-                <table class="pg-table">
-                    <thead>
-                        <tr>
-                            <th>Network Name</th>
-                            <th>ID</th>
-                            <th>Driver</th>
-                            <th>Subnet</th>
-                            <th>Gateway</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="networks-table">
-                        <tr><td colspan="6" style="text-align:center;">Loading networks...</td></tr>
-                    </tbody>
-                </table>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortNetworks('name')" title="Click to sort by Network Name">
+                                    <div class="th-content"><span>Network Name</span><span class="sort-indicator" id="sort-net-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortNetworks('id')" title="Click to sort by Network ID">
+                                    <div class="th-content"><span>ID</span><span class="sort-indicator" id="sort-net-id"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortNetworks('driver')" title="Click to sort by Driver">
+                                    <div class="th-content"><span>Driver</span><span class="sort-indicator" id="sort-net-driver"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortNetworks('subnet')" title="Click to sort by Subnet">
+                                    <div class="th-content"><span>Subnet</span><span class="sort-indicator" id="sort-net-subnet"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortNetworks('gateway')" title="Click to sort by Gateway">
+                                    <div class="th-content"><span>Gateway</span><span class="sort-indicator" id="sort-net-gateway"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="networks-table">
+                            <tr><td colspan="6" style="text-align:center;">Loading networks...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -3238,30 +3412,55 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
                         <span>Podman Desktop Secrets Engine</span>
                     </div>
-                    <div style="display:flex; gap: 8px;">
-                        <input type="text" id="secrets-search" class="form-input" style="width:220px; padding:4px 10px; font-size:12px;" placeholder="Filter secrets..." oninput="filterSecrets(this.value)">
-                        <button class="btn btn-primary rbac-write-only" onclick="openCreateSecretModal()">+ Create Secret</button>
+                    <div style="display:flex; gap: 8px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; display:inline-flex; align-items:center;">
+                            <svg class="icon-svg" style="position:absolute; left:8px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="secrets-search" class="form-input form-input-sm" style="width:180px; padding-left:26px;" placeholder="Filter secrets..." oninput="filterAndRenderSecrets()">
+                        </div>
+                        <select id="sec-driver-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderSecrets()" title="Filter by Driver">
+                            <option value="">All Drivers</option>
+                            <option value="file">file (Local Storage)</option>
+                            <option value="pass">pass (Password Store)</option>
+                            <option value="shell">shell (Command Provider)</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchSecrets()" title="Refresh secrets">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openCreateSecretModal()">+ Create Secret</button>
                     </div>
                 </div>
                 <div style="padding: 10px 16px; background:#eff6ff; border-bottom:1px solid var(--pg-border); font-size:12px; color:var(--pg-text-secondary); display:flex; align-items:center; gap:8px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                     <span>Store sensitive credentials, certificates, and tokens securely. Secrets are stored in Podman internal storage and can be injected into containers as environment variables or mounted files.</span>
                 </div>
-                <table class="pg-table">
-                    <thead>
-                        <tr>
-                            <th>Secret Name</th>
-                            <th>ID</th>
-                            <th>Driver</th>
-                            <th>Created</th>
-                            <th>Updated</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="secrets-table">
-                        <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading secrets...</td></tr>
-                    </tbody>
-                </table>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortSecrets('name')" title="Click to sort by Secret Name">
+                                    <div class="th-content"><span>Secret Name</span><span class="sort-indicator" id="sort-sec-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortSecrets('id')" title="Click to sort by Secret ID">
+                                    <div class="th-content"><span>ID</span><span class="sort-indicator" id="sort-sec-id"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortSecrets('driver')" title="Click to sort by Driver">
+                                    <div class="th-content"><span>Driver</span><span class="sort-indicator" id="sort-sec-driver"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortSecrets('created')" title="Click to sort by Creation Time">
+                                    <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-sec-created"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortSecrets('updated')" title="Click to sort by Updated Time">
+                                    <div class="th-content"><span>Updated</span><span class="sort-indicator" id="sort-sec-updated"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="secrets-table">
+                            <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading secrets...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -3454,13 +3653,23 @@ spec:
                     <table class="pg-table">
                         <thead>
                             <tr>
-                                <th>Organization</th>
-                                <th>Plan / Tier</th>
-                                <th>Status</th>
-                                <th>Resource Quotas (Workloads • Pods • Cores • RAM)</th>
+                                <th class="sortable" onclick="sortOrgs('name')" title="Click to sort by Organization Name">
+                                    <div class="th-content"><span>Organization</span><span class="sort-indicator" id="sort-org-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortOrgs('plan')" title="Click to sort by Plan Tier">
+                                    <div class="th-content"><span>Plan / Tier</span><span class="sort-indicator" id="sort-org-plan"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortOrgs('status')" title="Click to sort by Status">
+                                    <div class="th-content"><span>Status</span><span class="sort-indicator" id="sort-org-status"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortOrgs('containers')" title="Click to sort by Workloads Quota">
+                                    <div class="th-content"><span>Resource Quotas (Workloads • Pods • Cores • RAM)</span><span class="sort-indicator" id="sort-org-containers"></span></div>
+                                </th>
                                 <th>Members</th>
-                                <th>Created</th>
-                                <th>Actions</th>
+                                <th class="sortable" onclick="sortOrgs('created')" title="Click to sort by Creation Date">
+                                    <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-org-created"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="orgs-table-body">
@@ -3549,13 +3758,23 @@ spec:
                     <table class="pg-table">
                         <thead>
                             <tr>
-                                <th>User Profile</th>
-                                <th>Organization</th>
-                                <th>RBAC Role</th>
-                                <th>Status</th>
+                                <th class="sortable" onclick="sortUsers('name')" title="Click to sort by Username / Name">
+                                    <div class="th-content"><span>User Profile</span><span class="sort-indicator" id="sort-user-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortUsers('org')" title="Click to sort by Organization">
+                                    <div class="th-content"><span>Organization</span><span class="sort-indicator" id="sort-user-org"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortUsers('role')" title="Click to sort by RBAC Role">
+                                    <div class="th-content"><span>RBAC Role</span><span class="sort-indicator" id="sort-user-role"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortUsers('status')" title="Click to sort by Account Status">
+                                    <div class="th-content"><span>Status</span><span class="sort-indicator" id="sort-user-status"></span></div>
+                                </th>
                                 <th>Last Login</th>
-                                <th>Created</th>
-                                <th>Actions</th>
+                                <th class="sortable" onclick="sortUsers('created')" title="Click to sort by Creation Time">
+                                    <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-user-created"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="users-table-body">
@@ -5845,6 +6064,177 @@ spec:
             }
         }
 
+        // ==========================================
+        // UNIVERSAL TABLE SORTING & UI HELPERS
+        // ==========================================
+
+        function getSortIconSvg(isActive, dir) {
+            if (!isActive) {
+                return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.35;"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>';
+            }
+            if (dir === 'asc') {
+                return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg>';
+            }
+            return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>';
+        }
+
+        function updateTableSortIndicators(prefix, currentKey, currentDir, columnKeys) {
+            columnKeys.forEach(k => {
+                const el = document.getElementById(`sort-${prefix}-${k}`);
+                if (!el) return;
+                const th = el.closest('th');
+                const isActive = (k === currentKey);
+                el.innerHTML = getSortIconSvg(isActive, currentDir);
+                if (th) {
+                    th.classList.toggle('sorted-asc', isActive && currentDir === 'asc');
+                    th.classList.toggle('sorted-desc', isActive && currentDir === 'desc');
+                }
+            });
+        }
+
+        function compareValues(a, b, dir = 'asc') {
+            if (a == null && b == null) return 0;
+            if (a == null) return dir === 'asc' ? 1 : -1;
+            if (b == null) return dir === 'asc' ? -1 : 1;
+            if (typeof a === 'number' && typeof b === 'number') {
+                return dir === 'asc' ? a - b : b - a;
+            }
+            const strA = String(a).toLowerCase();
+            const strB = String(b).toLowerCase();
+            const res = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+            return dir === 'asc' ? res : -res;
+        }
+
+        function parseSizeToBytes(sizeStr) {
+            if (!sizeStr) return 0;
+            if (typeof sizeStr === 'number') return sizeStr;
+            const match = String(sizeStr).trim().match(/^([0-9.]+)\s*([a-zA-Z]+)?$/);
+            if (!match) return 0;
+            const val = parseFloat(match[1]) || 0;
+            const unit = (match[2] || '').toUpperCase();
+            if (unit.startsWith('K')) return val * 1024;
+            if (unit.startsWith('M')) return val * 1024 * 1024;
+            if (unit.startsWith('G')) return val * 1024 * 1024 * 1024;
+            if (unit.startsWith('T')) return val * 1024 * 1024 * 1024 * 1024;
+            return val;
+        }
+
+        // ==========================================
+        // 1. CONTAINERS
+        // ==========================================
+        let allContainers = [];
+        let ctrSortKey = 'name';
+        let ctrSortDir = 'asc';
+
+        function sortContainers(key) {
+            if (ctrSortKey === key) {
+                ctrSortDir = ctrSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                ctrSortKey = key;
+                ctrSortDir = 'asc';
+            }
+            filterAndRenderContainers();
+        }
+
+        function filterAndRenderContainers() {
+            updateTableSortIndicators('ctr', ctrSortKey, ctrSortDir, ['name', 'org', 'id', 'image', 'state', 'ports', 'created']);
+            const tbody = document.getElementById('containers-table');
+            if (!tbody) return;
+
+            const search = (document.getElementById('ctr-search-input')?.value || '').toLowerCase().trim();
+            const stateFilter = (document.getElementById('ctr-state-filter')?.value || '').toLowerCase().trim();
+            const orgFilter = (document.getElementById('ctr-org-filter')?.value || '').trim();
+
+            let filtered = allContainers.filter(c => {
+                const name = (c.names && c.names[0]) ? c.names[0] : (c.id || '');
+                const orgName = (c.labels && (c.labels['procloud.io/org-name'] || c.labels['procloud.io/organization'])) || 'Default';
+                const orgId = (c.labels && (c.labels['procloud.io/tenant-id'] || c.labels['procloud.io/organization'])) || '';
+                const state = (c.state || '').toLowerCase();
+                const id = c.id || '';
+                const image = c.image || '';
+                const ports = c.ports ? c.ports.join(', ') : '';
+
+                if (search) {
+                    const matchSearch = name.toLowerCase().includes(search) ||
+                        orgName.toLowerCase().includes(search) ||
+                        id.toLowerCase().includes(search) ||
+                        image.toLowerCase().includes(search) ||
+                        ports.toLowerCase().includes(search);
+                    if (!matchSearch) return false;
+                }
+
+                if (stateFilter) {
+                    if (stateFilter === 'stopped') {
+                        if (state !== 'stopped' && state !== 'exited') return false;
+                    } else if (state !== stateFilter) {
+                        return false;
+                    }
+                }
+
+                if (orgFilter) {
+                    if (orgId !== orgFilter && orgName !== orgFilter) return false;
+                }
+
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                const aName = (a.names && a.names[0]) ? a.names[0] : (a.id || '');
+                const bName = (b.names && b.names[0]) ? b.names[0] : (b.id || '');
+                const aOrg = (a.labels && (a.labels['procloud.io/org-name'] || a.labels['procloud.io/organization'])) || 'Default';
+                const bOrg = (b.labels && (b.labels['procloud.io/org-name'] || b.labels['procloud.io/organization'])) || 'Default';
+                let valA, valB;
+                switch (ctrSortKey) {
+                    case 'name': valA = aName; valB = bName; break;
+                    case 'org': valA = aOrg; valB = bOrg; break;
+                    case 'id': valA = a.id || ''; valB = b.id || ''; break;
+                    case 'image': valA = a.image || ''; valB = b.image || ''; break;
+                    case 'state': valA = a.state || ''; valB = b.state || ''; break;
+                    case 'ports': valA = (a.ports || []).join(', '); valB = (b.ports || []).join(', '); break;
+                    case 'created': valA = new Date(a.created || 0).getTime(); valB = new Date(b.created || 0).getTime(); break;
+                    default: valA = aName; valB = bName; break;
+                }
+                return compareValues(valA, valB, ctrSortDir);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No containers found matching the filter criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(c => {
+                const name = c.names ? c.names[0] : c.id;
+                const orgName = (c.labels && (c.labels['procloud.io/org-name'] || c.labels['procloud.io/organization'])) || 'Default';
+                return `
+                <tr>
+                    <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openContainerDetails('${escapeHtml(c.id)}')">${escapeHtml(name)}</a></td>
+                    <td><span class="pill pill-blue" style="font-size:11px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>${escapeHtml(orgName)}</span></td>
+                    <td><code style="color:var(--pg-blue-600);">${escapeHtml(c.id)}</code></td>
+                    <td><code>${escapeHtml(c.image)}</code></td>
+                    <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${escapeHtml(c.state)}</span></td>
+                    <td>${c.ports ? escapeHtml(c.ports.join(', ')) : 'None'}</td>
+                    <td>${c.created ? new Date(c.created).toLocaleTimeString() : 'n/a'}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn btn-sm btn-outline-primary" title="View Details" onclick="openContainerDetails('${escapeHtml(c.id)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Details</span>
+                            </button>
+                            ${canWrite() ? `
+                            ${c.state === 'running'
+                                ? `<button class="btn btn-sm btn-icon btn-outline-amber" title="Stop Container" onclick="stopContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`
+                                : `<button class="btn btn-sm btn-icon btn-outline-emerald" title="Start Container" onclick="startContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
+                            }
+                            <button class="btn btn-sm btn-icon btn-outline-slate" title="Restart Container" onclick="restartContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+                            <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Container" onclick="removeContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
         async function fetchContainers(all = false) {
             try {
                 let url = `/api/v1/containers${all ? '?all=true' : ''}`;
@@ -5852,47 +6242,125 @@ spec:
                     url += (url.includes('?') ? '&' : '?') + `tenant_id=${encodeURIComponent(activeOrgFilter)}`;
                 }
                 const res = await authFetch(url);
-                const list = await res.json() || [];
-                document.getElementById('tab-badge-containers').innerText = list.length;
-                const tbody = document.getElementById('containers-table');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px;">No containers found.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = list.map(c => {
-                    const name = c.names ? c.names[0] : c.id;
-                    const orgName = (c.labels && (c.labels['procloud.io/org-name'] || c.labels['procloud.io/organization'])) || 'Default';
-                    return `
-                    <tr>
-                        <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openContainerDetails('${escapeHtml(c.id)}')">${escapeHtml(name)}</a></td>
-                        <td><span class="pill pill-blue" style="font-size:11px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>${escapeHtml(orgName)}</span></td>
-                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(c.id)}</code></td>
-                        <td><code>${escapeHtml(c.image)}</code></td>
-                        <td><span class="pill pill-${c.state === 'running' ? 'running' : 'stopped'}">${escapeHtml(c.state)}</span></td>
-                        <td>${c.ports ? escapeHtml(c.ports.join(', ')) : 'None'}</td>
-                        <td>${c.created ? new Date(c.created).toLocaleTimeString() : 'n/a'}</td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="btn btn-sm btn-outline-primary" title="View Details" onclick="openContainerDetails('${escapeHtml(c.id)}')">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                                    <span>Details</span>
-                                </button>
-                                ${canWrite() ? `
-                                ${c.state === 'running'
-                                    ? `<button class="btn btn-sm btn-icon btn-outline-amber" title="Stop Container" onclick="stopContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`
-                                    : `<button class="btn btn-sm btn-icon btn-outline-emerald" title="Start Container" onclick="startContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
-                                }
-                                <button class="btn btn-sm btn-icon btn-outline-slate" title="Restart Container" onclick="restartContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
-                                <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Container" onclick="removeContainer('${c.id}', '${escapeHtml(name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                                ` : ''}
-                            </div>
-                        </td>
-                    </tr>
-                    `;
-                }).join('');
+                allContainers = await res.json() || [];
+                const badge = document.getElementById('tab-badge-containers');
+                if (badge) badge.innerText = allContainers.length;
+                filterAndRenderContainers();
             } catch (err) {
-                console.error(err);
+                console.error('fetchContainers error:', err);
+                const tbody = document.getElementById('containers-table');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load containers: ${escapeHtml(err.message)}</td></tr>`;
             }
+        }
+
+        // ==========================================
+        // 2. PODS
+        // ==========================================
+        let allPods = [];
+        let podSortKey = 'name';
+        let podSortDir = 'asc';
+
+        function sortPods(key) {
+            if (podSortKey === key) {
+                podSortDir = podSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                podSortKey = key;
+                podSortDir = 'asc';
+            }
+            filterAndRenderPods();
+        }
+
+        function filterAndRenderPods() {
+            updateTableSortIndicators('pod', podSortKey, podSortDir, ['name', 'org', 'id', 'status', 'containers', 'ports', 'created']);
+            const tbody = document.getElementById('pods-table');
+            if (!tbody) return;
+
+            const search = (document.getElementById('pod-search-input')?.value || '').toLowerCase().trim();
+            const statusFilter = (document.getElementById('pod-status-filter')?.value || '').toLowerCase().trim();
+            const orgFilter = (document.getElementById('pod-org-filter')?.value || '').trim();
+
+            let filtered = allPods.filter(p => {
+                const name = p.name || '';
+                const orgName = (p.labels && (p.labels['procloud.io/org-name'] || p.labels['procloud.io/organization'])) || 'Default';
+                const orgId = (p.labels && (p.labels['procloud.io/tenant-id'] || p.labels['procloud.io/organization'])) || '';
+                const status = (p.status || '').toLowerCase();
+                const id = p.id || '';
+                const ports = p.ports ? p.ports.join(', ') : '';
+
+                if (search) {
+                    const matchSearch = name.toLowerCase().includes(search) ||
+                        orgName.toLowerCase().includes(search) ||
+                        id.toLowerCase().includes(search) ||
+                        ports.toLowerCase().includes(search);
+                    if (!matchSearch) return false;
+                }
+
+                if (statusFilter && status !== statusFilter) {
+                    return false;
+                }
+
+                if (orgFilter) {
+                    if (orgId !== orgFilter && orgName !== orgFilter) return false;
+                }
+
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                const aOrg = (a.labels && (a.labels['procloud.io/org-name'] || a.labels['procloud.io/organization'])) || 'Default';
+                const bOrg = (b.labels && (b.labels['procloud.io/org-name'] || b.labels['procloud.io/organization'])) || 'Default';
+                let valA, valB;
+                switch (podSortKey) {
+                    case 'name': valA = a.name || ''; valB = b.name || ''; break;
+                    case 'org': valA = aOrg; valB = bOrg; break;
+                    case 'id': valA = a.id || ''; valB = b.id || ''; break;
+                    case 'status': valA = a.status || ''; valB = b.status || ''; break;
+                    case 'containers': valA = a.number_of_containers || 0; valB = b.number_of_containers || 0; break;
+                    case 'ports': valA = (a.ports || []).join(', '); valB = (b.ports || []).join(', '); break;
+                    case 'created': valA = new Date(a.created || 0).getTime(); valB = new Date(b.created || 0).getTime(); break;
+                    default: valA = a.name || ''; valB = b.name || ''; break;
+                }
+                return compareValues(valA, valB, podSortDir);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No pods found matching the filter criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(p => {
+                const orgName = (p.labels && (p.labels['procloud.io/org-name'] || p.labels['procloud.io/organization'])) || 'Default';
+                return `
+                <tr>
+                    <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openPodDetails('${escapeHtml(p.id)}')">${escapeHtml(p.name)}</a></td>
+                    <td><span class="pill pill-blue" style="font-size:11px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>${escapeHtml(orgName)}</span></td>
+                    <td><code style="color:var(--pg-blue-600);">${escapeHtml(p.id)}</code></td>
+                    <td><span class="pill pill-${p.status.toLowerCase() === 'running' ? 'running' : 'stopped'}">${escapeHtml(p.status)}</span></td>
+                    <td>${p.number_of_containers} containers</td>
+                    <td>${p.ports ? escapeHtml(p.ports.join(', ')) : 'None'}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn btn-sm btn-outline-primary" title="View Details" onclick="openPodDetails('${escapeHtml(p.id)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Details</span>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" title="Kubernetes Pod YAML" onclick="viewKube('${p.id}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <span>YAML</span>
+                            </button>
+                            ${canWrite() ? `
+                            ${p.status.toLowerCase() === 'running'
+                                ? `<button class="btn btn-sm btn-icon btn-outline-amber" title="Stop Pod" onclick="stopPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`
+                                : `<button class="btn btn-sm btn-icon btn-outline-emerald" title="Start Pod" onclick="startPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
+                            }
+                            <button class="btn btn-sm btn-icon btn-outline-slate" title="Restart Pod" onclick="restartPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+                            <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Pod" onclick="removePod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
         }
 
         async function fetchPods() {
@@ -5902,151 +6370,274 @@ spec:
                     url += `?tenant_id=${encodeURIComponent(activeOrgFilter)}`;
                 }
                 const res = await authFetch(url);
-                const list = await res.json() || [];
-                document.getElementById('tab-badge-pods').innerText = list.length;
-                const tbody = document.getElementById('pods-table');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px;">No pods created. Click "Create Pod" to provision a multi-container pod.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = list.map(p => {
-                    const orgName = (p.labels && (p.labels['procloud.io/org-name'] || p.labels['procloud.io/organization'])) || 'Default';
-                    return `
-                    <tr>
-                        <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openPodDetails('${escapeHtml(p.id)}')">${escapeHtml(p.name)}</a></td>
-                        <td><span class="pill pill-blue" style="font-size:11px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>${escapeHtml(orgName)}</span></td>
-                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(p.id)}</code></td>
-                        <td><span class="pill pill-${p.status.toLowerCase() === 'running' ? 'running' : 'stopped'}">${escapeHtml(p.status)}</span></td>
-                        <td>${p.number_of_containers} containers</td>
-                        <td>${p.ports ? escapeHtml(p.ports.join(', ')) : 'None'}</td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="btn btn-sm btn-outline-primary" title="View Details" onclick="openPodDetails('${escapeHtml(p.id)}')">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                                    <span>Details</span>
-                                </button>
-                                <button class="btn btn-sm btn-outline-primary" title="Kubernetes Pod YAML" onclick="viewKube('${p.id}')">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                    <span>YAML</span>
-                                </button>
-                                ${canWrite() ? `
-                                ${p.status.toLowerCase() === 'running'
-                                    ? `<button class="btn btn-sm btn-icon btn-outline-amber" title="Stop Pod" onclick="stopPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`
-                                    : `<button class="btn btn-sm btn-icon btn-outline-emerald" title="Start Pod" onclick="startPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>`
-                                }
-                                <button class="btn btn-sm btn-icon btn-outline-slate" title="Restart Pod" onclick="restartPod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
-                                <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Pod" onclick="removePod('${p.id}', '${escapeHtml(p.name)}')"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                                ` : ''}
-                            </div>
-                        </td>
-                    </tr>
-                    `;
-                }).join('');
+                allPods = await res.json() || [];
+                const badge = document.getElementById('tab-badge-pods');
+                if (badge) badge.innerText = allPods.length;
+                filterAndRenderPods();
             } catch (err) {
-                console.error(err);
+                console.error('fetchPods error:', err);
+                const tbody = document.getElementById('pods-table');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load pods: ${escapeHtml(err.message)}</td></tr>`;
             }
+        }
+
+        // ==========================================
+        // 3. IMAGES
+        // ==========================================
+        let allImages = [];
+        let imgSortKey = 'repo';
+        let imgSortDir = 'asc';
+
+        function sortImages(key) {
+            if (imgSortKey === key) {
+                imgSortDir = imgSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                imgSortKey = key;
+                imgSortDir = 'asc';
+            }
+            filterAndRenderImages();
+        }
+
+        function filterAndRenderImages() {
+            updateTableSortIndicators('img', imgSortKey, imgSortDir, ['repo', 'tag', 'id', 'size', 'created']);
+            const tbody = document.getElementById('images-table');
+            if (!tbody) return;
+
+            const search = (document.getElementById('img-search-input')?.value || '').toLowerCase().trim();
+
+            let filtered = allImages.filter(img => {
+                if (!search) return true;
+                const repo = (img.repository || '').toLowerCase();
+                const tag = (img.tag || '').toLowerCase();
+                const id = (img.id || '').toLowerCase();
+                return repo.includes(search) || tag.includes(search) || id.includes(search);
+            });
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                switch (imgSortKey) {
+                    case 'repo': valA = a.repository || ''; valB = b.repository || ''; break;
+                    case 'tag': valA = a.tag || ''; valB = b.tag || ''; break;
+                    case 'id': valA = a.id || ''; valB = b.id || ''; break;
+                    case 'size': valA = parseSizeToBytes(a.size); valB = parseSizeToBytes(b.size); break;
+                    case 'created': valA = new Date(a.created || 0).getTime(); valB = new Date(b.created || 0).getTime(); break;
+                    default: valA = a.repository || ''; valB = b.repository || ''; break;
+                }
+                return compareValues(valA, valB, imgSortDir);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No images found matching the filter criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(img => `
+                <tr>
+                    <td><strong>${escapeHtml(img.repository)}</strong></td>
+                    <td><span class="pill pill-blue">${escapeHtml(img.tag)}</span></td>
+                    <td><code style="color:var(--pg-blue-600);">${escapeHtml(img.id)}</code></td>
+                    <td>${escapeHtml(img.size)}</td>
+                    <td>${img.created ? new Date(img.created).toLocaleDateString() : 'n/a'}</td>
+                    <td>
+                        <div class="table-actions">
+                            ${canWrite() ? `
+                            <button class="btn btn-sm btn-outline-emerald" title="Run Container from Image" onclick="quickRunImage('${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span>Run</span>
+                            </button>
+                            <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Image" onclick="removeImage('${img.id}', '${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                            ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         async function fetchImages() {
             try {
                 const res = await authFetch('/api/v1/images');
-                const list = await res.json() || [];
-                document.getElementById('tab-badge-images').innerText = list.length;
-                const tbody = document.getElementById('images-table');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px;">No images found.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = list.map(img => `
-                    <tr>
-                        <td><strong>${escapeHtml(img.repository)}</strong></td>
-                        <td><span class="pill pill-blue">${escapeHtml(img.tag)}</span></td>
-                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(img.id)}</code></td>
-                        <td>${escapeHtml(img.size)}</td>
-                        <td>${img.created ? new Date(img.created).toLocaleDateString() : 'n/a'}</td>
-                        <td>
-                            <div class="table-actions">
-                                ${canWrite() ? `
-                                <button class="btn btn-sm btn-outline-emerald" title="Run Container from Image" onclick="quickRunImage('${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                    <span>Run</span>
-                                </button>
-                                <button class="btn btn-sm btn-icon btn-outline-rose" title="Delete Image" onclick="removeImage('${img.id}', '${escapeHtml(img.repository)}:${escapeHtml(img.tag)}')">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                </button>
-                                ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                allImages = await res.json() || [];
+                const badge = document.getElementById('tab-badge-images');
+                if (badge) badge.innerText = allImages.length;
+                filterAndRenderImages();
             } catch (err) {
-                console.error(err);
+                console.error('fetchImages error:', err);
+                const tbody = document.getElementById('images-table');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load images: ${escapeHtml(err.message)}</td></tr>`;
             }
+        }
+
+        // ==========================================
+        // 4. VOLUMES
+        // ==========================================
+        let allVolumes = [];
+        let volSortKey = 'name';
+        let volSortDir = 'asc';
+
+        function sortVolumes(key) {
+            if (volSortKey === key) {
+                volSortDir = volSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                volSortKey = key;
+                volSortDir = 'asc';
+            }
+            filterAndRenderVolumes();
+        }
+
+        function filterAndRenderVolumes() {
+            updateTableSortIndicators('vol', volSortKey, volSortDir, ['name', 'driver', 'mountpoint']);
+            const tbody = document.getElementById('volumes-table');
+            if (!tbody) return;
+
+            const search = (document.getElementById('vol-search-input')?.value || '').toLowerCase().trim();
+            const driverFilter = (document.getElementById('vol-driver-filter')?.value || '').toLowerCase().trim();
+
+            let filtered = allVolumes.filter(v => {
+                const name = (v.name || '').toLowerCase();
+                const driver = (v.driver || '').toLowerCase();
+                const mount = (v.mountpoint || '').toLowerCase();
+                if (search && !name.includes(search) && !mount.includes(search)) return false;
+                if (driverFilter && driver !== driverFilter) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                switch (volSortKey) {
+                    case 'name': valA = a.name || ''; valB = b.name || ''; break;
+                    case 'driver': valA = a.driver || ''; valB = b.driver || ''; break;
+                    case 'mountpoint': valA = a.mountpoint || ''; valB = b.mountpoint || ''; break;
+                    default: valA = a.name || ''; valB = b.name || ''; break;
+                }
+                return compareValues(valA, valB, volSortDir);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No volumes found matching the filter criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(v => `
+                <tr>
+                    <td><strong>${escapeHtml(v.name)}</strong></td>
+                    <td><span class="pill pill-blue">${escapeHtml(v.driver)}</span></td>
+                    <td><code>${escapeHtml(v.mountpoint)}</code></td>
+                    <td>
+                        <div class="table-actions">
+                            ${canWrite() ? `
+                            <button class="btn btn-sm btn-outline-rose" title="Delete Volume" onclick="removeVolume('${escapeHtml(v.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Delete</span>
+                            </button>
+                            ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         async function fetchVolumes() {
             try {
                 const res = await authFetch('/api/v1/podman/volumes');
-                const list = await res.json() || [];
-                document.getElementById('tab-badge-volumes').innerText = list.length;
-                const tbody = document.getElementById('volumes-table');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 24px;">No volumes found.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = list.map(v => `
-                    <tr>
-                        <td><strong>${escapeHtml(v.name)}</strong></td>
-                        <td><span class="pill pill-blue">${escapeHtml(v.driver)}</span></td>
-                        <td><code>${escapeHtml(v.mountpoint)}</code></td>
-                        <td>
-                            <div class="table-actions">
-                                ${canWrite() ? `
-                                <button class="btn btn-sm btn-outline-rose" title="Delete Volume" onclick="removeVolume('${escapeHtml(v.name)}')">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                    <span>Delete</span>
-                                </button>
-                                ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                allVolumes = await res.json() || [];
+                const badge = document.getElementById('tab-badge-volumes');
+                if (badge) badge.innerText = allVolumes.length;
+                filterAndRenderVolumes();
             } catch (err) {
-                console.error(err);
+                console.error('fetchVolumes error:', err);
+                const tbody = document.getElementById('volumes-table');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load volumes: ${escapeHtml(err.message)}</td></tr>`;
             }
+        }
+
+        // ==========================================
+        // 5. NETWORKS
+        // ==========================================
+        let allNetworks = [];
+        let netSortKey = 'name';
+        let netSortDir = 'asc';
+
+        function sortNetworks(key) {
+            if (netSortKey === key) {
+                netSortDir = netSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                netSortKey = key;
+                netSortDir = 'asc';
+            }
+            filterAndRenderNetworks();
+        }
+
+        function filterAndRenderNetworks() {
+            updateTableSortIndicators('net', netSortKey, netSortDir, ['name', 'id', 'driver', 'subnet', 'gateway']);
+            const tbody = document.getElementById('networks-table');
+            if (!tbody) return;
+
+            const search = (document.getElementById('net-search-input')?.value || '').toLowerCase().trim();
+            const driverFilter = (document.getElementById('net-driver-filter')?.value || '').toLowerCase().trim();
+
+            let filtered = allNetworks.filter(n => {
+                const name = (n.name || '').toLowerCase();
+                const id = (n.id || '').toLowerCase();
+                const driver = (n.driver || '').toLowerCase();
+                const subnet = (n.subnet || '').toLowerCase();
+                const gateway = (n.gateway || '').toLowerCase();
+                if (search && !name.includes(search) && !id.includes(search) && !subnet.includes(search) && !gateway.includes(search)) return false;
+                if (driverFilter && driver !== driverFilter) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                switch (netSortKey) {
+                    case 'name': valA = a.name || ''; valB = b.name || ''; break;
+                    case 'id': valA = a.id || ''; valB = b.id || ''; break;
+                    case 'driver': valA = a.driver || ''; valB = b.driver || ''; break;
+                    case 'subnet': valA = a.subnet || ''; valB = b.subnet || ''; break;
+                    case 'gateway': valA = a.gateway || ''; valB = b.gateway || ''; break;
+                    default: valA = a.name || ''; valB = b.name || ''; break;
+                }
+                return compareValues(valA, valB, netSortDir);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No networks found matching the filter criteria.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(n => `
+                <tr>
+                    <td><strong>${escapeHtml(n.name)}</strong></td>
+                    <td><code style="color:var(--pg-blue-600);">${escapeHtml(n.id)}</code></td>
+                    <td><span class="pill pill-blue">${escapeHtml(n.driver)}</span></td>
+                    <td>${escapeHtml(n.subnet || 'Auto')}</td>
+                    <td>${escapeHtml(n.gateway || 'Auto')}</td>
+                    <td>
+                        <div class="table-actions">
+                            ${canWrite() ? `
+                            <button class="btn btn-sm btn-outline-rose" title="Delete Network" onclick="removeNetwork('${escapeHtml(n.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Delete</span>
+                            </button>
+                            ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         async function fetchNetworks() {
             try {
                 const res = await authFetch('/api/v1/podman/networks');
-                const list = await res.json() || [];
-                document.getElementById('tab-badge-networks').innerText = list.length;
-                const tbody = document.getElementById('networks-table');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px;">No networks found.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = list.map(n => `
-                    <tr>
-                        <td><strong>${escapeHtml(n.name)}</strong></td>
-                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(n.id)}</code></td>
-                        <td><span class="pill pill-blue">${escapeHtml(n.driver)}</span></td>
-                        <td>${escapeHtml(n.subnet || 'Auto')}</td>
-                        <td>${escapeHtml(n.gateway || 'Auto')}</td>
-                        <td>
-                            <div class="table-actions">
-                                ${canWrite() ? `
-                                <button class="btn btn-sm btn-outline-rose" title="Delete Network" onclick="removeNetwork('${escapeHtml(n.name)}')">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                    <span>Delete</span>
-                                </button>
-                                ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                allNetworks = await res.json() || [];
+                const badge = document.getElementById('tab-badge-networks');
+                if (badge) badge.innerText = allNetworks.length;
+                filterAndRenderNetworks();
             } catch (err) {
-                console.error(err);
+                console.error('fetchNetworks error:', err);
+                const tbody = document.getElementById('networks-table');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load networks: ${escapeHtml(err.message)}</td></tr>`;
             }
         }
 
@@ -6533,6 +7124,52 @@ spec:
         let allSecretsCache = [];
         let currentInspectingSecret = null;
         let isSecretRevealed = false;
+        let secSortKey = 'name';
+        let secSortDir = 'asc';
+
+        function sortSecrets(key) {
+            if (secSortKey === key) {
+                secSortDir = secSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                secSortKey = key;
+                secSortDir = 'asc';
+            }
+            filterAndRenderSecrets();
+        }
+
+        function filterAndRenderSecrets() {
+            updateTableSortIndicators('sec', secSortKey, secSortDir, ['name', 'id', 'driver', 'created', 'updated']);
+            const search = (document.getElementById('secrets-search')?.value || '').toLowerCase().trim();
+            const driverFilter = (document.getElementById('sec-driver-filter')?.value || '').toLowerCase().trim();
+
+            let filtered = allSecretsCache.filter(s => {
+                const name = (s.name || '').toLowerCase();
+                const id = (s.id || '').toLowerCase();
+                const driver = (s.driver || 'file').toLowerCase();
+                if (search && !name.includes(search) && !id.includes(search) && !driver.includes(search)) return false;
+                if (driverFilter && driver !== driverFilter) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                switch (secSortKey) {
+                    case 'name': valA = a.name || ''; valB = b.name || ''; break;
+                    case 'id': valA = a.id || ''; valB = b.id || ''; break;
+                    case 'driver': valA = a.driver || 'file'; valB = b.driver || 'file'; break;
+                    case 'created': valA = new Date(a.created_at || 0).getTime(); valB = new Date(b.created_at || 0).getTime(); break;
+                    case 'updated': valA = new Date(a.updated_at || a.created_at || 0).getTime(); valB = new Date(b.updated_at || b.created_at || 0).getTime(); break;
+                    default: valA = a.name || ''; valB = b.name || ''; break;
+                }
+                return compareValues(valA, valB, secSortDir);
+            });
+
+            renderSecrets(filtered);
+        }
+
+        function filterSecrets(q) {
+            filterAndRenderSecrets();
+        }
 
         async function fetchSecrets() {
             try {
@@ -6541,7 +7178,7 @@ spec:
                 allSecretsCache = await res.json() || [];
                 const badge = document.getElementById('tab-badge-secrets');
                 if (badge) badge.innerText = allSecretsCache.length;
-                renderSecrets(allSecretsCache);
+                filterAndRenderSecrets();
             } catch (err) {
                 console.error(err);
                 const tbody = document.getElementById('secrets-table');
@@ -6549,20 +7186,6 @@ spec:
                     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load secrets: ${escapeHtml(err.message)}</td></tr>`;
                 }
             }
-        }
-
-        function filterSecrets(q) {
-            if (!q) {
-                renderSecrets(allSecretsCache);
-                return;
-            }
-            const lower = q.toLowerCase();
-            const filtered = allSecretsCache.filter(s =>
-                (s.name || '').toLowerCase().includes(lower) ||
-                (s.id || '').toLowerCase().includes(lower) ||
-                (s.driver || '').toLowerCase().includes(lower)
-            );
-            renderSecrets(filtered);
         }
 
         function renderSecrets(list) {
@@ -8925,6 +9548,46 @@ spec:
                 }
             }
 
+            // Containers Table Filter Org Selector
+            const ctrOrgFilter = document.getElementById('ctr-org-filter');
+            if (ctrOrgFilter) {
+                const prev = ctrOrgFilter.value;
+                let html = '<option value="">All Organizations</option>';
+                allOrganizations.forEach(o => {
+                    html += `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}</option>`;
+                });
+                ctrOrgFilter.innerHTML = html;
+                if (!isSuper && currentUser && currentUser.tenant_id) {
+                    ctrOrgFilter.value = currentUser.tenant_id;
+                    ctrOrgFilter.disabled = true;
+                } else if (prev && allOrganizations.some(o => o.id === prev)) {
+                    ctrOrgFilter.value = prev;
+                    ctrOrgFilter.disabled = false;
+                } else {
+                    ctrOrgFilter.disabled = false;
+                }
+            }
+
+            // Pods Table Filter Org Selector
+            const podOrgFilter = document.getElementById('pod-org-filter');
+            if (podOrgFilter) {
+                const prev = podOrgFilter.value;
+                let html = '<option value="">All Organizations</option>';
+                allOrganizations.forEach(o => {
+                    html += `<option value="${escapeHtml(o.id)}">${escapeHtml(o.name)}</option>`;
+                });
+                podOrgFilter.innerHTML = html;
+                if (!isSuper && currentUser && currentUser.tenant_id) {
+                    podOrgFilter.value = currentUser.tenant_id;
+                    podOrgFilter.disabled = true;
+                } else if (prev && allOrganizations.some(o => o.id === prev)) {
+                    podOrgFilter.value = prev;
+                    podOrgFilter.disabled = false;
+                } else {
+                    podOrgFilter.disabled = false;
+                }
+            }
+
             // Users Table Filter Org Selector
             const usersFilterSelect = document.getElementById('users-org-filter');
             if (usersFilterSelect) {
@@ -9063,7 +9726,21 @@ spec:
             }
         }
 
+        let orgSortKey = 'name';
+        let orgSortDir = 'asc';
+
+        function sortOrgs(key) {
+            if (orgSortKey === key) {
+                orgSortDir = orgSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                orgSortKey = key;
+                orgSortDir = 'asc';
+            }
+            filterOrgsTable();
+        }
+
         function filterOrgsTable() {
+            updateTableSortIndicators('org', orgSortKey, orgSortDir, ['name', 'plan', 'status', 'containers', 'created']);
             const query = (document.getElementById('orgs-search-input')?.value || '').toLowerCase().trim();
             const planFilter = (document.getElementById('orgs-plan-filter')?.value || '').toLowerCase().trim();
 
@@ -9078,6 +9755,20 @@ spec:
             if (planFilter) {
                 filtered = filtered.filter(o => (o.plan || '').toLowerCase() === planFilter);
             }
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                switch (orgSortKey) {
+                    case 'name': valA = a.name || ''; valB = b.name || ''; break;
+                    case 'plan': valA = a.plan || ''; valB = b.plan || ''; break;
+                    case 'status': valA = a.status || ''; valB = b.status || ''; break;
+                    case 'containers': valA = a.max_containers || 0; valB = b.max_containers || 0; break;
+                    case 'created': valA = new Date(a.created_at || 0).getTime(); valB = new Date(b.created_at || 0).getTime(); break;
+                    default: valA = a.name || ''; valB = b.name || ''; break;
+                }
+                return compareValues(valA, valB, orgSortDir);
+            });
+
             renderOrganizations(filtered);
         }
 
@@ -9346,7 +10037,21 @@ spec:
             }
         }
 
+        let userSortKey = 'name';
+        let userSortDir = 'asc';
+
+        function sortUsers(key) {
+            if (userSortKey === key) {
+                userSortDir = userSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                userSortKey = key;
+                userSortDir = 'asc';
+            }
+            filterUsersTable();
+        }
+
         function filterUsersTable() {
+            updateTableSortIndicators('user', userSortKey, userSortDir, ['name', 'org', 'role', 'status', 'created']);
             const query = (document.getElementById('users-search-input')?.value || '').toLowerCase().trim();
             const orgFilter = (document.getElementById('users-org-filter')?.value || '').trim();
             const roleFilter = (document.getElementById('users-role-filter')?.value || '').trim();
@@ -9369,6 +10074,24 @@ spec:
                     return u.role === roleFilter;
                 });
             }
+
+            filtered.sort((a, b) => {
+                const aName = a.display_name || a.username || '';
+                const bName = b.display_name || b.username || '';
+                const aOrg = a.tenant_name || a.tenant_id || '';
+                const bOrg = b.tenant_name || b.tenant_id || '';
+                let valA, valB;
+                switch (userSortKey) {
+                    case 'name': valA = aName; valB = bName; break;
+                    case 'org': valA = aOrg; valB = bOrg; break;
+                    case 'role': valA = a.role || ''; valB = b.role || ''; break;
+                    case 'status': valA = a.status || ''; valB = b.status || ''; break;
+                    case 'created': valA = new Date(a.created_at || 0).getTime(); valB = new Date(b.created_at || 0).getTime(); break;
+                    default: valA = aName; valB = bName; break;
+                }
+                return compareValues(valA, valB, userSortDir);
+            });
+
             renderUsers(filtered);
         }
 
