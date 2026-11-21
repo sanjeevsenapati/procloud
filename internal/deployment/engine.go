@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"procloud.io/procloud/internal/build"
@@ -76,20 +78,86 @@ func (e *Engine) Deploy(ctx context.Context, req DeployRequest) (*protocol.Deplo
 		return nil, fmt.Errorf("scheduling failed: %w", err)
 	}
 
-	// 3. Build container image from immutable commit SHA
-	imageTag := fmt.Sprintf("localhost/%s:%s", appName, req.CommitSHA[:min(7, len(req.CommitSHA))])
-	if m.Spec.Image.Repository != "" {
-		imageTag = fmt.Sprintf("%s:%s", m.Spec.Image.Repository, req.CommitSHA[:min(7, len(req.CommitSHA))])
+	// 3. Resolve container image: build from source if requested, or pull existing image
+	var tag string
+	if m.Spec.Image.Tag != "" {
+		tag = m.Spec.Image.Tag
+	} else if req.CommitSHA != "" {
+		tag = req.CommitSHA[:min(7, len(req.CommitSHA))]
+	} else {
+		tag = "latest"
+	}
+
+	imageTag := fmt.Sprintf("%s:%s", m.Spec.Image.Repository, tag)
+	if m.Spec.Image.Repository == "" {
+		imageTag = fmt.Sprintf("localhost/%s:%s", appName, tag)
+	} else if strings.Contains(m.Spec.Image.Repository, ":") {
+		imageTag = m.Spec.Image.Repository
+	}
+
+	contextDir := req.ContextDir
+	if contextDir == "" && m.Spec.Image.Build != nil && m.Spec.Image.Build.Context != "" {
+		contextDir = m.Spec.Image.Build.Context
 	}
 
 	containerfilePath := req.Containerfile
 	if containerfilePath == "" && m.Spec.Image.Build != nil && m.Spec.Image.Build.Containerfile != "" {
-		containerfilePath = filepath.Join(req.ContextDir, m.Spec.Image.Build.Containerfile)
+		if contextDir != "" {
+			containerfilePath = filepath.Join(contextDir, m.Spec.Image.Build.Containerfile)
+		} else {
+			containerfilePath = m.Spec.Image.Build.Containerfile
+		}
 	}
 
-	imageDigest, err := e.builder.Build(ctx, req.ContextDir, containerfilePath, imageTag)
-	if err != nil {
-		return nil, fmt.Errorf("build failed: %w", err)
+	var imageDigest string
+	shouldBuild := (m.Spec.Image.Build != nil) || (req.Containerfile != "")
+	if !shouldBuild && contextDir != "" {
+		if _, err := os.Stat(filepath.Join(contextDir, "Containerfile")); err == nil {
+			shouldBuild = true
+		} else if _, err := os.Stat(filepath.Join(contextDir, "Dockerfile")); err == nil {
+			shouldBuild = true
+		}
+	}
+
+	if shouldBuild {
+		if contextDir == "" {
+			contextDir = "."
+		}
+		digest, err := e.builder.Build(ctx, contextDir, containerfilePath, imageTag)
+		if err != nil {
+			return nil, fmt.Errorf("build failed: %w", err)
+		}
+		imageDigest = digest
+	} else {
+		// Existing image: pull from registry if not already available locally
+		if err := e.runtime.PullImage(ctx, imageTag); err != nil {
+			// Check if image exists locally
+			images, listErr := e.runtime.ListImages(ctx)
+			found := false
+			if listErr == nil {
+				for _, img := range images {
+					if img.Repository == m.Spec.Image.Repository || img.ID == imageTag || (img.Repository+":"+img.Tag) == imageTag {
+						found = true
+						imageDigest = img.ID
+						break
+					}
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("image pull failed: %w", err)
+			}
+		} else {
+			images, _ := e.runtime.ListImages(ctx)
+			for _, img := range images {
+				if (img.Repository+":"+img.Tag) == imageTag || img.Repository == m.Spec.Image.Repository {
+					imageDigest = img.ID
+					break
+				}
+			}
+		}
+		if imageDigest == "" {
+			imageDigest = imageTag
+		}
 	}
 
 	// 4. Resolve persistent volumes
@@ -104,6 +172,7 @@ func (e *Engine) Deploy(ctx context.Context, req DeployRequest) (*protocol.Deplo
 
 	// 5. Generate Quadlet unit definition
 	quadletCfg := m.ToQuadletContainer(req.NetworkName, hostVolumeMappings)
+	quadletCfg.Image = imageTag
 	quadletContent := quadlet.GenerateContainerUnit(quadletCfg)
 
 	// Write Quadlet unit to systemd directory

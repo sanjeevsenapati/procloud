@@ -1688,8 +1688,67 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 	}
 	req.ManifestYAML = body
 
+	// Resolve tenant context
+	tenantID := "tnt-default"
+	if claims := s.checkAuth(r); claims != nil && claims.TenantID != "" {
+		tenantID = claims.TenantID
+	}
+	if qTenant := r.URL.Query().Get("tenant_id"); qTenant != "" {
+		tenantID = qTenant
+	}
+
+	// Resolve project context (ensuring foreign key validity)
+	if req.ProjectID == "" {
+		projs, _ := s.tenantSvc.ListProjects(r.Context(), tenantID)
+		if len(projs) > 0 {
+			req.ProjectID = projs[0].ID
+		} else {
+			p, err := s.tenantSvc.CreateProject(r.Context(), tenantID, "default", "", "main")
+			if err == nil && p != nil {
+				req.ProjectID = p.ID
+			}
+		}
+	}
+
+	// Resolve VPC and Subnet context (ensuring foreign key validity)
+	if req.VPCID == "" {
+		vpcs, _ := s.vpcSvc.ListVPCs(r.Context(), tenantID)
+		if len(vpcs) > 0 {
+			req.VPCID = vpcs[0].ID
+		} else {
+			vpcs, _ = s.vpcSvc.ListVPCs(r.Context(), "tnt-default")
+			if len(vpcs) > 0 {
+				req.VPCID = vpcs[0].ID
+			} else {
+				v, err := s.vpcSvc.CreateVPC(r.Context(), tenantID, "default-vpc")
+				if err == nil && v != nil {
+					req.VPCID = v.ID
+				}
+			}
+		}
+	}
+
+	if req.VPCID != "" && req.SubnetID == "" {
+		subnets, _ := s.vpcSvc.ListSubnets(r.Context(), req.VPCID)
+		if len(subnets) > 0 {
+			req.SubnetID = subnets[0].ID
+			req.NetworkName = subnets[0].Netavark
+		} else {
+			sn, err := s.vpcSvc.CreateSubnet(r.Context(), req.VPCID, "default-subnet")
+			if err != nil {
+				log.Printf("[CreateSubnet Error] %v", err)
+			} else if sn != nil {
+				req.SubnetID = sn.ID
+				req.NetworkName = sn.Netavark
+			}
+		}
+	}
+
+	log.Printf("[Deploy Handler] ProjectID=%q VPCID=%q SubnetID=%q NetworkName=%q", req.ProjectID, req.VPCID, req.SubnetID, req.NetworkName)
+
 	dep, err := s.deployEngine.Deploy(r.Context(), req)
 	if err != nil {
+		log.Printf("[Deploy Handler Error] %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

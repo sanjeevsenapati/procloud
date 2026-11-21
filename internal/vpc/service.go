@@ -32,6 +32,17 @@ func (s *Service) CreateVPC(ctx context.Context, tenantID, name string) (*protoc
 	defer s.mu.Unlock()
 
 	// Assign unique 10.X.0.0/16 block per VPC
+	if s.nextVPCIndex == 10 {
+		if allVPCs, err := s.repo.ListVPCsByTenant(ctx, tenantID); err == nil {
+			for _, v := range allVPCs {
+				var octet int
+				fmt.Sscanf(v.CIDR, "10.%d.0.0/16", &octet)
+				if octet >= s.nextVPCIndex {
+					s.nextVPCIndex = octet
+				}
+			}
+		}
+	}
 	s.nextVPCIndex++
 	cidr := fmt.Sprintf("10.%d.0.0/16", s.nextVPCIndex)
 	bridgeName := fmt.Sprintf("br-vpc-%d", s.nextVPCIndex)
@@ -67,7 +78,6 @@ func (s *Service) CreateSubnet(ctx context.Context, vpcID, name string) (*protoc
 		return nil, err
 	}
 
-	subnetIdx := len(existing) + 1
 	// Subnet CIDR based on VPC prefix
 	var vpcOctet int
 	fmt.Sscanf(v.CIDR, "10.%d.0.0/16", &vpcOctet)
@@ -75,13 +85,26 @@ func (s *Service) CreateSubnet(ctx context.Context, vpcID, name string) (*protoc
 		vpcOctet = 10
 	}
 
-	subnetCIDR := fmt.Sprintf("10.%d.%d.0/24", vpcOctet, subnetIdx)
-	gateway := fmt.Sprintf("10.%d.%d.1", vpcOctet, subnetIdx)
-	netName := fmt.Sprintf("pcnet-%s-%s", v.Name, name)
+	subnetIdx := len(existing) + 1
+	var subnetCIDR, gateway, netName string
+	var netErr error
+	for attempt := 0; attempt < 50; attempt++ {
+		curIdx := subnetIdx + attempt
+		subnetCIDR = fmt.Sprintf("10.%d.%d.0/24", vpcOctet, curIdx)
+		gateway = fmt.Sprintf("10.%d.%d.1", vpcOctet, curIdx)
+		netName = fmt.Sprintf("pcnet-%s-%s", v.Name, name)
+		if attempt > 0 {
+			netName = fmt.Sprintf("pcnet-%s-%s-%d", v.Name, name, curIdx)
+		}
 
-	// Create Podman / Netavark network
-	if err := s.networkProvider.CreateNetwork(ctx, netName, subnetCIDR, gateway); err != nil {
-		return nil, fmt.Errorf("failed to provision network: %w", err)
+		// Create Podman / Netavark network
+		netErr = s.networkProvider.CreateNetwork(ctx, netName, subnetCIDR, gateway)
+		if netErr == nil {
+			break
+		}
+	}
+	if netErr != nil {
+		return nil, fmt.Errorf("failed to provision network: %w", netErr)
 	}
 
 	subnet := &protocol.Subnet{
