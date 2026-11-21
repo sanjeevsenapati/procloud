@@ -37,16 +37,16 @@ echo ""
 echo "=========================================================="
 echo "⚡ Step 4: Testing User Authentication & RBAC"
 echo "=========================================================="
-echo "-> POST /api/v1/auth/register (Admin Account)"
-curl -s -X POST http://localhost:8080/api/v1/auth/register \
+echo "-> POST /api/v1/auth/register (Verifying public registration is disabled)"
+curl -s -i -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"username":"cloudadmin","email":"admin@procloud.io","password":"SovereignCloud2026!","role":"admin"}' | python3 -m json.tool
+  -d '{"username":"publicuser","email":"user@test.io","password":"Password123!","role":"developer"}' | head -n 5
 
 echo ""
-echo "-> POST /api/v1/auth/login"
+echo "-> POST /api/v1/auth/login (Login as Super Administrator)"
 AUTH_TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"cloudadmin","password":"SovereignCloud2026!"}' | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+  -d '{"username":"admin","password":"admin123"}' | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
 echo "JWT Token generated: ${AUTH_TOKEN:0:35}..."
 
 echo ""

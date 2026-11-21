@@ -222,23 +222,97 @@ func TestMandatoryAuthentication(t *testing.T) {
 		}
 	}
 
-	// 8. Test Registration of a new user and login
+	// 8. Test that public self-registration is disabled (returns 403 Forbidden)
 	regBody, _ := json.Marshal(map[string]string{
 		"username": "developer1",
 		"email":    "dev1@procloud.io",
 		"password": "Password123!",
-		"role":     "member",
+		"role":     "developer",
 	})
 	reqReg := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(regBody))
 	reqReg.Header.Set("Content-Type", "application/json")
 	recReg := httptest.NewRecorder()
 	server.ServeHTTP(recReg, reqReg)
 
-	if recReg.Code != http.StatusCreated {
-		t.Fatalf("[POST /api/v1/auth/register] expected 201 Created, got %d: %s", recReg.Code, recReg.Body.String())
+	if recReg.Code != http.StatusForbidden {
+		t.Fatalf("[POST /api/v1/auth/register] expected 403 Forbidden, got %d: %s", recReg.Code, recReg.Body.String())
 	}
 
-	// Login as newly created user
+	// 9. Test Super Admin provisioning a user via POST /api/v1/users
+	createUserBody, _ := json.Marshal(map[string]string{
+		"username":     "developer1",
+		"email":        "dev1@procloud.io",
+		"password":     "Password123!",
+		"role":         "developer",
+		"tenant_id":    "tnt-default",
+		"display_name": "Developer One",
+	})
+	reqCreateUser := httptest.NewRequest("POST", "/api/v1/users", bytes.NewReader(createUserBody))
+	reqCreateUser.Header.Set("Content-Type", "application/json")
+	reqCreateUser.Header.Set("Authorization", "Bearer "+loginResp.Token)
+	recCreateUser := httptest.NewRecorder()
+	server.ServeHTTP(recCreateUser, reqCreateUser)
+
+	if recCreateUser.Code != http.StatusCreated {
+		t.Fatalf("[POST /api/v1/users] expected 201 Created, got %d: %s", recCreateUser.Code, recCreateUser.Body.String())
+	}
+
+	// 10. Test Super Admin creating Organization with initial Org Admin
+	createOrgBody, _ := json.Marshal(map[string]any{
+		"name":               "Test Org Admin Tenant",
+		"description":        "Testing initial org admin creation",
+		"plan":               "enterprise",
+		"admin_username":     "tenant.admin",
+		"admin_email":        "tadmin@tenant.local",
+		"admin_password":     "TenantPass123!",
+		"admin_display_name": "Tenant Administrator",
+	})
+	reqCreateOrg := httptest.NewRequest("POST", "/api/v1/organizations", bytes.NewReader(createOrgBody))
+	reqCreateOrg.Header.Set("Content-Type", "application/json")
+	reqCreateOrg.Header.Set("Authorization", "Bearer "+loginResp.Token)
+	recCreateOrg := httptest.NewRecorder()
+	server.ServeHTTP(recCreateOrg, reqCreateOrg)
+
+	if recCreateOrg.Code != http.StatusCreated {
+		t.Fatalf("[POST /api/v1/organizations] expected 201 Created, got %d: %s", recCreateOrg.Code, recCreateOrg.Body.String())
+	}
+
+	// Login as newly provisioned Org Admin
+	orgAdminLoginBody, _ := json.Marshal(map[string]string{
+		"username": "tenant.admin",
+		"password": "TenantPass123!",
+	})
+	reqOrgAdminLogin := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(orgAdminLoginBody))
+	reqOrgAdminLogin.Header.Set("Content-Type", "application/json")
+	recOrgAdminLogin := httptest.NewRecorder()
+	server.ServeHTTP(recOrgAdminLogin, reqOrgAdminLogin)
+	if recOrgAdminLogin.Code != http.StatusOK {
+		t.Fatalf("new org admin login failed: %d: %s", recOrgAdminLogin.Code, recOrgAdminLogin.Body.String())
+	}
+	var orgAdminLoginResp struct {
+		Token string `json:"token"`
+	}
+	_ = json.Unmarshal(recOrgAdminLogin.Body.Bytes(), &orgAdminLoginResp)
+
+	// Verify Org Admin CANNOT create another Org Admin (must return 403 Forbidden)
+	badOrgAdminBody, _ := json.Marshal(map[string]string{
+		"username":     "illegal.admin",
+		"email":        "illegal@tenant.local",
+		"password":     "Password123!",
+		"role":         "org_admin",
+		"display_name": "Illegal Admin",
+	})
+	reqBadOrgAdmin := httptest.NewRequest("POST", "/api/v1/users", bytes.NewReader(badOrgAdminBody))
+	reqBadOrgAdmin.Header.Set("Content-Type", "application/json")
+	reqBadOrgAdmin.Header.Set("Authorization", "Bearer "+orgAdminLoginResp.Token)
+	recBadOrgAdmin := httptest.NewRecorder()
+	server.ServeHTTP(recBadOrgAdmin, reqBadOrgAdmin)
+
+	if recBadOrgAdmin.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden when Org Admin tries to create another Org Admin, got %d: %s", recBadOrgAdmin.Code, recBadOrgAdmin.Body.String())
+	}
+
+	// Login as newly created developer user
 	devLoginBody, _ := json.Marshal(map[string]string{
 		"username": "developer1",
 		"password": "Password123!",
@@ -253,5 +327,5 @@ func TestMandatoryAuthentication(t *testing.T) {
 	}
 
 	_ = ctx
-	t.Log("SUCCESS: Mandatory authentication verified across all protected endpoints!")
+	t.Log("SUCCESS: Mandatory authentication and RBAC governance verified!")
 }

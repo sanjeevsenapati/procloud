@@ -415,23 +415,7 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Role     string `json:"role"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	u, err := s.authSvc.Register(r.Context(), req.Username, req.Email, req.Password, req.Role)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	s.auditSvc.Log(r.Context(), u.Username, "USER_REGISTERED", "User", u.ID, r.RemoteAddr, "Created account")
-	respondJSON(w, http.StatusCreated, u)
+	http.Error(w, "Public sign-up is disabled. User accounts and organizations must be provisioned by a Super Administrator.", http.StatusForbidden)
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -1361,15 +1345,19 @@ func (s *Server) handleListOrganizations(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name          string `json:"name"`
-		Description   string `json:"description"`
-		Plan          string `json:"plan"`
-		Status        string `json:"status"`
-		MaxContainers int    `json:"max_containers"`
-		MaxPods       int    `json:"max_pods"`
-		MaxCPUCores   int    `json:"max_cpu_cores"`
-		MaxMemoryMB   int    `json:"max_memory_mb"`
-		MaxStorageGB  int    `json:"max_storage_gb"`
+		Name             string `json:"name"`
+		Description      string `json:"description"`
+		Plan             string `json:"plan"`
+		Status           string `json:"status"`
+		MaxContainers    int    `json:"max_containers"`
+		MaxPods          int    `json:"max_pods"`
+		MaxCPUCores      int    `json:"max_cpu_cores"`
+		MaxMemoryMB      int    `json:"max_memory_mb"`
+		MaxStorageGB     int    `json:"max_storage_gb"`
+		AdminUsername    string `json:"admin_username"`
+		AdminEmail       string `json:"admin_email"`
+		AdminPassword    string `json:"admin_password"`
+		AdminDisplayName string `json:"admin_display_name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
@@ -1401,6 +1389,34 @@ func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request
 		actor = claims.Username
 	}
 	s.auditSvc.Log(r.Context(), actor, "ORG_CREATE", "Tenant", t.ID, r.RemoteAddr, fmt.Sprintf("Created organization %s (%s)", t.Name, t.Plan))
+
+	// Provision initial Org Admin if requested by Super Admin
+	if strings.TrimSpace(req.AdminUsername) != "" && strings.TrimSpace(req.AdminPassword) != "" {
+		adminEmail := strings.TrimSpace(req.AdminEmail)
+		if adminEmail == "" {
+			cleanName := strings.ToLower(strings.Map(func(r rune) rune {
+				if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+					return r
+				}
+				return -1
+			}, t.Name))
+			if cleanName == "" {
+				cleanName = "tenant"
+			}
+			adminEmail = strings.TrimSpace(req.AdminUsername) + "@" + cleanName + ".local"
+		}
+		adminName := strings.TrimSpace(req.AdminDisplayName)
+		if adminName == "" {
+			adminName = strings.TrimSpace(req.AdminUsername)
+		}
+		_, err := s.authSvc.CreateUserWithOrg(r.Context(), req.AdminUsername, adminEmail, req.AdminPassword, protocol.RoleOrgAdmin, t.ID, adminName)
+		if err != nil {
+			log.Printf("[Org Admin Provision] warning: failed creating initial admin %s: %v", req.AdminUsername, err)
+		} else {
+			s.auditSvc.Log(r.Context(), actor, "USER_CREATE", "User", req.AdminUsername, r.RemoteAddr, fmt.Sprintf("Provisioned initial Org Admin %s for tenant %s", req.AdminUsername, t.ID))
+		}
+	}
+
 	respondJSON(w, http.StatusCreated, t)
 }
 
@@ -1510,9 +1526,14 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	claims := getClaims(r)
 	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
 		req.TenantID = claims.TenantID
-		if req.Role == protocol.RoleSuperAdmin {
-			req.Role = protocol.RoleDeveloper
+		if req.Role == protocol.RoleSuperAdmin || req.Role == protocol.RoleOrgAdmin {
+			http.Error(w, "forbidden: only Super Administrators can create Organisation Admins or Super Admins", http.StatusForbidden)
+			return
 		}
+	}
+
+	if req.Role == "" {
+		req.Role = protocol.RoleDeveloper
 	}
 
 	u, err := s.authSvc.CreateUserWithOrg(r.Context(), req.Username, req.Email, req.Password, req.Role, req.TenantID, req.DisplayName)
@@ -1554,13 +1575,14 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	claims := getClaims(r)
 	if claims != nil && claims.Role != protocol.RoleSuperAdmin {
 		targetUser, err := s.authSvc.GetUser(r.Context(), id)
-		if err != nil || targetUser == nil || targetUser.TenantID != claims.TenantID || targetUser.Role == protocol.RoleSuperAdmin {
-			http.Error(w, "forbidden: cannot modify user outside your organization", http.StatusForbidden)
+		if err != nil || targetUser == nil || targetUser.TenantID != claims.TenantID || targetUser.Role == protocol.RoleSuperAdmin || targetUser.Role == protocol.RoleOrgAdmin {
+			http.Error(w, "forbidden: cannot modify user outside your organization or administrators", http.StatusForbidden)
 			return
 		}
 		req.TenantID = claims.TenantID
-		if req.Role == protocol.RoleSuperAdmin {
-			req.Role = targetUser.Role
+		if req.Role == protocol.RoleSuperAdmin || req.Role == protocol.RoleOrgAdmin {
+			http.Error(w, "forbidden: only Super Administrators can assign Organisation Admin or Super Admin roles", http.StatusForbidden)
+			return
 		}
 	}
 
