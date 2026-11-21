@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -90,97 +92,140 @@ func NewServer(
 		builder:       builder,
 	}
 
+	// Ensure default administrator account exists (admin / admin123)
+	if _, err := repo.GetUserByUsername(context.Background(), "admin"); err != nil {
+		_, regErr := authSvc.Register(context.Background(), "admin", "admin@procloud.io", "admin123", "admin")
+		if regErr != nil {
+			_, regErr = authSvc.Register(context.Background(), "admin", "admin@procloud.local", "admin123", "admin")
+		}
+		if regErr != nil {
+			log.Printf("[Auth] Notice: failed to register default admin: %v", regErr)
+		} else {
+			log.Printf("[Auth] Default admin account created: admin / admin123")
+		}
+	}
+
 	s.registerRoutes()
 	return s
 }
 
+// ServeHTTP implements http.Handler for Server.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.mux.ServeHTTP(w, r)
+}
+
+type claimsCtxKey struct{}
+
+func (s *Server) authRequired(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims := s.checkAuth(r)
+		if claims == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"error": "unauthorized: valid Bearer token required. Please log in.",
+			})
+			return
+		}
+		ctx := context.WithValue(r.Context(), claimsCtxKey{}, claims)
+		next(w, r.WithContext(ctx))
+	}
+}
+
+func getClaims(r *http.Request) *auth.Claims {
+	if c, ok := r.Context().Value(claimsCtxKey{}).(*auth.Claims); ok {
+		return c
+	}
+	return nil
+}
+
 func (s *Server) registerRoutes() {
-	// Health & Status
+	// Health & Status (Public)
 	s.mux.HandleFunc("GET /healthz", s.handleHealthz)
 
-	// Auth & User Management
+	// Auth & User Management (Login and Register are public; me is protected)
 	s.mux.HandleFunc("POST /api/v1/auth/register", s.handleRegister)
 	s.mux.HandleFunc("POST /api/v1/auth/login", s.handleLogin)
-	s.mux.HandleFunc("GET /api/v1/auth/me", s.handleMe)
+	s.mux.HandleFunc("GET /api/v1/auth/me", s.authRequired(s.handleMe))
 
-	// Compute Nodes
-	s.mux.HandleFunc("GET /api/v1/nodes", s.handleListNodes)
-	s.mux.HandleFunc("POST /api/v1/nodes/register", s.handleRegisterNode)
-
-	// -------------------------------------------------------------
-	// Podman Desktop Features: Container Provisioning & Lifecycle
-	// -------------------------------------------------------------
-	s.mux.HandleFunc("GET /api/v1/containers", s.handleListContainers)
-	s.mux.HandleFunc("POST /api/v1/containers", s.handleRunContainer)
-	s.mux.HandleFunc("GET /api/v1/containers/{id}", s.handleInspectContainer)
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/start", s.handleStartContainer)
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/stop", s.handleStopContainer)
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/restart", s.handleRestartContainer)
-	s.mux.HandleFunc("DELETE /api/v1/containers/{id}", s.handleRemoveContainer)
-	s.mux.HandleFunc("GET /api/v1/containers/{id}/logs", s.handleContainerLogs)
-	s.mux.HandleFunc("POST /api/v1/containers/{id}/exec", s.handleExecContainer)
+	// Compute Nodes (Protected)
+	s.mux.HandleFunc("GET /api/v1/nodes", s.authRequired(s.handleListNodes))
+	s.mux.HandleFunc("POST /api/v1/nodes/register", s.authRequired(s.handleRegisterNode))
 
 	// -------------------------------------------------------------
-	// Podman Desktop Features: Pod Provisioning & Lifecycle
+	// Podman Desktop Features: Container Provisioning & Lifecycle (Protected)
 	// -------------------------------------------------------------
-	s.mux.HandleFunc("GET /api/v1/pods", s.handleListPods)
-	s.mux.HandleFunc("POST /api/v1/pods", s.handleCreatePod)
-	s.mux.HandleFunc("GET /api/v1/pods/{id}", s.handleInspectPod)
-	s.mux.HandleFunc("POST /api/v1/pods/{id}/start", s.handleStartPod)
-	s.mux.HandleFunc("POST /api/v1/pods/{id}/stop", s.handleStopPod)
-	s.mux.HandleFunc("POST /api/v1/pods/{id}/restart", s.handleRestartPod)
-	s.mux.HandleFunc("DELETE /api/v1/pods/{id}", s.handleRemovePod)
-	s.mux.HandleFunc("GET /api/v1/pods/{id}/kube", s.handleGenerateKube)
-
-	// -------------------------------------------------------------
-	// Podman Desktop Features: Image Management
-	// -------------------------------------------------------------
-	s.mux.HandleFunc("GET /api/v1/images", s.handleListImages)
-	s.mux.HandleFunc("POST /api/v1/images/pull", s.handlePullImage)
-	s.mux.HandleFunc("DELETE /api/v1/images/{id}", s.handleRemoveImage)
+	s.mux.HandleFunc("GET /api/v1/containers", s.authRequired(s.handleListContainers))
+	s.mux.HandleFunc("POST /api/v1/containers", s.authRequired(s.handleRunContainer))
+	s.mux.HandleFunc("GET /api/v1/containers/{id}", s.authRequired(s.handleInspectContainer))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/start", s.authRequired(s.handleStartContainer))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/stop", s.authRequired(s.handleStopContainer))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/restart", s.authRequired(s.handleRestartContainer))
+	s.mux.HandleFunc("DELETE /api/v1/containers/{id}", s.authRequired(s.handleRemoveContainer))
+	s.mux.HandleFunc("GET /api/v1/containers/{id}/logs", s.authRequired(s.handleContainerLogs))
+	s.mux.HandleFunc("POST /api/v1/containers/{id}/exec", s.authRequired(s.handleExecContainer))
 
 	// -------------------------------------------------------------
-	// Podman Desktop Features: Runtime Networks & Volumes
+	// Podman Desktop Features: Pod Provisioning & Lifecycle (Protected)
 	// -------------------------------------------------------------
-	s.mux.HandleFunc("GET /api/v1/podman/networks", s.handleListPodmanNetworks)
-	s.mux.HandleFunc("POST /api/v1/podman/networks", s.handleCreatePodmanNetwork)
-	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id}", s.handleRemovePodmanNetwork)
+	s.mux.HandleFunc("GET /api/v1/pods", s.authRequired(s.handleListPods))
+	s.mux.HandleFunc("POST /api/v1/pods", s.authRequired(s.handleCreatePod))
+	s.mux.HandleFunc("GET /api/v1/pods/{id}", s.authRequired(s.handleInspectPod))
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/start", s.authRequired(s.handleStartPod))
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/stop", s.authRequired(s.handleStopPod))
+	s.mux.HandleFunc("POST /api/v1/pods/{id}/restart", s.authRequired(s.handleRestartPod))
+	s.mux.HandleFunc("DELETE /api/v1/pods/{id}", s.authRequired(s.handleRemovePod))
+	s.mux.HandleFunc("GET /api/v1/pods/{id}/kube", s.authRequired(s.handleGenerateKube))
 
-	s.mux.HandleFunc("GET /api/v1/podman/volumes", s.handleListPodmanVolumes)
-	s.mux.HandleFunc("POST /api/v1/podman/volumes", s.handleCreatePodmanVolume)
-	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.handleRemovePodmanVolume)
+	// -------------------------------------------------------------
+	// Podman Desktop Features: Image Management (Protected)
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/images", s.authRequired(s.handleListImages))
+	s.mux.HandleFunc("POST /api/v1/images/pull", s.authRequired(s.handlePullImage))
+	s.mux.HandleFunc("DELETE /api/v1/images/{id}", s.authRequired(s.handleRemoveImage))
 
-	// Tenants & Projects
-	s.mux.HandleFunc("GET /api/v1/tenants", s.handleListTenants)
-	s.mux.HandleFunc("POST /api/v1/tenants", s.handleCreateTenant)
-	s.mux.HandleFunc("GET /api/v1/projects", s.handleListProjects)
-	s.mux.HandleFunc("POST /api/v1/projects", s.handleCreateProject)
+	// -------------------------------------------------------------
+	// Podman Desktop Features: Runtime Networks & Volumes (Protected)
+	// -------------------------------------------------------------
+	s.mux.HandleFunc("GET /api/v1/podman/networks", s.authRequired(s.handleListPodmanNetworks))
+	s.mux.HandleFunc("POST /api/v1/podman/networks", s.authRequired(s.handleCreatePodmanNetwork))
+	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id}", s.authRequired(s.handleRemovePodmanNetwork))
 
-	// VPC & Storage Repositories
-	s.mux.HandleFunc("GET /api/v1/vpcs", s.handleListVPCs)
-	s.mux.HandleFunc("POST /api/v1/vpcs", s.handleCreateVPC)
-	s.mux.HandleFunc("GET /api/v1/subnets", s.handleListSubnets)
-	s.mux.HandleFunc("POST /api/v1/subnets", s.handleCreateSubnet)
-	s.mux.HandleFunc("GET /api/v1/volumes", s.handleListVolumes)
-	s.mux.HandleFunc("POST /api/v1/volumes", s.handleCreateVolume)
+	s.mux.HandleFunc("GET /api/v1/podman/volumes", s.authRequired(s.handleListPodmanVolumes))
+	s.mux.HandleFunc("POST /api/v1/podman/volumes", s.authRequired(s.handleCreatePodmanVolume))
+	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.authRequired(s.handleRemovePodmanVolume))
 
-	// Workloads & Deployments
-	s.mux.HandleFunc("GET /api/v1/workloads", s.handleListWorkloads)
-	s.mux.HandleFunc("POST /api/v1/deployments", s.handleCreateDeployment)
-	s.mux.HandleFunc("POST /api/v1/deployments/{workload}/rollback", s.handleRollback)
+	// Tenants & Projects (Protected)
+	s.mux.HandleFunc("GET /api/v1/tenants", s.authRequired(s.handleListTenants))
+	s.mux.HandleFunc("POST /api/v1/tenants", s.authRequired(s.handleCreateTenant))
+	s.mux.HandleFunc("GET /api/v1/projects", s.authRequired(s.handleListProjects))
+	s.mux.HandleFunc("POST /api/v1/projects", s.authRequired(s.handleCreateProject))
 
-	// Database & WAL Management
-	s.mux.HandleFunc("GET /api/v1/database/status", s.handleDBStatus)
-	s.mux.HandleFunc("POST /api/v1/database/checkpoint", s.handleDBCheckpoint)
-	s.mux.HandleFunc("POST /api/v1/database/backup", s.handleDBBackup)
+	// VPC & Storage Repositories (Protected)
+	s.mux.HandleFunc("GET /api/v1/vpcs", s.authRequired(s.handleListVPCs))
+	s.mux.HandleFunc("POST /api/v1/vpcs", s.authRequired(s.handleCreateVPC))
+	s.mux.HandleFunc("GET /api/v1/subnets", s.authRequired(s.handleListSubnets))
+	s.mux.HandleFunc("POST /api/v1/subnets", s.authRequired(s.handleCreateSubnet))
+	s.mux.HandleFunc("GET /api/v1/volumes", s.authRequired(s.handleListVolumes))
+	s.mux.HandleFunc("POST /api/v1/volumes", s.authRequired(s.handleCreateVolume))
 
-	// Background Jobs & Audit
-	s.mux.HandleFunc("GET /api/v1/jobs", s.handleListJobs)
-	s.mux.HandleFunc("GET /api/v1/audit", s.handleListAudit)
+	// Workloads & Deployments (Protected)
+	s.mux.HandleFunc("GET /api/v1/workloads", s.authRequired(s.handleListWorkloads))
+	s.mux.HandleFunc("POST /api/v1/deployments", s.authRequired(s.handleCreateDeployment))
+	s.mux.HandleFunc("POST /api/v1/deployments/{workload}/rollback", s.authRequired(s.handleRollback))
+
+	// Database & WAL Management (Protected)
+	s.mux.HandleFunc("GET /api/v1/database/status", s.authRequired(s.handleDBStatus))
+	s.mux.HandleFunc("POST /api/v1/database/checkpoint", s.authRequired(s.handleDBCheckpoint))
+	s.mux.HandleFunc("POST /api/v1/database/backup", s.authRequired(s.handleDBBackup))
+
+	// Background Jobs & Audit (Protected)
+	s.mux.HandleFunc("GET /api/v1/jobs", s.authRequired(s.handleListJobs))
+	s.mux.HandleFunc("GET /api/v1/audit", s.authRequired(s.handleListAudit))
 
 	// Webhooks & Milestone
 	s.mux.HandleFunc("POST /api/v1/webhooks/progit", s.handleProGitWebhook)
-	s.mux.HandleFunc("POST /api/v1/milestone/run", s.handleRunMilestone)
+	s.mux.HandleFunc("POST /api/v1/milestone/run", s.authRequired(s.handleRunMilestone))
 
 	// Static Web UI Console (Podman Desktop + Sovereign Cloud)
 	s.mux.Handle("/", web.Handler())

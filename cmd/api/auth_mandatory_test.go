@@ -1,0 +1,164 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"procloud.io/procloud/internal/database/sqlite"
+	"procloud.io/procloud/pkg/podman"
+)
+
+func TestMandatoryAuthentication(t *testing.T) {
+	ctx := context.Background()
+
+	// 1. Initialise database and mock runtime
+	dbPath := t.TempDir() + "/test_auth.db"
+	db, err := sqlite.Open(sqlite.DefaultConfig(dbPath))
+	if err != nil {
+		t.Fatalf("failed opening test db: %v", err)
+	}
+	defer db.Close()
+
+	repo := sqlite.NewRepository(db)
+	mockRuntime := podman.NewMockRuntime()
+
+	server := NewServer(db, repo, mockRuntime)
+
+	// 2. Test Unauthenticated access to protected endpoints -> MUST return 401
+	protectedEndpoints := []struct {
+		method string
+		path   string
+	}{
+		{"GET", "/api/v1/containers"},
+		{"GET", "/api/v1/pods"},
+		{"GET", "/api/v1/images"},
+		{"GET", "/api/v1/podman/networks"},
+		{"GET", "/api/v1/podman/volumes"},
+		{"GET", "/api/v1/database/status"},
+		{"GET", "/api/v1/workloads"},
+		{"GET", "/api/v1/nodes"},
+		{"GET", "/api/v1/auth/me"},
+	}
+
+	for _, ep := range protectedEndpoints {
+		req := httptest.NewRequest(ep.method, ep.path, nil)
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("[%s %s] expected 401 Unauthorized without token, got %d", ep.method, ep.path, rec.Code)
+		}
+	}
+
+	// 3. Test Public endpoint (/healthz) -> MUST return 200 without token
+	{
+		req := httptest.NewRequest("GET", "/healthz", nil)
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Errorf("[GET /healthz] expected 200 OK, got %d", rec.Code)
+		}
+	}
+
+	// 4. Test Invalid token -> MUST return 401
+	{
+		req := httptest.NewRequest("GET", "/api/v1/containers", nil)
+		req.Header.Set("Authorization", "Bearer invalid-garbage-token-here")
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("[GET /api/v1/containers with invalid token] expected 401, got %d", rec.Code)
+		}
+	}
+
+	// 5. Test Login with seeded Default Admin (admin / admin123) -> MUST succeed and return JWT
+	loginBody, _ := json.Marshal(map[string]string{
+		"username": "admin",
+		"password": "admin123",
+	})
+	reqLogin := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(loginBody))
+	reqLogin.Header.Set("Content-Type", "application/json")
+	recLogin := httptest.NewRecorder()
+	server.ServeHTTP(recLogin, reqLogin)
+
+	if recLogin.Code != http.StatusOK {
+		t.Fatalf("[POST /api/v1/auth/login] expected 200 OK, got %d: %s", recLogin.Code, recLogin.Body.String())
+	}
+
+	var loginResp struct {
+		Token string `json:"token"`
+		User  struct {
+			Username string `json:"username"`
+			Role     string `json:"role"`
+		} `json:"user"`
+	}
+	if err := json.Unmarshal(recLogin.Body.Bytes(), &loginResp); err != nil {
+		t.Fatalf("failed decoding login response: %v", err)
+	}
+
+	if loginResp.Token == "" {
+		t.Fatalf("login response token is empty")
+	}
+	if loginResp.User.Username != "admin" || loginResp.User.Role != "admin" {
+		t.Fatalf("unexpected user details: %+v", loginResp.User)
+	}
+
+	// 6. Test Authenticated access with valid Bearer token -> MUST succeed with 200
+	for _, ep := range protectedEndpoints {
+		req := httptest.NewRequest(ep.method, ep.path, nil)
+		req.Header.Set("Authorization", "Bearer "+loginResp.Token)
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("[%s %s with Bearer token] expected 200 OK, got %d: %s", ep.method, ep.path, rec.Code, rec.Body.String())
+		}
+	}
+
+	// 7. Verify /api/v1/auth/me returns the authenticated user
+	reqMe := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+	reqMe.Header.Set("Authorization", "Bearer "+loginResp.Token)
+	recMe := httptest.NewRecorder()
+	server.ServeHTTP(recMe, reqMe)
+
+	if recMe.Code != http.StatusOK {
+		t.Fatalf("[GET /api/v1/auth/me] expected 200 OK, got %d", recMe.Code)
+	}
+
+	// 8. Test Registration of a new user and login
+	regBody, _ := json.Marshal(map[string]string{
+		"username": "developer1",
+		"email":    "dev1@procloud.io",
+		"password": "Password123!",
+		"role":     "member",
+	})
+	reqReg := httptest.NewRequest("POST", "/api/v1/auth/register", bytes.NewReader(regBody))
+	reqReg.Header.Set("Content-Type", "application/json")
+	recReg := httptest.NewRecorder()
+	server.ServeHTTP(recReg, reqReg)
+
+	if recReg.Code != http.StatusCreated {
+		t.Fatalf("[POST /api/v1/auth/register] expected 201 Created, got %d: %s", recReg.Code, recReg.Body.String())
+	}
+
+	// Login as newly created user
+	devLoginBody, _ := json.Marshal(map[string]string{
+		"username": "developer1",
+		"password": "Password123!",
+	})
+	reqDevLogin := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewReader(devLoginBody))
+	reqDevLogin.Header.Set("Content-Type", "application/json")
+	recDevLogin := httptest.NewRecorder()
+	server.ServeHTTP(recDevLogin, reqDevLogin)
+
+	if recDevLogin.Code != http.StatusOK {
+		t.Fatalf("new user login failed: %d: %s", recDevLogin.Code, recDevLogin.Body.String())
+	}
+
+	_ = ctx
+	t.Log("SUCCESS: Mandatory authentication verified across all protected endpoints!")
+}

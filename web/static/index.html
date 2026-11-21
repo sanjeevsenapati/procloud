@@ -488,6 +488,83 @@
     </style>
 </head>
 <body>
+    <!-- MANDATORY AUTHENTICATION PORTAL (White & Light Blue ProGit Theme) -->
+    <div id="auth-screen" style="display: flex; min-height: 100vh; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 20%, #e0edff 0%, #f0f6ff 60%, #e8f2ff 100%); padding: 20px;">
+        <div style="background: var(--pg-surface); border: 1px solid var(--pg-border); border-radius: 14px; box-shadow: 0 10px 30px -5px rgba(37,99,235,0.12), 0 4px 6px -2px rgba(37,99,235,0.04); width: 100%; max-width: 440px; padding: 32px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; margin-bottom: 12px; box-shadow: 0 4px 12px var(--pg-blue-glow);">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/>
+                    </svg>
+                </div>
+                <h1 style="font-size: 22px; font-weight: 800; color: var(--pg-text); margin: 0 0 4px 0;">ProCloud</h1>
+                <p style="font-size: 13px; color: var(--pg-text-muted); margin: 0 0 12px 0;">Sovereign Cloud & Container Platform</p>
+                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 11px; font-weight: 600; color: var(--pg-blue-600);">
+                    <span>🔒 Authentication Required</span>
+                </div>
+            </div>
+
+            <!-- Error banner -->
+            <div id="auth-error-banner" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; color: #e11d48; border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 16px;"></div>
+
+            <!-- Auth Switch Tabs -->
+            <div style="display: flex; gap: 8px; margin-bottom: 20px; background: #f0f6ff; padding: 4px; border-radius: 8px; border: 1px solid var(--pg-border);">
+                <button id="auth-tab-login" class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="switchAuthTab('login')">Sign In</button>
+                <button id="auth-tab-register" class="btn" style="flex: 1; justify-content: center;" onclick="switchAuthTab('register')">Register</button>
+            </div>
+
+            <!-- Sign In Form -->
+            <div id="auth-view-login">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="main-login-username" class="form-input" placeholder="admin" value="admin">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="main-login-password" class="form-input" placeholder="••••••••" value="admin123">
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <button type="button" class="btn" style="padding: 4px 10px; font-size: 11px; border: 1px dashed var(--pg-blue-500); background: #eff6ff; color: var(--pg-blue-600);" onclick="fillDemoAdmin()">⚡ Fill Default Admin</button>
+                    <span style="font-size: 11px; color: var(--pg-text-muted);">Default: admin / admin123</span>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px; font-size: 14px; font-weight: 600;" onclick="doMainLogin()">Sign In to ProCloud</button>
+            </div>
+
+            <!-- Register Form -->
+            <div id="auth-view-register" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="main-reg-username" class="form-input" placeholder="e.g. devops-lead">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="main-reg-email" class="form-input" placeholder="user@procloud.io">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="main-reg-password" class="form-input" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select id="main-reg-role" class="form-input">
+                        <option value="admin">Administrator</option>
+                        <option value="member" selected>Member (Developer)</option>
+                        <option value="viewer">Viewer (Read-only)</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px; font-size: 14px; font-weight: 600;" onclick="doMainRegister()">Create Account</button>
+            </div>
+
+            <div style="margin-top: 24px; text-align: center; font-size: 11px; color: var(--pg-text-muted);">
+                ProCloud Sovereign Cloud • Podman Runtime • SQLite WAL
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONSOLE APPLICATION (Gated behind mandatory authentication) -->
+    <div id="app-screen" style="display: none;">
     <!-- Top Brand Navbar (White & Light Blue Accent) -->
     <header class="progit-navbar">
         <div style="display: flex; align-items: center; gap: 20px;">
@@ -1061,6 +1138,7 @@ spec:
             </div>
         </div>
     </div>
+    </div> <!-- /#app-screen -->
 
     <script>
         let currentTab = 'dashboard';
@@ -1102,9 +1180,204 @@ spec:
             }
         }
 
+        let pollTimer = null;
+
+        function getAuthToken() {
+            return localStorage.getItem('procloud_token');
+        }
+
         function getAuthHeader() {
-            const token = localStorage.getItem('procloud_token');
+            const token = getAuthToken();
             return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
+        async function authFetch(url, options = {}) {
+            const token = getAuthToken();
+            if (!token) {
+                showAuthScreen('Authentication required. Please sign in.');
+                throw new Error('Unauthenticated');
+            }
+            if (!options.headers) {
+                options.headers = {};
+            }
+            options.headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                showAuthScreen('Session expired or unauthorized. Please sign in again.');
+                throw new Error('Unauthorized');
+            }
+            return res;
+        }
+
+        function showAuthScreen(errorMsg = '') {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+            localStorage.removeItem('procloud_token');
+            localStorage.removeItem('procloud_user');
+
+            const appEl = document.getElementById('app-screen');
+            const authEl = document.getElementById('auth-screen');
+            if (appEl) appEl.style.display = 'none';
+            if (authEl) authEl.style.display = 'flex';
+
+            const errBanner = document.getElementById('auth-error-banner');
+            if (errBanner) {
+                if (errorMsg) {
+                    errBanner.innerText = errorMsg;
+                    errBanner.style.display = 'block';
+                } else {
+                    errBanner.style.display = 'none';
+                }
+            }
+        }
+
+        function showAppScreen(user) {
+            const appEl = document.getElementById('app-screen');
+            const authEl = document.getElementById('auth-screen');
+            if (authEl) authEl.style.display = 'none';
+            if (appEl) appEl.style.display = 'block';
+
+            if (user) {
+                document.getElementById('username-label').innerText = '👤 ' + (user.username || 'admin');
+                document.getElementById('userrole-label').innerText = (user.role || 'ADMIN').toUpperCase();
+            }
+
+            refreshCurrentTab();
+            if (!pollTimer) {
+                pollTimer = setInterval(refreshCurrentTab, 4000);
+            }
+        }
+
+        async function doMainLogin() {
+            const u = document.getElementById('main-login-username').value.trim();
+            const p = document.getElementById('main-login-password').value.trim();
+            const errBanner = document.getElementById('auth-error-banner');
+            if (errBanner) errBanner.style.display = 'none';
+
+            if (!u || !p) {
+                if (errBanner) {
+                    errBanner.innerText = 'Username and password are required.';
+                    errBanner.style.display = 'block';
+                }
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('procloud_token', data.token);
+                    localStorage.setItem('procloud_user', JSON.stringify(data.user));
+                    showAppScreen(data.user);
+                } else {
+                    const txt = await res.text();
+                    if (errBanner) {
+                        errBanner.innerText = 'Login failed: ' + (txt || 'Invalid username or password');
+                        errBanner.style.display = 'block';
+                    }
+                }
+            } catch (e) {
+                if (errBanner) {
+                    errBanner.innerText = 'Network error: ' + e.message;
+                    errBanner.style.display = 'block';
+                }
+            }
+        }
+
+        async function doMainRegister() {
+            const u = document.getElementById('main-reg-username').value.trim();
+            const e = document.getElementById('main-reg-email').value.trim();
+            const p = document.getElementById('main-reg-password').value.trim();
+            const r = document.getElementById('main-reg-role').value;
+            const errBanner = document.getElementById('auth-error-banner');
+            if (errBanner) errBanner.style.display = 'none';
+
+            if (!u || !e || !p) {
+                if (errBanner) {
+                    errBanner.innerText = 'All fields are required.';
+                    errBanner.style.display = 'block';
+                }
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/v1/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, email: e, password: p, role: r })
+                });
+                if (res.ok) {
+                    alert('Account created successfully! Signing you in...');
+                    document.getElementById('main-login-username').value = u;
+                    document.getElementById('main-login-password').value = p;
+                    await doMainLogin();
+                } else {
+                    const txt = await res.text();
+                    if (errBanner) {
+                        errBanner.innerText = 'Registration failed: ' + txt;
+                        errBanner.style.display = 'block';
+                    }
+                }
+            } catch (e) {
+                if (errBanner) {
+                    errBanner.innerText = 'Registration error: ' + e.message;
+                    errBanner.style.display = 'block';
+                }
+            }
+        }
+
+        function fillDemoAdmin() {
+            document.getElementById('main-login-username').value = 'admin';
+            document.getElementById('main-login-password').value = 'admin123';
+        }
+
+        function switchAuthTab(tab) {
+            const errBanner = document.getElementById('auth-error-banner');
+            if (errBanner) errBanner.style.display = 'none';
+            if (tab === 'login') {
+                document.getElementById('auth-view-login').style.display = 'block';
+                document.getElementById('auth-view-register').style.display = 'none';
+                document.getElementById('auth-tab-login').className = 'btn btn-primary';
+                document.getElementById('auth-tab-register').className = 'btn';
+            } else {
+                document.getElementById('auth-view-login').style.display = 'none';
+                document.getElementById('auth-view-register').style.display = 'block';
+                document.getElementById('auth-tab-login').className = 'btn';
+                document.getElementById('auth-tab-register').className = 'btn btn-primary';
+            }
+        }
+
+        function logout() {
+            showAuthScreen('You have been signed out.');
+        }
+
+        async function checkSession() {
+            const token = getAuthToken();
+            if (!token) {
+                showAuthScreen();
+                return;
+            }
+            try {
+                const res = await fetch('/api/v1/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const user = await res.json();
+                    localStorage.setItem('procloud_user', JSON.stringify(user));
+                    showAppScreen(user);
+                } else {
+                    showAuthScreen('Session expired. Please log in.');
+                }
+            } catch (e) {
+                showAuthScreen('Server unreachable. Please log in.');
+            }
         }
 
         function filterTables(query) {
@@ -1121,7 +1394,7 @@ spec:
 
         async function fetchDashboard() {
             try {
-                const nodeRes = await fetch('/api/v1/nodes');
+                const nodeRes = await authFetch('/api/v1/nodes');
                 const nodeData = await nodeRes.json();
                 if (nodeData && nodeData.length > 0) {
                     const n = nodeData[0];
@@ -1129,17 +1402,17 @@ spec:
                     document.getElementById('node-sub').innerText = `${n.arch} • ${n.os} • ${n.podman_version}`;
                 }
 
-                const ctrRes = await fetch('/api/v1/containers');
+                const ctrRes = await authFetch('/api/v1/containers');
                 const ctrs = await ctrRes.json() || [];
                 document.getElementById('stat-containers-count').innerText = ctrs.length;
                 document.getElementById('tab-badge-containers').innerText = ctrs.length;
 
-                const podsRes = await fetch('/api/v1/pods');
+                const podsRes = await authFetch('/api/v1/pods');
                 const pods = await podsRes.json() || [];
                 document.getElementById('stat-pods-count').innerText = pods.length;
                 document.getElementById('tab-badge-pods').innerText = pods.length;
 
-                const dbRes = await fetch('/api/v1/database/status');
+                const dbRes = await authFetch('/api/v1/database/status');
                 const db = await dbRes.json();
                 if (db) {
                     document.getElementById('stat-wal-status').innerText = db.mode.toUpperCase();
@@ -1169,7 +1442,7 @@ spec:
 
         async function fetchContainers(all = false) {
             try {
-                const res = await fetch(`/api/v1/containers${all ? '?all=true' : ''}`);
+                const res = await authFetch(`/api/v1/containers${all ? '?all=true' : ''}`);
                 const list = await res.json() || [];
                 document.getElementById('tab-badge-containers').innerText = list.length;
                 const tbody = document.getElementById('containers-table');
@@ -1206,7 +1479,7 @@ spec:
 
         async function fetchPods() {
             try {
-                const res = await fetch('/api/v1/pods');
+                const res = await authFetch('/api/v1/pods');
                 const list = await res.json() || [];
                 document.getElementById('tab-badge-pods').innerText = list.length;
                 const tbody = document.getElementById('pods-table');
@@ -1239,7 +1512,7 @@ spec:
 
         async function fetchImages() {
             try {
-                const res = await fetch('/api/v1/images');
+                const res = await authFetch('/api/v1/images');
                 const list = await res.json() || [];
                 document.getElementById('tab-badge-images').innerText = list.length;
                 const tbody = document.getElementById('images-table');
@@ -1267,7 +1540,7 @@ spec:
 
         async function fetchVolumes() {
             try {
-                const res = await fetch('/api/v1/podman/volumes');
+                const res = await authFetch('/api/v1/podman/volumes');
                 const list = await res.json() || [];
                 document.getElementById('tab-badge-volumes').innerText = list.length;
                 const tbody = document.getElementById('volumes-table');
@@ -1292,7 +1565,7 @@ spec:
 
         async function fetchNetworks() {
             try {
-                const res = await fetch('/api/v1/podman/networks');
+                const res = await authFetch('/api/v1/podman/networks');
                 const list = await res.json() || [];
                 document.getElementById('tab-badge-networks').innerText = list.length;
                 const tbody = document.getElementById('networks-table');
@@ -1319,7 +1592,7 @@ spec:
 
         async function fetchDeployments() {
             try {
-                const res = await fetch('/api/v1/workloads');
+                const res = await authFetch('/api/v1/workloads');
                 const list = await res.json() || [];
                 const tbody = document.getElementById('workloads-list-table');
                 if (list.length === 0) {
@@ -1344,11 +1617,11 @@ spec:
 
         async function fetchTelemetry() {
             try {
-                const dbRes = await fetch('/api/v1/database/status');
+                const dbRes = await authFetch('/api/v1/database/status');
                 const db = await dbRes.json();
                 document.getElementById('db-status-box').innerText = JSON.stringify(db, null, 2);
 
-                const jobsRes = await fetch('/api/v1/jobs');
+                const jobsRes = await authFetch('/api/v1/jobs');
                 const jobs = await jobsRes.json() || [];
                 const tbody = document.getElementById('jobs-telemetry-table');
                 if (jobs.length === 0) {
@@ -1382,39 +1655,51 @@ spec:
             const ports = portsStr ? [portsStr] : [];
             const vols = volsStr ? [volsStr] : [];
 
-            const res = await fetch('/api/v1/containers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-                body: JSON.stringify({ name, image, pod, ports, volumes: vols })
-            });
+            try {
+                const res = await authFetch('/api/v1/containers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, image, pod, ports, volumes: vols })
+                });
 
-            if (res.ok) {
-                closeModal('run-container-modal');
-                fetchContainers();
-            } else {
-                alert('Failed to start container: ' + await res.text());
+                if (res.ok) {
+                    closeModal('run-container-modal');
+                    fetchContainers();
+                } else {
+                    alert('Failed to start container: ' + await res.text());
+                }
+            } catch (e) {
+                console.error(e);
             }
         }
 
         async function startContainer(id) {
-            await fetch(`/api/v1/containers/${id}/start`, { method: 'POST', headers: getAuthHeader() });
-            fetchContainers();
+            try {
+                await authFetch(`/api/v1/containers/${id}/start`, { method: 'POST' });
+                fetchContainers();
+            } catch (e) { console.error(e); }
         }
 
         async function stopContainer(id) {
-            await fetch(`/api/v1/containers/${id}/stop`, { method: 'POST', headers: getAuthHeader() });
-            fetchContainers();
+            try {
+                await authFetch(`/api/v1/containers/${id}/stop`, { method: 'POST' });
+                fetchContainers();
+            } catch (e) { console.error(e); }
         }
 
         async function restartContainer(id) {
-            await fetch(`/api/v1/containers/${id}/restart`, { method: 'POST', headers: getAuthHeader() });
-            fetchContainers();
+            try {
+                await authFetch(`/api/v1/containers/${id}/restart`, { method: 'POST' });
+                fetchContainers();
+            } catch (e) { console.error(e); }
         }
 
         async function removeContainer(id) {
             if (confirm(`Remove container ${id}?`)) {
-                await fetch(`/api/v1/containers/${id}?force=true`, { method: 'DELETE', headers: getAuthHeader() });
-                fetchContainers();
+                try {
+                    await authFetch(`/api/v1/containers/${id}?force=true`, { method: 'DELETE' });
+                    fetchContainers();
+                } catch (e) { console.error(e); }
             }
         }
 
@@ -1424,23 +1709,27 @@ spec:
             document.getElementById('logs-content').innerText = 'Fetching logs...';
             openModal('logs-modal');
 
-            const res = await fetch(`/api/v1/containers/${idOrName}/logs?tail=50`);
-            const data = await res.json();
-            document.getElementById('logs-content').innerText = data.logs || 'No log output captured.';
+            try {
+                const res = await authFetch(`/api/v1/containers/${idOrName}/logs?tail=50`);
+                const data = await res.json();
+                document.getElementById('logs-content').innerText = data.logs || 'No log output captured.';
+            } catch (e) { console.error(e); }
         }
 
         async function submitExec() {
             const cmdStr = document.getElementById('exec-input').value.trim();
             if (!cmdStr || !activeContainerForLogs) return;
 
-            const res = await fetch(`/api/v1/containers/${activeContainerForLogs}/exec`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-                body: JSON.stringify({ command: cmdStr.split(' ') })
-            });
-            const data = await res.json();
-            document.getElementById('logs-content').innerText += `\n$ ${cmdStr}\n${data.output || 'Command executed.'}`;
-            document.getElementById('exec-input').value = '';
+            try {
+                const res = await authFetch(`/api/v1/containers/${activeContainerForLogs}/exec`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmdStr.split(' ') })
+                });
+                const data = await res.json();
+                document.getElementById('logs-content').innerText += `\n$ ${cmdStr}\n${data.output || 'Command executed.'}`;
+                document.getElementById('exec-input').value = '';
+            } catch (e) { console.error(e); }
         }
 
         async function submitCreatePod() {
@@ -1448,69 +1737,85 @@ spec:
             const portsStr = document.getElementById('pod-ports').value.trim();
             const ports = portsStr ? portsStr.split(',').map(s => s.trim()) : [];
 
-            const res = await fetch('/api/v1/pods', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-                body: JSON.stringify({ name, ports })
-            });
+            try {
+                const res = await authFetch('/api/v1/pods', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, ports })
+                });
 
-            if (res.ok) {
-                closeModal('create-pod-modal');
-                fetchPods();
-            } else {
-                alert('Failed to create pod: ' + await res.text());
-            }
+                if (res.ok) {
+                    closeModal('create-pod-modal');
+                    fetchPods();
+                } else {
+                    alert('Failed to create pod: ' + await res.text());
+                }
+            } catch (e) { console.error(e); }
         }
 
         async function startPod(id) {
-            await fetch(`/api/v1/pods/${id}/start`, { method: 'POST', headers: getAuthHeader() });
-            fetchPods();
+            try {
+                await authFetch(`/api/v1/pods/${id}/start`, { method: 'POST' });
+                fetchPods();
+            } catch (e) { console.error(e); }
         }
 
         async function stopPod(id) {
-            await fetch(`/api/v1/pods/${id}/stop`, { method: 'POST', headers: getAuthHeader() });
-            fetchPods();
+            try {
+                await authFetch(`/api/v1/pods/${id}/stop`, { method: 'POST' });
+                fetchPods();
+            } catch (e) { console.error(e); }
         }
 
         async function restartPod(id) {
-            await fetch(`/api/v1/pods/${id}/restart`, { method: 'POST', headers: getAuthHeader() });
-            fetchPods();
+            try {
+                await authFetch(`/api/v1/pods/${id}/restart`, { method: 'POST' });
+                fetchPods();
+            } catch (e) { console.error(e); }
         }
 
         async function removePod(id) {
             if (confirm(`Remove pod ${id}?`)) {
-                await fetch(`/api/v1/pods/${id}?force=true`, { method: 'DELETE', headers: getAuthHeader() });
-                fetchPods();
+                try {
+                    await authFetch(`/api/v1/pods/${id}?force=true`, { method: 'DELETE' });
+                    fetchPods();
+                } catch (e) { console.error(e); }
             }
         }
 
         async function viewKube(id) {
-            const res = await fetch(`/api/v1/pods/${id}/kube`);
-            const data = await res.json();
-            document.getElementById('kube-content').innerText = data.kube_yaml || 'YAML unavailable';
-            openModal('kube-modal');
+            try {
+                const res = await authFetch(`/api/v1/pods/${id}/kube`);
+                const data = await res.json();
+                document.getElementById('kube-content').innerText = data.kube_yaml || 'YAML unavailable';
+                openModal('kube-modal');
+            } catch (e) { console.error(e); }
         }
 
         async function submitPullImage() {
             const image = document.getElementById('pull-image-name').value.trim();
             if (!image) return;
-            const res = await fetch('/api/v1/images/pull', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-                body: JSON.stringify({ image })
-            });
-            if (res.ok) {
-                closeModal('pull-image-modal');
-                fetchImages();
-            } else {
-                alert('Pull failed: ' + await res.text());
-            }
+            try {
+                const res = await authFetch('/api/v1/images/pull', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image })
+                });
+                if (res.ok) {
+                    closeModal('pull-image-modal');
+                    fetchImages();
+                } else {
+                    alert('Pull failed: ' + await res.text());
+                }
+            } catch (e) { console.error(e); }
         }
 
         async function removeImage(id) {
             if (confirm(`Delete image ${id}?`)) {
-                await fetch(`/api/v1/images/${id}?force=true`, { method: 'DELETE', headers: getAuthHeader() });
-                fetchImages();
+                try {
+                    await authFetch(`/api/v1/images/${id}?force=true`, { method: 'DELETE' });
+                    fetchImages();
+                } catch (e) { console.error(e); }
             }
         }
 
@@ -1523,19 +1828,23 @@ spec:
         async function submitCreateVolume() {
             const name = document.getElementById('new-vol-name').value.trim();
             if (!name) return;
-            await fetch('/api/v1/podman/volumes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-                body: JSON.stringify({ name })
-            });
-            closeModal('create-volume-modal');
-            fetchVolumes();
+            try {
+                await authFetch('/api/v1/podman/volumes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                closeModal('create-volume-modal');
+                fetchVolumes();
+            } catch (e) { console.error(e); }
         }
 
         async function removeVolume(name) {
             if (confirm(`Delete volume ${name}?`)) {
-                await fetch(`/api/v1/podman/volumes/${name}`, { method: 'DELETE', headers: getAuthHeader() });
-                fetchVolumes();
+                try {
+                    await authFetch(`/api/v1/podman/volumes/${name}`, { method: 'DELETE' });
+                    fetchVolumes();
+                } catch (e) { console.error(e); }
             }
         }
 
@@ -1544,44 +1853,51 @@ spec:
             const subnet = document.getElementById('new-net-subnet').value.trim();
             const gateway = document.getElementById('new-net-gateway').value.trim();
             if (!name) return;
-            await fetch('/api/v1/podman/networks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-                body: JSON.stringify({ name, subnet, gateway })
-            });
-            closeModal('create-network-modal');
-            fetchNetworks();
+            try {
+                await authFetch('/api/v1/podman/networks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, subnet, gateway })
+                });
+                closeModal('create-network-modal');
+                fetchNetworks();
+            } catch (e) { console.error(e); }
         }
 
         async function removeNetwork(name) {
             if (confirm(`Delete network ${name}?`)) {
-                await fetch(`/api/v1/podman/networks/${name}`, { method: 'DELETE', headers: getAuthHeader() });
-                fetchNetworks();
+                try {
+                    await authFetch(`/api/v1/podman/networks/${name}`, { method: 'DELETE' });
+                    fetchNetworks();
+                } catch (e) { console.error(e); }
             }
         }
 
         async function deployManifest() {
             const yamlText = document.getElementById('manifest-editor').value;
-            const res = await fetch('/api/v1/deployments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain', ...getAuthHeader() },
-                body: yamlText
-            });
-            if (res.ok) {
-                alert('Deployment triggered successfully!');
-                fetchDeployments();
-            } else {
-                alert('Deployment failed: ' + await res.text());
-            }
+            try {
+                const res = await authFetch('/api/v1/deployments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: yamlText
+                });
+                if (res.ok) {
+                    alert('Deployment triggered successfully!');
+                    fetchDeployments();
+                } else {
+                    alert('Deployment failed: ' + await res.text());
+                }
+            } catch (e) { console.error(e); }
         }
 
         async function rollback(appName, targetRelease) {
             if (confirm(`Roll back ${appName} to release ${targetRelease}?`)) {
-                await fetch(`/api/v1/deployments/${appName}/rollback?release=${targetRelease}`, {
-                    method: 'POST',
-                    headers: getAuthHeader()
-                });
-                fetchDeployments();
+                try {
+                    await authFetch(`/api/v1/deployments/${appName}/rollback?release=${targetRelease}`, {
+                        method: 'POST'
+                    });
+                    fetchDeployments();
+                } catch (e) { console.error(e); }
             }
         }
 
@@ -1589,7 +1905,7 @@ spec:
             const logBox = document.getElementById('milestone-quick-log');
             if (logBox) logBox.innerText = 'Executing Milestone 1 (16 Steps)...\n';
             try {
-                const res = await fetch('/api/v1/milestone/run', { method: 'POST', headers: getAuthHeader() });
+                const res = await authFetch('/api/v1/milestone/run', { method: 'POST' });
                 const result = await res.json();
                 if (logBox) logBox.innerText = result.output || 'Milestone completed successfully!';
                 refreshCurrentTab();
@@ -1599,99 +1915,26 @@ spec:
         }
 
         async function triggerCheckpoint() {
-            await fetch('/api/v1/database/checkpoint?mode=TRUNCATE', { method: 'POST', headers: getAuthHeader() });
-            fetchTelemetry();
+            try {
+                await authFetch('/api/v1/database/checkpoint?mode=TRUNCATE', { method: 'POST' });
+                fetchTelemetry();
+            } catch (e) { console.error(e); }
         }
 
         async function triggerBackup() {
-            const res = await fetch('/api/v1/database/backup', { method: 'POST', headers: getAuthHeader() });
-            const data = await res.json();
-            alert('Backup created at: ' + data.path);
-            fetchTelemetry();
-        }
-
-        // -------------------------------------------------------------
-        // Auth Handlers
-        // -------------------------------------------------------------
-
-        function toggleAuthTab(tab) {
-            if (tab === 'login') {
-                document.getElementById('auth-login-form').style.display = 'block';
-                document.getElementById('auth-register-form').style.display = 'none';
-                document.getElementById('tab-login-btn').className = 'btn btn-primary';
-                document.getElementById('tab-register-btn').className = 'btn';
-            } else {
-                document.getElementById('auth-login-form').style.display = 'none';
-                document.getElementById('auth-register-form').style.display = 'block';
-                document.getElementById('tab-login-btn').className = 'btn';
-                document.getElementById('tab-register-btn').className = 'btn btn-primary';
-            }
-        }
-
-        async function submitLogin() {
-            const u = document.getElementById('login-username').value.trim();
-            const p = document.getElementById('login-password').value.trim();
-            const res = await fetch('/api/v1/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, password: p })
-            });
-            if (res.ok) {
+            try {
+                const res = await authFetch('/api/v1/database/backup', { method: 'POST' });
                 const data = await res.json();
-                localStorage.setItem('procloud_token', data.token);
-                localStorage.setItem('procloud_user', JSON.stringify(data.user));
-                updateUserUI();
-                closeModal('auth-modal');
-            } else {
-                alert('Invalid credentials');
-            }
-        }
-
-        async function submitRegister() {
-            const u = document.getElementById('reg-username').value.trim();
-            const e = document.getElementById('reg-email').value.trim();
-            const p = document.getElementById('reg-password').value.trim();
-            const r = document.getElementById('reg-role').value;
-            const res = await fetch('/api/v1/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, email: e, password: p, role: r })
-            });
-            if (res.ok) {
-                alert('User created! Please log in.');
-                toggleAuthTab('login');
-            } else {
-                alert('Registration failed: ' + await res.text());
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('procloud_token');
-            localStorage.removeItem('procloud_user');
-            updateUserUI();
-        }
-
-        function updateUserUI() {
-            const userStr = localStorage.getItem('procloud_user');
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                document.getElementById('username-label').innerText = '👤 ' + user.username;
-                document.getElementById('userrole-label').innerText = (user.role || 'MEMBER').toUpperCase();
-                document.getElementById('user-display').style.display = 'flex';
-                document.getElementById('login-btn').style.display = 'none';
-            } else {
-                document.getElementById('user-display').style.display = 'none';
-                document.getElementById('login-btn').style.display = 'inline-flex';
-            }
+                alert('Backup created at: ' + data.path);
+                fetchTelemetry();
+            } catch (e) { console.error(e); }
         }
 
         function openModal(id) { document.getElementById(id).classList.add('open'); }
         function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-        // Initialize UI
-        updateUserUI();
-        fetchDashboard();
-        setInterval(refreshCurrentTab, 4000);
+        // Start session check immediately
+        checkSession();
     </script>
 </body>
 </html>
