@@ -1523,7 +1523,7 @@
             </div>
             <button class="btn btn-primary" id="login-btn" style="display:none;" onclick="openModal('auth-modal')">Log In</button>
 
-            <button class="btn btn-emerald" onclick="runMilestone()">
+            <button class="btn btn-emerald" onclick="switchTab('milestone'); runMilestone();">
                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 <span>Run Milestone 1</span>
             </button>
@@ -1590,6 +1590,11 @@
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span class="sidebar-label">SQLite WAL &amp; Jobs</span>
                 </a>
+                <a class="sidebar-item" onclick="switchTab('milestone')" data-tab="milestone" data-tooltip="Milestone 1 (16 Steps)">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                    <span class="sidebar-label">Milestone 1</span>
+                    <span class="sidebar-badge pill-emerald">16 Steps</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -1634,7 +1639,7 @@
                     <div class="stat-hint" id="stat-wal-sub">Zero-downtime journal mode</div>
                 </div>
 
-                <div class="pg-box col-8">
+                <div class="pg-box col-12">
                     <div class="pg-box-header">
                         <div class="pg-box-title">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/></svg>
@@ -1657,24 +1662,78 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
 
-                <div class="pg-box col-4">
-                    <div class="pg-box-header">
-                        <div class="pg-box-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
-                            <span>First Milestone (16 Steps)</span>
+        <!-- MILESTONE 1 (16 STEPS) VERIFICATION TAB -->
+        <div id="tab-milestone" class="tab-content">
+            <div class="wf-hero-card">
+                <div class="wf-hero-top">
+                    <div class="wf-hero-title-group">
+                        <div class="wf-hero-icon-badge" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-color: #a7f3d0; color: #059669;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="wf-hero-title">First Milestone: 16-Step Verification Engine</div>
+                            <div class="wf-hero-subtitle">Single-node workflow verification: Podman, systemd Quadlet, Netavark, Nginx ingress, SQLite WAL persistence, and 1-click rollback</div>
                         </div>
                     </div>
-                    <div style="padding: 18px;">
-                        <p style="font-size:12px; color: var(--pg-text-secondary); line-height: 1.6;">
-                            Single-node workflow verification: Podman, systemd Quadlet, Netavark, Nginx ingress, SQLite WAL persistence, and 1-click rollback.
-                        </p>
-                        <button class="btn btn-emerald" style="margin-top: 14px; width: 100%; justify-content: center;" onclick="runMilestone()">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-emerald" style="padding: 9px 18px; font-weight: 700;" onclick="runMilestone()">
                             <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                             <span>Execute 16-Step Verification</span>
                         </button>
-                        <div class="code-view" style="margin-top: 14px; max-height: 180px;" id="milestone-quick-log">Ready to run.</div>
                     </div>
+                </div>
+
+                <!-- 16-Step Checklist Grid -->
+                <div style="background: #f8faff; border: 1px solid var(--pg-border); border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px;">
+                        Automated Verification Scope (16 Distinct Platform Gates)
+                    </div>
+                    <div class="grid-12" style="gap: 10px; font-size: 12px; color: var(--pg-text);">
+                        <div class="col-4" style="background:#ffffff; padding:10px 14px; border:1px solid var(--pg-border); border-radius:8px; display:flex; align-items:center; gap:8px;">
+                            <span class="pill pill-blue">1-3</span>
+                            <span>Node Registration &amp; Auth</span>
+                        </div>
+                        <div class="col-4" style="background:#ffffff; padding:10px 14px; border:1px solid var(--pg-border); border-radius:8px; display:flex; align-items:center; gap:8px;">
+                            <span class="pill pill-blue">4-6</span>
+                            <span>VPC &amp; Netavark Bridge Setup</span>
+                        </div>
+                        <div class="col-4" style="background:#ffffff; padding:10px 14px; border:1px solid var(--pg-border); border-radius:8px; display:flex; align-items:center; gap:8px;">
+                            <span class="pill pill-blue">7-8</span>
+                            <span>Persistent Volume Claims</span>
+                        </div>
+                        <div class="col-4" style="background:#ffffff; padding:10px 14px; border:1px solid var(--pg-border); border-radius:8px; display:flex; align-items:center; gap:8px;">
+                            <span class="pill pill-purple">9-11</span>
+                            <span>OCI Build &amp; Quadlet Service</span>
+                        </div>
+                        <div class="col-4" style="background:#ffffff; padding:10px 14px; border:1px solid var(--pg-border); border-radius:8px; display:flex; align-items:center; gap:8px;">
+                            <span class="pill pill-purple">12-13</span>
+                            <span>Health Check &amp; Ingress</span>
+                        </div>
+                        <div class="col-4" style="background:#ffffff; padding:10px 14px; border:1px solid var(--pg-border); border-radius:8px; display:flex; align-items:center; gap:8px;">
+                            <span class="pill pill-emerald">14-16</span>
+                            <span>Zero-Downtime Rollback &amp; WAL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Execution Terminal Output Box -->
+                <div class="pg-box" style="margin-bottom:0;">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                            <span>Milestone Execution Trace Output</span>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-sm" onclick="copyMilestoneLog()">Copy Log</button>
+                            <button class="btn btn-sm btn-emerald" onclick="runMilestone()">Run Again</button>
+                        </div>
+                    </div>
+                    <div class="code-view" style="min-height: 280px; max-height: 520px; font-size: 12px; white-space: pre-wrap;" id="milestone-quick-log">Ready to run 16-step verification. Click 'Execute 16-Step Verification' above.</div>
                 </div>
             </div>
         </div>
@@ -3605,6 +3664,7 @@ spec:
                 case 'networks': fetchNetworks(); break;
                 case 'deployments': fetchDeployments(); break;
                 case 'telemetry': fetchTelemetry(); break;
+                case 'milestone': break;
                 case 'container-details':
                     if (currentContainerDetails && typeof openContainerDetails === 'function') {
                         openContainerDetails(currentContainerDetails.id);
@@ -4990,12 +5050,23 @@ spec:
             const logBox = document.getElementById('milestone-quick-log');
             if (logBox) logBox.innerText = 'Executing Milestone 1 (16 Steps)...\n';
             try {
+                showToast('Executing 16-Step Milestone Verification...', 'info');
                 const res = await authFetch('/api/v1/milestone/run', { method: 'POST' });
                 const result = await res.json();
                 if (logBox) logBox.innerText = result.output || 'Milestone completed successfully!';
+                showToast('Milestone 1 verified successfully!', 'success');
                 refreshCurrentTab();
             } catch (err) {
                 if (logBox) logBox.innerText += 'Failed: ' + err;
+                showToast('Milestone run failed: ' + err, 'error');
+            }
+        }
+
+        function copyMilestoneLog() {
+            const el = document.getElementById('milestone-quick-log');
+            if (el) {
+                navigator.clipboard.writeText(el.innerText || '');
+                showToast('Milestone execution trace copied to clipboard!', 'success');
             }
         }
 
