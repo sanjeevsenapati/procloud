@@ -4701,8 +4701,8 @@ spec:
                             <td>${c.ports ? escapeHtml(c.ports.join(', ')) : 'None'}</td>
                             <td>
                                 <div style="display:flex; gap:4px;">
-                                    <button class="btn btn-primary" style="padding: 2px 6px; font-size:10px;" onclick="openContainerDetails('${escapeHtml(c.id)}')">
-                                        <svg class="icon-svg" style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    <button class="btn btn-primary btn-sm" onclick="openContainerDetails('${escapeHtml(c.id)}')">
+                                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                                         <span>Details</span>
                                     </button>
                                 </div>
@@ -4881,7 +4881,7 @@ spec:
                         <td>${escapeHtml(n.subnet || 'Auto')}</td>
                         <td>${escapeHtml(n.gateway || 'Auto')}</td>
                         <td>
-                            <button class="btn btn-rose" style="padding: 3px 8px; font-size:11px;" onclick="removeNetwork('${escapeHtml(n.name)}')">
+                            <button class="btn btn-rose btn-sm" onclick="removeNetwork('${escapeHtml(n.name)}')">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                 <span>Delete</span>
                             </button>
@@ -4909,7 +4909,7 @@ spec:
                         <td><span class="pill pill-${w.status === 'running' ? 'healthy' : 'stopped'}">${escapeHtml(w.status)}</span></td>
                         <td>${w.host_port ? `localhost:${w.host_port}` : 'None'}</td>
                         <td>
-                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="rollback('${escapeHtml(w.name)}', ${Math.max(1, w.current_release - 1)})">
+                            <button class="btn btn-sm" onclick="rollback('${escapeHtml(w.name)}', ${Math.max(1, w.current_release - 1)})">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
                                 <span>Rollback</span>
                             </button>
