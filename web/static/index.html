@@ -386,52 +386,89 @@
             border: 1px solid var(--pg-border);
         }
 
-        /* Modals */
+        /* Modals - ProGit White & Light Blue Theme */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(6px);
+            backdrop-filter: blur(8px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
+            padding: 16px;
         }
         .modal-overlay.open { display: flex; animation: fadeIn 0.15s ease; }
         .modal-dialog {
             background: #ffffff;
             border: 1px solid var(--pg-border);
+            border-top: 3px solid var(--pg-blue-600);
             border-radius: 12px;
-            padding: 22px;
+            padding: 20px 24px;
             max-width: 580px;
-            width: 90%;
-            max-height: 85vh;
+            width: 100%;
+            max-height: 88vh;
             overflow-y: auto;
-            box-shadow: 0 25px 50px rgba(30, 58, 138, 0.15);
+            box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.22), 0 0 0 1px rgba(37, 99, 235, 0.08);
+            position: relative;
+            animation: modalPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalPop {
+            0% { opacity: 0; transform: scale(0.96) translateY(-6px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         .modal-dialog-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
+            margin: -20px -24px 18px -24px;
+            padding: 14px 22px;
+            background: linear-gradient(180deg, #f0f7ff 0%, #f8faff 100%);
             border-bottom: 1px solid var(--pg-border);
+            border-top-left-radius: 9px;
+            border-top-right-radius: 9px;
         }
         .modal-dialog-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             color: var(--pg-text);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            letter-spacing: -0.2px;
+        }
+        .modal-dialog-title .icon-svg,
+        .modal-dialog-title .icon-svg-lg {
+            color: var(--pg-blue-600);
+            background: #ffffff;
+            padding: 5px;
+            border-radius: 8px;
+            border: 1px solid #bfdbfe;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
         }
         .modal-dialog-close {
             cursor: pointer;
             color: var(--pg-text-muted);
-            font-size: 20px;
+            font-size: 18px;
             line-height: 1;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            background: transparent;
+            border: 1px solid transparent;
         }
-        .modal-dialog-close:hover { color: var(--pg-text); }
+        .modal-dialog-close:hover {
+            background: #fee2e2;
+            color: #ef4444;
+            border-color: #fecdd3;
+        }
 
         /* Form Controls */
         .form-group { margin-bottom: 15px; }
@@ -445,7 +482,7 @@
         .form-input {
             width: 100%;
             background: #ffffff;
-            border: 1px solid var(--pg-code-border);
+            border: 1px solid #cbd5e1;
             padding: 9px 12px;
             border-radius: 7px;
             color: var(--pg-text);
@@ -456,21 +493,23 @@
         .form-input:focus {
             outline: none;
             border-color: var(--pg-blue-600);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+            background: #ffffff;
         }
 
         .code-view {
-            background: var(--pg-code-bg);
-            border: 1px solid var(--pg-code-border);
+            background: #f8faff;
+            border: 1px solid #bfdbfe;
             border-radius: 8px;
             padding: 12px;
             font-family: 'JetBrains Mono', ui-monospace, monospace;
             font-size: 12px;
-            color: #0369a1;
-            max-height: 280px;
-            overflow-y: auto;
+            color: #0f172a;
+            line-height: 1.6;
             white-space: pre-wrap;
-            line-height: 1.5;
+            overflow-x: auto;
+            max-height: 280px;
+            box-shadow: inset 0 1px 2px rgba(37, 99, 235, 0.04);
         }
 
         .user-profile-badge {
@@ -506,17 +545,36 @@
             margin-right: 4px;
         }
 
-        /* Interactive Terminal */
+        /* Interactive Terminal - ProGit Theme */
         .term-container {
-            background: #090d16;
-            color: #f1f5f9;
+            background: #f8faff;
+            color: var(--pg-text);
             font-family: 'JetBrains Mono', monospace;
-            border-radius: 8px;
-            border: 1px solid #1e293b;
-            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--pg-border);
+            box-shadow: inset 0 2px 4px rgba(37, 99, 235, 0.03);
             height: 380px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .term-titlebar {
+            background: #eff6ff;
+            border-bottom: 1px solid var(--pg-border);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .term-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .term-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
         }
         .term-output {
             flex: 1;
@@ -524,19 +582,21 @@
             white-space: pre-wrap;
             word-break: break-all;
             font-size: 12px;
-            line-height: 1.5;
-            padding-bottom: 8px;
+            line-height: 1.6;
+            padding: 12px 14px;
+            color: #1e293b;
         }
         .term-prompt-line {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #1e293b;
+            padding: 8px 14px;
+            background: #ffffff;
+            border-top: 1px solid var(--pg-border);
         }
         .term-prompt {
-            color: #38bdf8;
-            font-weight: 600;
+            color: var(--pg-blue-600);
+            font-weight: 700;
             font-size: 12px;
             white-space: nowrap;
         }
@@ -544,27 +604,124 @@
             flex: 1;
             background: transparent;
             border: none;
-            color: #ffffff;
+            color: var(--pg-text);
             font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
+            font-weight: 500;
             outline: none;
         }
         .term-quick-btn {
-            padding: 4px 9px;
+            padding: 4px 10px;
             font-size: 11px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: #94a3b8;
-            border-radius: 5px;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.15s ease;
             font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
         }
         .term-quick-btn:hover {
-            background: #1e293b;
-            color: #38bdf8;
-            border-color: #38bdf8;
+            background: #dbeafe;
+            color: #1e40af;
+            border-color: #2563eb;
+            transform: translateY(-1px);
         }
+        .term-container.dark-terminal {
+            background: #0b1528;
+            border-color: #1e3a8a;
+            color: #f1f5f9;
+        }
+        .term-container.dark-terminal .term-titlebar {
+            background: #0f1d3a;
+            border-color: #1e3a8a;
+        }
+        .term-container.dark-terminal .term-output {
+            color: #f1f5f9;
+        }
+        .term-container.dark-terminal .term-prompt-line {
+            background: #0b1528;
+            border-color: #1e3a8a;
+        }
+        .term-container.dark-terminal .term-prompt {
+            color: #38bdf8;
+        }
+        .term-container.dark-terminal .term-input {
+            color: #ffffff;
+        }
+
+        /* ProGit Toast Notifications */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .pg-toast {
+            pointer-events: auto;
+            background: #ffffff;
+            border: 1px solid var(--pg-border);
+            border-top: 3px solid var(--pg-blue-600);
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 15px 30px -5px rgba(37, 99, 235, 0.22), 0 0 0 1px rgba(37, 99, 235, 0.08);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--pg-text);
+            min-width: 280px;
+            max-width: 440px;
+            animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.25s ease;
+        }
+        @keyframes toastSlideIn {
+            0% { opacity: 0; transform: translateY(-12px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .pg-toast-success { border-top-color: var(--pg-emerald); }
+        .pg-toast-error { border-top-color: var(--pg-rose); background: #fffafa; }
+        .pg-toast-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .pg-toast-success .pg-toast-icon {
+            background: #ecfdf5;
+            color: var(--pg-emerald);
+            border: 1px solid var(--pg-emerald-border);
+        }
+        .pg-toast-error .pg-toast-icon {
+            background: #fff1f2;
+            color: var(--pg-rose);
+            border: 1px solid var(--pg-rose-border);
+        }
+        .pg-toast-info .pg-toast-icon {
+            background: #eff6ff;
+            color: var(--pg-blue-600);
+            border: 1px solid #bfdbfe;
+        }
+        .pg-toast-close {
+            margin-left: auto;
+            cursor: pointer;
+            color: var(--pg-text-muted);
+            font-size: 16px;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pg-toast-close:hover { color: var(--pg-text); }
 
         /* Resource Stats Gauges */
         .stats-grid {
@@ -1411,8 +1568,19 @@ spec:
             </div>
 
             <div class="term-container">
+                <div class="term-titlebar">
+                    <div class="term-dots">
+                        <span class="term-dot" style="background:#f87171;"></span>
+                        <span class="term-dot" style="background:#fbbf24;"></span>
+                        <span class="term-dot" style="background:#34d399;"></span>
+                    </div>
+                    <span id="term-active-pill" style="font-size:11px; font-weight:600; color:var(--pg-blue-700); font-family:'JetBrains Mono',monospace;">container shell</span>
+                    <button type="button" class="btn" style="padding:2px 8px; font-size:10px; background:#ffffff;" onclick="toggleTerminalTheme()">
+                        <span id="term-theme-label">Dark View</span>
+                    </button>
+                </div>
                 <div class="term-output" id="term-output">
-                    <div style="color:#64748b;">Ready. Select a quick command or type below.</div>
+                    <div style="color:var(--pg-text-muted); font-style:italic;">Ready. Select a quick command or type below.</div>
                 </div>
                 <div class="term-prompt-line">
                     <span class="term-prompt">root@container:~$</span>
@@ -1596,9 +1764,15 @@ spec:
                     <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                     <span>Kubernetes Pod YAML</span>
                 </div>
-                <div class="modal-dialog-close" onclick="closeModal('kube-modal')">&times;</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="copyKubeYaml()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy YAML</span>
+                    </button>
+                    <div class="modal-dialog-close" onclick="closeModal('kube-modal')">&times;</div>
+                </div>
             </div>
-            <pre class="code-view" id="kube-content" style="max-height: 380px; color:#7c3aed; background:#f5f3ff; border-color:#ddd6fe;"></pre>
+            <pre class="code-view" id="kube-content" style="max-height: 380px;"></pre>
         </div>
     </div>
 
@@ -1606,9 +1780,9 @@ spec:
     <div id="auth-modal" class="modal-overlay">
         <div class="modal-dialog" style="max-width: 420px;">
             <div class="modal-dialog-header">
-                <div class="modal-dialog-title" style="display:flex;align-items:center;gap:8px;">
-                    <svg class="icon-svg" style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    ProCloud Authentication
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>ProCloud Authentication</span>
                 </div>
                 <div class="modal-dialog-close" onclick="closeModal('auth-modal')">&times;</div>
             </div>
@@ -1925,7 +2099,9 @@ spec:
         function openTerminal(idOrName) {
             activeContainerForTerminal = idOrName;
             document.getElementById('term-modal-title').innerText = 'Terminal: ' + idOrName;
-            document.getElementById('term-output').innerHTML = '<div style="color:#64748b;">Connected to container ' + escapeHtml(idOrName) + '. Type a command or click a quick action below:</div>';
+            const activePill = document.getElementById('term-active-pill');
+            if (activePill) activePill.innerText = idOrName;
+            document.getElementById('term-output').innerHTML = '<div style="color:var(--pg-text-muted);font-style:italic;">Connected to container ' + escapeHtml(idOrName) + '. Type a command or click a quick action below:</div>';
             document.getElementById('term-input').value = '';
             terminalHistory = [];
             terminalHistoryIndex = -1;
@@ -1968,7 +2144,7 @@ spec:
             }
 
             const termOut = document.getElementById('term-output');
-            termOut.innerHTML += `<div style="margin-top:6px;"><span style="color:#38bdf8;font-weight:600;">root@${escapeHtml(activeContainerForTerminal)}</span>:<span style="color:#a78bfa;">~</span>$ ${escapeHtml(cmdStr)}</div>`;
+            termOut.innerHTML += `<div style="margin-top:6px;"><span style="color:var(--pg-blue-600);font-weight:700;">root@${escapeHtml(activeContainerForTerminal)}</span>:<span style="color:#7c3aed;font-weight:600;">~</span>$ <span style="font-weight:600;">${escapeHtml(cmdStr)}</span></div>`;
             termOut.scrollTop = termOut.scrollHeight;
 
             try {
@@ -1979,15 +2155,15 @@ spec:
                 });
                 const data = await res.json();
                 const output = data.output || '(Process exited with no output)';
-                termOut.innerHTML += `<div style="color:#e2e8f0;white-space:pre-wrap;font-size:12px;margin-top:2px;">${escapeHtml(output)}</div>`;
+                termOut.innerHTML += `<div style="white-space:pre-wrap;font-size:12px;margin-top:2px;font-family:'JetBrains Mono',monospace;line-height:1.5;">${escapeHtml(output)}</div>`;
             } catch (e) {
-                termOut.innerHTML += `<div style="color:#fb7185;">Error: ${escapeHtml(e.message)}</div>`;
+                termOut.innerHTML += `<div style="color:#e11d48;background:#fff1f2;border:1px solid #fecdd3;padding:4px 8px;border-radius:4px;margin-top:4px;">Error: ${escapeHtml(e.message)}</div>`;
             }
             termOut.scrollTop = termOut.scrollHeight;
         }
 
         function clearTerminal() {
-            document.getElementById('term-output').innerHTML = '<div style="color:#64748b;">Terminal cleared.</div>';
+            document.getElementById('term-output').innerHTML = '<div style="color:var(--pg-text-muted);font-style:italic;">Terminal cleared.</div>';
         }
 
         function copyTerminalOutput() {
@@ -2883,7 +3059,17 @@ spec:
             } catch (e) { console.error(e); }
         }
 
-        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function openModal(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.add('open');
+                const firstInput = el.querySelector('input:not([type=hidden]), textarea, select');
+                if (firstInput && id !== 'terminal-modal') {
+                    setTimeout(() => firstInput.focus(), 120);
+                }
+            }
+        }
+
         function closeModal(id) {
             const el = document.getElementById(id);
             if (el) el.classList.remove('open');
@@ -2892,8 +3078,93 @@ spec:
             if (id === 'stats-modal') stopStatsPolling();
         }
 
+        // Click outside modal dialog to dismiss
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                if (e.target.id === 'auth-modal' && !authToken) return;
+                closeModal(e.target.id);
+            }
+        });
+
+        // Escape key dismisses open modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const openModals = document.querySelectorAll('.modal-overlay.open');
+                openModals.forEach(m => {
+                    if (m.id === 'auth-modal' && !authToken) return;
+                    closeModal(m.id);
+                });
+            }
+        });
+
+        // ProGit Themed Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `pg-toast pg-toast-${type}`;
+
+            let iconSvg = '';
+            if (type === 'success') {
+                iconSvg = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>`;
+            } else if (type === 'error') {
+                iconSvg = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+            } else {
+                iconSvg = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+            }
+
+            toast.innerHTML = `
+                <div class="pg-toast-icon">${iconSvg}</div>
+                <div style="flex:1; line-height:1.4;">${escapeHtml(String(message))}</div>
+                <div class="pg-toast-close" onclick="this.parentElement.remove()">&times;</div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 250);
+            }, 3800);
+        }
+
+        // Seamless override for native browser alert window
+        window.alert = function(msg) {
+            const str = String(msg);
+            const lower = str.toLowerCase();
+            if (lower.includes('fail') || lower.includes('error') || lower.includes('unauthorized')) {
+                showToast(str, 'error');
+            } else if (lower.includes('success') || lower.includes('copied') || lower.includes('created') || lower.includes('deployed')) {
+                showToast(str, 'success');
+            } else {
+                showToast(str, 'info');
+            }
+        };
+
+        function toggleTerminalTheme() {
+            const term = document.querySelector('.term-container');
+            const label = document.getElementById('term-theme-label');
+            if (!term || !label) return;
+            if (term.classList.contains('dark-terminal')) {
+                term.classList.remove('dark-terminal');
+                label.innerText = 'Dark View';
+            } else {
+                term.classList.add('dark-terminal');
+                label.innerText = 'Light View';
+            }
+        }
+
+        function copyKubeYaml() {
+            const text = document.getElementById('kube-content').innerText;
+            navigator.clipboard.writeText(text).then(() => showToast('Kubernetes YAML copied to clipboard!', 'success'));
+        }
+
         // Start session check immediately
         checkSession();
     </script>
+
+    <!-- Unified ProGit Toast Notification Container -->
+    <div id="toast-container"></div>
 </body>
 </html>
