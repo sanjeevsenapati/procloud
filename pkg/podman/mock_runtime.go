@@ -450,11 +450,34 @@ func (m *MockRuntime) InspectPod(ctx context.Context, nameOrID string) (*PodInsp
 		return nil, fmt.Errorf("pod %s not found", nameOrID)
 	}
 	return &PodInspect{
-		ID:    p.ID,
-		Name:  p.Name,
-		State: p.Status,
-		Ports: p.Ports,
+		ID:            p.ID,
+		Name:          p.Name,
+		State:         p.Status,
+		Created:       time.Now().Format(time.RFC3339),
+		NumContainers: p.NumberOfContainers,
+		Containers: []*ContainerSummary{
+			{ID: "mock-infra-" + p.ID, Names: []string{p.Name + "-infra"}, State: "running"},
+			{ID: "mock-app-" + p.ID, Names: []string{p.Name + "-web"}, State: "running"},
+		},
+		Ports:        p.Ports,
+		CgroupParent: "user.slice",
+		Raw:          `{"Id":"` + p.ID + `","Name":"` + p.Name + `","State":"` + p.Status + `"}`,
 	}, nil
+}
+
+func (m *MockRuntime) TopPod(ctx context.Context, nameOrID string) ([]*ContainerProcess, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return []*ContainerProcess{
+		{User: "root", PID: "1", PPID: "0", CPU: "0.1", Elapsed: "10m", TTY: "?", Time: "0:01", Command: "/catatonit -P"},
+		{User: "1000", PID: "25", PPID: "1", CPU: "0.4", Elapsed: "10m", TTY: "?", Time: "0:02", Command: "node /app/server.js"},
+	}, nil
+}
+
+func (m *MockRuntime) GetPodLogs(ctx context.Context, nameOrID string, container string, tailLines int) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return "[mock-pod] Starting pod workloads...\n[mock-pod] Ready to accept connections.", nil
 }
 
 func (m *MockRuntime) GenerateKube(ctx context.Context, nameOrID string) (string, error) {

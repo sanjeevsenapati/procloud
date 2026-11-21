@@ -188,6 +188,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("DELETE /api/v1/pods/{id}", s.authRequired(s.handleRemovePod))
 	s.mux.HandleFunc("GET /api/v1/pods/{id}/kube", s.authRequired(s.handleGenerateKube))
 	s.mux.HandleFunc("POST /api/v1/pods/kube/play", s.authRequired(s.handlePlayKube))
+	s.mux.HandleFunc("GET /api/v1/pods/{id}/top", s.authRequired(s.handleTopPod))
+	s.mux.HandleFunc("GET /api/v1/pods/{id}/logs", s.authRequired(s.handlePodLogs))
 
 	// -------------------------------------------------------------
 	// Podman Desktop Features: Image Management (Protected)
@@ -716,6 +718,32 @@ func (s *Server) handlePlayKube(w http.ResponseWriter, r *http.Request) {
 	s.auditSvc.Log(r.Context(), actor, "KUBE_PLAY", "Pod", fmt.Sprintf("Pods: %v", result.Pods), r.RemoteAddr, "Deployed Podman workloads via Kubernetes YAML manifest")
 
 	respondJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) handleTopPod(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	procs, err := s.runtime.TopPod(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, procs)
+}
+
+func (s *Server) handlePodLogs(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	container := r.URL.Query().Get("container")
+	tailStr := r.URL.Query().Get("tail")
+	tail := 50
+	if tailStr != "" {
+		tail, _ = strconv.Atoi(tailStr)
+	}
+	logs, err := s.runtime.GetPodLogs(r.Context(), id, container, tail)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"logs": logs})
 }
 
 // -------------------------------------------------------------

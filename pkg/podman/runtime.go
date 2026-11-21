@@ -46,6 +46,8 @@ type ContainerRuntime interface {
 	InspectPod(ctx context.Context, nameOrID string) (*PodInspect, error)
 	GenerateKube(ctx context.Context, nameOrID string) (string, error)
 	PlayKube(ctx context.Context, kubeYAML string) (*PlayKubeResult, error)
+	TopPod(ctx context.Context, nameOrID string) ([]*ContainerProcess, error)
+	GetPodLogs(ctx context.Context, nameOrID string, container string, tailLines int) (string, error)
 
 	// Networks & Volumes
 	ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
@@ -154,11 +156,17 @@ type PodCreateOptions struct {
 }
 
 type PodInspect struct {
-	ID         string              `json:"id"`
-	Name       string              `json:"name"`
-	State      string              `json:"state"`
-	Containers []*ContainerSummary `json:"containers"`
-	Ports      []string            `json:"ports"`
+	ID               string              `json:"id"`
+	Name             string              `json:"name"`
+	State            string              `json:"state"`
+	Created          string              `json:"created,omitempty"`
+	Containers       []*ContainerSummary `json:"containers"`
+	Ports            []string            `json:"ports,omitempty"`
+	CgroupParent     string              `json:"cgroup_parent,omitempty"`
+	InfraContainerID string              `json:"infra_container_id,omitempty"`
+	SharedNamespaces []string            `json:"shared_namespaces,omitempty"`
+	NumContainers    int                 `json:"num_containers,omitempty"`
+	Raw              string              `json:"raw,omitempty"`
 }
 
 type ImageSummary struct {
@@ -827,18 +835,45 @@ func (p *PodmanCLI) InspectPod(ctx context.Context, nameOrID string) (*PodInspec
 		return nil, err
 	}
 
-	var raw struct {
-		Id         string `json:"Id"`
-		Name       string `json:"Name"`
-		State      string `json:"State"`
+	type rawPod struct {
+		Id               string   `json:"Id"`
+		Name             string   `json:"Name"`
+		Created          string   `json:"Created"`
+		State            string   `json:"State"`
+		Hostname         string   `json:"Hostname"`
+		CgroupParent     string   `json:"CgroupParent"`
+		CgroupPath       string   `json:"CgroupPath"`
+		InfraContainerID string   `json:"InfraContainerID"`
+		SharedNamespaces []string `json:"SharedNamespaces"`
+		NumContainers    int      `json:"NumContainers"`
+		InfraConfig      struct {
+			PortBindings map[string][]struct {
+				HostIp   string `json:"HostIp"`
+				HostPort string `json:"HostPort"`
+			} `json:"PortBindings"`
+		} `json:"InfraConfig"`
 		Containers []struct {
 			Id    string `json:"Id"`
 			Name  string `json:"Name"`
 			State string `json:"State"`
 		} `json:"Containers"`
 	}
-	if err := json.Unmarshal(out, &raw); err != nil {
-		return nil, err
+
+	var raw rawPod
+	trimmed := bytes.TrimSpace(out)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var slice []rawPod
+		if err := json.Unmarshal(out, &slice); err != nil {
+			return nil, err
+		}
+		if len(slice) == 0 {
+			return nil, fmt.Errorf("pod not found")
+		}
+		raw = slice[0]
+	} else {
+		if err := json.Unmarshal(out, &raw); err != nil {
+			return nil, err
+		}
 	}
 
 	var ctrs []*ContainerSummary
@@ -850,12 +885,74 @@ func (p *PodmanCLI) InspectPod(ctx context.Context, nameOrID string) (*PodInspec
 		})
 	}
 
+	var ports []string
+	for containerPort, bindings := range raw.InfraConfig.PortBindings {
+		for _, b := range bindings {
+			ports = append(ports, fmt.Sprintf("%s:%s", b.HostPort, containerPort))
+		}
+	}
+
 	return &PodInspect{
-		ID:         raw.Id,
-		Name:       raw.Name,
-		State:      raw.State,
-		Containers: ctrs,
+		ID:               raw.Id,
+		Name:             raw.Name,
+		State:            raw.State,
+		Created:          raw.Created,
+		Containers:       ctrs,
+		Ports:            ports,
+		CgroupParent:     raw.CgroupParent,
+		InfraContainerID: raw.InfraContainerID,
+		SharedNamespaces: raw.SharedNamespaces,
+		NumContainers:    raw.NumContainers,
+		Raw:              string(out),
 	}, nil
+}
+
+func (p *PodmanCLI) TopPod(ctx context.Context, nameOrID string) ([]*ContainerProcess, error) {
+	cmd := exec.CommandContext(ctx, p.binPath, "pod", "top", nameOrID)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("podman pod top failed: %w: %s", err, string(out))
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) <= 1 {
+		return []*ContainerProcess{}, nil
+	}
+
+	var procs []*ContainerProcess
+	for _, line := range lines[1:] {
+		fields := strings.Fields(line)
+		if len(fields) >= 8 {
+			procs = append(procs, &ContainerProcess{
+				User:    fields[0],
+				PID:     fields[1],
+				PPID:    fields[2],
+				CPU:     fields[3],
+				Elapsed: fields[4],
+				TTY:     fields[5],
+				Time:    fields[6],
+				Command: strings.Join(fields[7:], " "),
+			})
+		}
+	}
+	return procs, nil
+}
+
+func (p *PodmanCLI) GetPodLogs(ctx context.Context, nameOrID string, container string, tailLines int) (string, error) {
+	args := []string{"pod", "logs"}
+	if tailLines > 0 {
+		args = append(args, "--tail", strconv.Itoa(tailLines))
+	}
+	if container != "" {
+		args = append(args, "-c", container)
+	}
+	args = append(args, nameOrID)
+	cmd := exec.CommandContext(ctx, p.binPath, args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil && len(out) == 0 {
+		return "", err
+	}
+	return string(out), nil
 }
 
 func (p *PodmanCLI) GenerateKube(ctx context.Context, nameOrID string) (string, error) {
