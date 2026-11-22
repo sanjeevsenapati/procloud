@@ -343,6 +343,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/containers/{id}/restart", s.writeRequired(s.handleRestartContainer))
 	s.mux.HandleFunc("DELETE /api/v1/containers/{id}", s.writeRequired(s.handleRemoveContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/logs", s.authRequired(s.handleContainerLogs))
+	s.mux.HandleFunc("GET /api/v1/containers/{id}/terminal", s.handleContainerTerminalWS)
 	s.mux.HandleFunc("POST /api/v1/containers/{id}/exec", s.writeRequired(s.handleExecContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/top", s.authRequired(s.handleTopContainer))
 	s.mux.HandleFunc("GET /api/v1/containers/{id}/stats", s.authRequired(s.handleStatsContainer))
@@ -507,10 +508,15 @@ func (s *Server) registerRoutes() {
 
 func (s *Server) checkAuth(r *http.Request) *auth.Claims {
 	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
+	var token string
+	if authHeader != "" {
+		token = strings.TrimPrefix(authHeader, "Bearer ")
+	} else if qToken := r.URL.Query().Get("token"); qToken != "" {
+		token = qToken
+	}
+	if token == "" {
 		return nil
 	}
-	token := strings.TrimPrefix(authHeader, "Bearer ")
 	claims, err := s.authSvc.VerifyToken(token)
 	if err != nil {
 		return nil

@@ -7,6 +7,17 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z'/></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Embedded Interactive Terminal (xterm.js & fit addon) -->
+    <link rel="stylesheet" href="/vendor/xterm/xterm.css">
+    <script src="/vendor/xterm/xterm.js"></script>
+    <script src="/vendor/xterm/xterm-addon-fit.js"></script>
+    <script>
+        if (typeof Terminal === 'undefined') {
+            document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">');
+            document.write('<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"><\/script>');
+            document.write('<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"><\/script>');
+        }
+    </script>
     <style>
         :root {
             /* White and Light Blue Theme Palette */
@@ -2793,23 +2804,27 @@
                     <div class="pg-box-header">
                         <div class="pg-box-title">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
-                            <span>Interactive Container Exec Shell</span>
+                            <span>Interactive Container Shell (PTY Attached)</span>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                            <button class="btn btn-primary btn-sm" onclick="openActualShellModal()" title="Open actual interactive shell in macOS Terminal / Host">
-                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
-                                <span>Open Actual Shell</span>
-                            </button>
-                            <select id="cd-term-shell" class="form-input form-input-sm" style="width:auto;">
-                                <option value="/bin/bash" selected>/bin/bash</option>
+                            <span id="cd-term-status-pill" class="pill pill-running" style="font-size:11px; display:inline-flex; align-items:center; gap:4px;">● Connected</span>
+                            <select id="cd-term-shell" class="form-input form-input-sm" style="width:auto;" onchange="reconnectCdTerminal()">
+                                <option value="auto" selected>Shell: Auto-detect (/bin/bash or /bin/sh)</option>
+                                <option value="/bin/bash">/bin/bash</option>
                                 <option value="/bin/sh">/bin/sh</option>
-                                <option value="/bin/ash">/bin/ash</option>
+                                <option value="/bin/ash">/bin/ash (Alpine)</option>
+                                <option value="attach">podman attach (PID 1 Console)</option>
                             </select>
-                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="toggleCdTerminalTheme()">
-                                <span id="cd-term-theme-label">Light View</span>
+                            <button class="btn btn-sm" onclick="reconnectCdTerminal()" title="Restart shell session">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                                <span>Reconnect</span>
                             </button>
-                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="clearCdTerminal()">Clear</button>
-                            <button class="btn" style="padding: 2px 8px; font-size:11px;" onclick="copyCdTerminalOutput()">Copy</button>
+                            <button class="btn btn-sm" onclick="clearCdTerminal()" title="Clear terminal screen">Clear</button>
+                            <button class="btn btn-sm" onclick="copyCdTerminalOutput()" title="Copy terminal text">Copy</button>
+                            <button class="btn btn-primary btn-sm" onclick="openActualShellModal()" title="Host CLI Helper">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                                <span>Host CLI</span>
+                            </button>
                         </div>
                     </div>
 
@@ -2817,7 +2832,7 @@
                     <div id="cd-term-stopped-alert" style="display:none; background:#fff1f2; border-bottom:1px solid #fecdd3; padding:10px 16px; align-items:center; justify-content:space-between; gap:12px;">
                         <div style="display:flex; align-items:center; gap:8px; color:#be123c; font-size:12px; font-weight:600;">
                             <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                            <span id="cd-term-stopped-msg">Container is stopped. Start container to run interactive commands.</span>
+                            <span id="cd-term-stopped-msg">Container is stopped. Start container to attach to an interactive terminal.</span>
                         </div>
                         <button class="btn btn-emerald btn-sm" onclick="startCurrentContainerFromTerm()">
                             <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -2825,30 +2840,23 @@
                         </button>
                     </div>
 
-                    <div class="term-container dark-terminal" id="cd-term-box" style="height: 440px; border-radius: 0 0 8px 8px;">
-                        <div class="term-output" id="cd-term-output">
-                            <div style="color:var(--pg-text-muted); font-style:italic;">Connected to container console. Shell session active.</div>
-                        </div>
+                    <!-- REAL INTERACTIVE PTY TERMINAL VIEWPORT -->
+                    <div id="cd-term-xterm-wrapper" style="background:#090d16; padding:10px 12px; min-height:440px; height:460px; overflow:hidden; border-radius:0 0 8px 8px; position:relative;">
+                        <div id="cd-term-xterm-container" style="width:100%; height:100%;"></div>
+                    </div>
 
-                        <!-- Quick Exec Chips Bar -->
-                        <div class="term-quick-bar" style="display:flex; gap:6px; padding:6px 14px; background:rgba(15,23,42,0.7); border-top:1px solid rgba(255,255,255,0.08); flex-wrap:wrap; align-items:center;">
-                            <span style="font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Quick:</span>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('ls -la')">ls -la</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('pwd')">pwd</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('ps aux')">ps aux</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('cat /etc/os-release')">os-release</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('df -h')">df -h</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('env')">env</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('whoami')">whoami</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px;" onclick="execQuickCdTerm('uptime')">uptime</button>
-                            <button type="button" class="term-quick-btn" style="padding:2px 8px; font-size:11px; margin-left:auto; color:#f87171; border-color:#7f1d1d;" onclick="clearCdTerminal()">Clear</button>
-                        </div>
-
-                        <div class="term-prompt-line">
-                            <span class="term-prompt" id="cd-term-prompt-label">root@container:~#</span>
-                            <input type="text" id="cd-term-input" class="term-input" placeholder="Type command (e.g. ls -la, ps aux, cat /etc/os-release)..." onkeydown="handleCdTermKey(event)">
-                            <button id="cd-term-exec-btn" class="btn btn-primary" style="padding: 4px 12px; font-size: 11px;" onclick="runCdTerminalCommand()">Exec</button>
-                        </div>
+                    <!-- QUICK CHIPS & ACTIONS BAR -->
+                    <div class="term-quick-bar" style="display:flex; gap:6px; padding:8px 14px; background:#f8fafc; border-top:1px solid #e2e8f0; flex-wrap:wrap; align-items:center;">
+                        <span style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Quick Actions:</span>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('ls -la')">ls -la</button>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('pwd')">pwd</button>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('ps aux')">ps aux</button>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('cat /etc/os-release')">os-release</button>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('df -h')">df -h</button>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('env')">env</button>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('whoami')">whoami</button>
+                        <button type="button" class="btn btn-sm" style="padding:2px 8px; font-size:11px;" onclick="sendTerminalQuickCmd('uptime')">uptime</button>
+                        <button type="button" class="btn btn-sm btn-outline-rose" style="padding:2px 8px; font-size:11px; margin-left:auto; font-weight:700;" onclick="sendTerminalInterrupt()" title="Send SIGINT (Ctrl+C)">Ctrl+C</button>
                     </div>
                 </div>
             </div>
@@ -7652,20 +7660,9 @@ spec:
         // 1. Interactive Terminal
         // -------------------------------------------------------------
 
-        function openTerminal(idOrName) {
-            activeContainerForTerminal = idOrName;
-            document.getElementById('term-modal-title').innerText = 'Terminal: ' + idOrName;
-            const activePill = document.getElementById('term-active-pill');
-            if (activePill) activePill.innerText = idOrName;
-            document.getElementById('term-output').innerHTML = '<div style="color:var(--pg-text-muted);font-style:italic;">Connected to container ' + escapeHtml(idOrName) + '. Type a command or click a quick action below:</div>';
-            document.getElementById('term-input').value = '';
-            terminalHistory = [];
-            terminalHistoryIndex = -1;
-            openModal('terminal-modal');
-            setTimeout(() => {
-                const inp = document.getElementById('term-input');
-                if (inp) inp.focus();
-            }, 150);
+        async function openTerminal(idOrName) {
+            await openContainerDetails(idOrName);
+            switchContainerSubTab('terminal');
         }
 
         function handleTerminalKey(e) {
@@ -11872,6 +11869,9 @@ spec:
 
         async function openContainerDetails(idOrName) {
             try {
+                if (typeof detachContainerTerminal === 'function') {
+                    detachContainerTerminal();
+                }
                 switchTab('container-details');
                 const res = await authFetch(`/api/v1/containers/${encodeURIComponent(idOrName)}`);
                 if (!res.ok) {
@@ -12025,8 +12025,9 @@ spec:
                 if (liveToggle && liveToggle.checked) startCdLogsPolling();
             } else if (subTab === 'terminal') {
                 if (typeof checkCdTerminalState === 'function') checkCdTerminalState();
-                const termInput = document.getElementById('cd-term-input');
-                if (termInput) setTimeout(() => termInput.focus(), 100);
+                if (currentContainerDetails && currentContainerDetails.id && typeof attachContainerTerminal === 'function') {
+                    attachContainerTerminal(currentContainerDetails.id);
+                }
             } else if (subTab === 'top') {
                 fetchCdTop();
             } else if (subTab === 'stats') {
@@ -12131,115 +12132,278 @@ spec:
             URL.revokeObjectURL(url);
         }
 
-        // Subtab: Terminal
-        function handleCdTermKey(e) {
-            if (e.key === 'Enter') {
-                runCdTerminalCommand();
-            } else if (e.key === 'ArrowUp') {
-                if (cdTermHistory.length > 0) {
-                    if (cdTermHistoryIdx === -1) cdTermHistoryIdx = cdTermHistory.length - 1;
-                    else if (cdTermHistoryIdx > 0) cdTermHistoryIdx--;
-                    e.target.value = cdTermHistory[cdTermHistoryIdx];
-                }
-            } else if (e.key === 'ArrowDown') {
-                if (cdTermHistory.length > 0 && cdTermHistoryIdx !== -1) {
-                    if (cdTermHistoryIdx < cdTermHistory.length - 1) {
-                        cdTermHistoryIdx++;
-                        e.target.value = cdTermHistory[cdTermHistoryIdx];
-                    } else {
-                        cdTermHistoryIdx = -1;
-                        e.target.value = '';
-                    }
-                }
-            }
-        }
-
-        function execQuickCdTerm(cmd) {
-            runCdTerminalCommand(cmd);
-        }
-
-        async function runCdTerminalCommand(overrideCmd) {
-            if (!currentContainerDetails) return;
-            const input = document.getElementById('cd-term-input');
-            const cmd = (overrideCmd !== undefined ? overrideCmd : input.value).trim();
-            if (!cmd) return;
-
-            if (overrideCmd === undefined) {
-                cdTermHistory.push(cmd);
-                cdTermHistoryIdx = -1;
-                input.value = '';
-            }
-
-            // Built-in 'clear' / 'cls' support
-            if (cmd.toLowerCase() === 'clear' || cmd.toLowerCase() === 'cls') {
-                clearCdTerminal();
-                return;
-            }
-
-            const outBox = document.getElementById('cd-term-output');
-            const promptText = (document.getElementById('cd-term-prompt-label') || {}).innerText || 'root@container:~# ';
-            const promptLine = document.createElement('div');
-            promptLine.innerHTML = `<span style="color:var(--pg-blue-500);font-weight:700;">${escapeHtml(promptText)}</span><span style="color:#ffffff;">${escapeHtml(cmd)}</span>`;
-            outBox.appendChild(promptLine);
-
-            try {
-                const shell = document.getElementById('cd-term-shell').value || '/bin/bash';
-                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(currentContainerDetails.id)}/exec`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ raw: cmd, shell: shell })
-                });
-
-                let data;
-                try {
-                    data = await res.json();
-                } catch (jsonErr) {
-                    const rawTxt = await res.text();
-                    data = { output: rawTxt || '(No output)' };
-                }
-
-                const respLine = document.createElement('pre');
-                respLine.style.margin = '4px 0 10px 0';
-                respLine.style.whiteSpace = 'pre-wrap';
-                respLine.style.fontFamily = "'JetBrains Mono', monospace";
-                respLine.style.lineHeight = '1.45';
-
-                if (data.exit_code && data.exit_code !== 0 && (!data.output || data.output.startsWith('Error:'))) {
-                    respLine.style.color = '#f87171';
-                    respLine.innerText = data.output || data.error || `Command exited with status ${data.exit_code}`;
-                } else {
-                    respLine.style.color = '#e2e8f0';
-                    respLine.innerText = data.output || '(Command finished with no output)';
-                }
-
-                outBox.appendChild(respLine);
-                outBox.scrollTop = outBox.scrollHeight;
-            } catch (e) {
-                const errLine = document.createElement('div');
-                errLine.style.color = 'var(--pg-rose)';
-                errLine.style.margin = '4px 0 10px 0';
-                errLine.style.fontFamily = "'JetBrains Mono', monospace";
-                errLine.innerText = 'Command execution error: ' + (e.message || e);
-                outBox.appendChild(errLine);
-                outBox.scrollTop = outBox.scrollHeight;
-            }
-        }
+        // -------------------------------------------------------------
+        // Subtab: Real Interactive PTY Terminal (Per-Container Isolated)
+        // -------------------------------------------------------------
+        const containerTerminalSessions = new Map();
+        let activeTerminalContainerId = null;
 
         function checkCdTerminalState() {
             if (!currentContainerDetails) return;
             const isRunning = currentContainerDetails.status === 'running' || currentContainerDetails.running;
             const alertEl = document.getElementById('cd-term-stopped-alert');
             const msgEl = document.getElementById('cd-term-stopped-msg');
-            const termInput = document.getElementById('cd-term-input');
 
             if (!isRunning) {
                 if (alertEl) alertEl.style.display = 'flex';
                 const stateStr = currentContainerDetails.status || (currentContainerDetails.state ? currentContainerDetails.state.status : 'stopped');
-                if (msgEl) msgEl.innerText = `Container is currently not running (State: ${stateStr}). Start container to run interactive commands.`;
-                if (termInput) termInput.placeholder = 'Container is stopped. Click "Start Container" to enable shell...';
+                if (msgEl) msgEl.innerText = `Container is currently not running (State: ${stateStr}). Start container to attach to an interactive terminal session.`;
             } else {
                 if (alertEl) alertEl.style.display = 'none';
-                if (termInput) termInput.placeholder = 'Type command (e.g. ls -la, ps aux, cat /etc/os-release)...';
+            }
+        }
+
+        function detachContainerTerminal() {
+            const wrapper = document.getElementById('cd-term-xterm-container');
+            if (!wrapper) return;
+            if (activeTerminalContainerId) {
+                const prevSession = containerTerminalSessions.get(activeTerminalContainerId);
+                if (prevSession && prevSession.mountEl && prevSession.mountEl.parentNode === wrapper) {
+                    wrapper.removeChild(prevSession.mountEl);
+                }
+            }
+            activeTerminalContainerId = null;
+        }
+
+        function attachContainerTerminal(containerId) {
+            if (!containerId) return;
+
+            const wrapper = document.getElementById('cd-term-xterm-container');
+            if (!wrapper) return;
+
+            // Detach previous container's terminal DOM if different
+            if (activeTerminalContainerId && activeTerminalContainerId !== containerId) {
+                const prevSession = containerTerminalSessions.get(activeTerminalContainerId);
+                if (prevSession && prevSession.mountEl && prevSession.mountEl.parentNode === wrapper) {
+                    wrapper.removeChild(prevSession.mountEl);
+                }
+            }
+
+            activeTerminalContainerId = containerId;
+
+            let session = containerTerminalSessions.get(containerId);
+            if (!session) {
+                // Initialize fresh isolated session specifically for this container
+                const mountEl = document.createElement('div');
+                mountEl.style.width = '100%';
+                mountEl.style.height = '100%';
+                mountEl.id = 'term-session-' + containerId.replace(/[^a-zA-Z0-9_-]/g, '_');
+                wrapper.appendChild(mountEl);
+
+                let term = null;
+                let fit = null;
+
+                if (typeof Terminal !== 'undefined') {
+                    term = new Terminal({
+                        cursorBlink: true,
+                        cursorStyle: 'block',
+                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Menlo', 'Courier New', monospace",
+                        fontSize: 13,
+                        lineHeight: 1.25,
+                        scrollback: 5000,
+                        theme: {
+                            background: '#090d16',
+                            foreground: '#e2e8f0',
+                            cursor: '#38bdf8',
+                            selectionBackground: 'rgba(56, 189, 248, 0.35)',
+                            black: '#0f172a',
+                            red: '#f87171',
+                            green: '#4ade80',
+                            yellow: '#facc15',
+                            blue: '#60a5fa',
+                            magenta: '#c084fc',
+                            cyan: '#38bdf8',
+                            white: '#f1f5f9',
+                            brightBlack: '#64748b',
+                            brightRed: '#ef4444',
+                            brightGreen: '#22c55e',
+                            brightYellow: '#eab308',
+                            brightBlue: '#3b82f6',
+                            brightMagenta: '#a855f7',
+                            brightCyan: '#06b6d4',
+                            brightWhite: '#ffffff'
+                        }
+                    });
+
+                    if (typeof FitAddon !== 'undefined' && FitAddon.FitAddon) {
+                        fit = new FitAddon.FitAddon();
+                        term.loadAddon(fit);
+                    }
+
+                    term.open(mountEl);
+                    if (fit) {
+                        setTimeout(() => { try { fit.fit(); } catch(e){} }, 50);
+                    }
+                }
+
+                session = {
+                    id: containerId,
+                    term: term,
+                    fit: fit,
+                    mountEl: mountEl,
+                    ws: null,
+                    shell: document.getElementById('cd-term-shell') ? document.getElementById('cd-term-shell').value : 'auto'
+                };
+                containerTerminalSessions.set(containerId, session);
+
+                connectContainerTerminalWebSocket(session);
+            } else {
+                // Restore container's dedicated mountEl into wrapper
+                if (session.mountEl.parentNode !== wrapper) {
+                    wrapper.appendChild(session.mountEl);
+                }
+                if (session.fit) {
+                    setTimeout(() => { try { session.fit.fit(); } catch(e){} }, 50);
+                }
+                if (session.term) session.term.focus();
+            }
+
+            updateTerminalStatusIndicator(session);
+        }
+
+        function connectContainerTerminalWebSocket(session) {
+            if (!session) return;
+
+            if (session.ws) {
+                try { session.ws.close(); } catch(e){}
+                session.ws = null;
+            }
+
+            const term = session.term;
+            if (!term) return;
+
+            const token = localStorage.getItem('procloud_token') || '';
+            const shell = session.shell || (document.getElementById('cd-term-shell') ? document.getElementById('cd-term-shell').value : 'auto');
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${proto}//${location.host}/api/v1/containers/${encodeURIComponent(session.id)}/terminal?token=${encodeURIComponent(token)}&shell=${encodeURIComponent(shell)}`;
+
+            term.write(`\r\n\x1b[36;1m[ProCloud PTY]\x1b[0m Connecting to interactive terminal for container \x1b[33m${escapeHtml(session.id)}\x1b[0m...\r\n`);
+
+            try {
+                const ws = new WebSocket(wsUrl);
+                session.ws = ws;
+                ws.binaryType = 'arraybuffer';
+
+                ws.onopen = () => {
+                    updateTerminalStatusIndicator(session, 'connected');
+                    term.write(`\x1b[32;1m[ProCloud PTY]\x1b[0m Attached to container TTY. Interactive shell active.\r\n\r\n`);
+                    if (session.fit) {
+                        session.fit.fit();
+                        ws.send(JSON.stringify({
+                            type: 'resize',
+                            cols: term.cols,
+                            rows: term.rows
+                        }));
+                    }
+                    term.focus();
+                };
+
+                ws.onmessage = (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        const decoder = new TextDecoder('utf-8');
+                        term.write(decoder.decode(event.data));
+                    } else {
+                        term.write(event.data);
+                    }
+                };
+
+                ws.onerror = (err) => {
+                    updateTerminalStatusIndicator(session, 'error');
+                    term.write(`\r\n\x1b[31;1m[ProCloud PTY]\x1b[0m Terminal connection error.\r\n`);
+                };
+
+                ws.onclose = () => {
+                    updateTerminalStatusIndicator(session, 'disconnected');
+                    term.write(`\r\n\x1b[33;1m[ProCloud PTY]\x1b[0m Shell session exited. Click Reconnect to restart.\r\n`);
+                };
+
+                term.onData(data => {
+                    if (session.ws && session.ws.readyState === WebSocket.OPEN) {
+                        session.ws.send(data);
+                    }
+                });
+
+                term.onResize(size => {
+                    if (session.ws && session.ws.readyState === WebSocket.OPEN) {
+                        session.ws.send(JSON.stringify({
+                            type: 'resize',
+                            cols: size.cols,
+                            rows: size.rows
+                        }));
+                    }
+                });
+            } catch(e) {
+                term.write(`\r\n\x1b[31;1m[ProCloud PTY]\x1b[0m Failed to connect: ${e.message}\r\n`);
+                updateTerminalStatusIndicator(session, 'error');
+            }
+        }
+
+        function updateTerminalStatusIndicator(session, state) {
+            const pill = document.getElementById('cd-term-status-pill');
+            if (!pill) return;
+            const currentState = state || (session && session.ws && session.ws.readyState === WebSocket.OPEN ? 'connected' : 'disconnected');
+            if (currentState === 'connected') {
+                pill.className = 'pill pill-running';
+                pill.innerText = '● Connected';
+            } else if (currentState === 'error') {
+                pill.className = 'pill pill-stopped';
+                pill.innerText = '● Connection Error';
+            } else {
+                pill.className = 'pill pill-stopped';
+                pill.innerText = '○ Disconnected';
+            }
+        }
+
+        function sendTerminalQuickCmd(cmd) {
+            if (!activeTerminalContainerId) return;
+            const session = containerTerminalSessions.get(activeTerminalContainerId);
+            if (session && session.ws && session.ws.readyState === WebSocket.OPEN) {
+                session.ws.send(cmd + '\r');
+                if (session.term) session.term.focus();
+            } else {
+                showToast('Terminal not connected. Click Reconnect first.', 'warning');
+            }
+        }
+
+        function sendTerminalInterrupt() {
+            if (!activeTerminalContainerId) return;
+            const session = containerTerminalSessions.get(activeTerminalContainerId);
+            if (session && session.ws && session.ws.readyState === WebSocket.OPEN) {
+                session.ws.send('\x03'); // SIGINT Ctrl+C
+                if (session.term) session.term.focus();
+            }
+        }
+
+        function clearCdTerminal() {
+            if (!activeTerminalContainerId) return;
+            const session = containerTerminalSessions.get(activeTerminalContainerId);
+            if (session && session.term) {
+                session.term.clear();
+                session.term.focus();
+            }
+        }
+
+        function copyCdTerminalOutput() {
+            if (!activeTerminalContainerId) return;
+            const session = containerTerminalSessions.get(activeTerminalContainerId);
+            if (session && session.term) {
+                const text = session.term.getSelection();
+                if (text) {
+                    navigator.clipboard.writeText(text).then(() => showToast('Copied selected text to clipboard', 'info'));
+                } else {
+                    showToast('Highlight text in terminal with mouse to copy', 'info');
+                }
+            }
+        }
+
+        function reconnectCdTerminal() {
+            if (!activeTerminalContainerId) return;
+            const session = containerTerminalSessions.get(activeTerminalContainerId);
+            if (session) {
+                const shellSelect = document.getElementById('cd-term-shell');
+                if (shellSelect) session.shell = shellSelect.value;
+                if (session.term) session.term.clear();
+                connectContainerTerminalWebSocket(session);
             }
         }
 
@@ -12251,11 +12415,10 @@ spec:
             try {
                 const res = await authFetch(`/api/v1/containers/${encodeURIComponent(id)}/start`, { method: 'POST' });
                 if (res.ok) {
-                    showToast(`Container '${name}' started successfully! Shell ready.`, 'success');
+                    showToast(`Container '${name}' started successfully! Connecting terminal...`, 'success');
                     await refreshCurrentContainerDetails();
                     checkCdTerminalState();
-                    const termInput = document.getElementById('cd-term-input');
-                    if (termInput) termInput.focus();
+                    attachContainerTerminal(id);
                 } else {
                     showToast('Failed to start container: ' + await res.text(), 'error');
                 }
@@ -12282,28 +12445,6 @@ spec:
             navigator.clipboard.writeText(cmd).then(() => {
                 showToast(`Copied to clipboard: ${cmd}`, 'success');
             });
-        }
-
-        function clearCdTerminal() {
-            const outBox = document.getElementById('cd-term-output');
-            outBox.innerHTML = '<div style="color:var(--pg-text-muted);font-style:italic;">Terminal cleared. Shell session ready.</div>';
-        }
-
-        function copyCdTerminalOutput() {
-            const text = document.getElementById('cd-term-output').innerText;
-            navigator.clipboard.writeText(text).then(() => showToast('Terminal output copied!', 'info'));
-        }
-
-        function toggleCdTerminalTheme() {
-            const term = document.getElementById('cd-term-box');
-            const label = document.getElementById('cd-term-theme-label');
-            if (term.classList.contains('dark-terminal')) {
-                term.classList.remove('dark-terminal');
-                label.innerText = 'Dark View';
-            } else {
-                term.classList.add('dark-terminal');
-                label.innerText = 'Light View';
-            }
         }
 
         // Subtab: Top Processes
