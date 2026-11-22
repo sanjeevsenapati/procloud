@@ -20,6 +20,7 @@ import (
 	"procloud.io/procloud/internal/compute"
 	"procloud.io/procloud/internal/database/sqlite"
 	"procloud.io/procloud/internal/deployment"
+	"procloud.io/procloud/internal/dns"
 	"procloud.io/procloud/internal/ingress"
 	"procloud.io/procloud/internal/job"
 	"procloud.io/procloud/internal/loadbalancer"
@@ -50,6 +51,7 @@ type Server struct {
 	storageSvc    *storage.Service
 	ingressCtrl   *ingress.Controller
 	lbSvc         *loadbalancer.Service
+	dnsSvc        *dns.Service
 	deployEngine  *deployment.Engine
 	jobEngine     *job.Engine
 	monitoringSvc *monitoring.Service
@@ -69,6 +71,12 @@ func NewServer(
 	storageSvc := storage.NewService(repo, runtime, "")
 	ingressCtrl := ingress.NewController("")
 	lbSvc := loadbalancer.NewService(repo, runtime, "")
+	dnsSvc := dns.NewService(repo)
+	if err := dnsSvc.StartUDPServer("127.0.0.1:1053"); err != nil {
+		log.Printf("[DNS] Warning: failed starting authoritative UDP listener on 127.0.0.1:1053: %v", err)
+	} else {
+		log.Printf("[DNS] Authoritative RFC 1035 UDP listener started on 127.0.0.1:1053")
+	}
 	deployEngine := deployment.NewEngine(repo, repo, builder, runtime, sched, storageSvc, ingressCtrl)
 
 	jobEngine := job.NewEngine(repo, "api-worker-1")
@@ -95,6 +103,7 @@ func NewServer(
 		storageSvc:    storageSvc,
 		ingressCtrl:   ingressCtrl,
 		lbSvc:         lbSvc,
+		dnsSvc:        dnsSvc,
 		deployEngine:  deployEngine,
 		jobEngine:     jobEngine,
 		monitoringSvc: monitoringSvc,
@@ -405,6 +414,20 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/listeners/{lid}/policies", s.writeRequired(s.handleCreateLBPolicy))
 	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}/policies/{polid}", s.writeRequired(s.handleDeleteLBPolicy))
 	s.mux.HandleFunc("GET /api/v1/loadbalancers/{id}/config", s.authRequired(s.handleGetLBConfig))
+
+	// DNS as a Service (DNSaaS) (Protected)
+	s.mux.HandleFunc("GET /api/v1/dns/zones", s.authRequired(s.handleListDNSZones))
+	s.mux.HandleFunc("POST /api/v1/dns/zones", s.writeRequired(s.handleCreateDNSZone))
+	s.mux.HandleFunc("GET /api/v1/dns/zones/{id}", s.authRequired(s.handleGetDNSZone))
+	s.mux.HandleFunc("PUT /api/v1/dns/zones/{id}", s.writeRequired(s.handleUpdateDNSZone))
+	s.mux.HandleFunc("DELETE /api/v1/dns/zones/{id}", s.writeRequired(s.handleDeleteDNSZone))
+	s.mux.HandleFunc("GET /api/v1/dns/zones/{id}/records", s.authRequired(s.handleListDNSRecords))
+	s.mux.HandleFunc("POST /api/v1/dns/zones/{id}/records", s.writeRequired(s.handleCreateDNSRecord))
+	s.mux.HandleFunc("GET /api/v1/dns/zones/{id}/records/{rid}", s.authRequired(s.handleGetDNSRecord))
+	s.mux.HandleFunc("PUT /api/v1/dns/zones/{id}/records/{rid}", s.writeRequired(s.handleUpdateDNSRecord))
+	s.mux.HandleFunc("DELETE /api/v1/dns/zones/{id}/records/{rid}", s.writeRequired(s.handleDeleteDNSRecord))
+	s.mux.HandleFunc("GET /api/v1/dns/zones/{id}/export", s.authRequired(s.handleExportBINDZone))
+	s.mux.HandleFunc("POST /api/v1/dns/query", s.authRequired(s.handleQueryDNS))
 
 	// Webhooks & Milestone
 	s.mux.HandleFunc("POST /api/v1/webhooks/progit", s.handleProGitWebhook)
@@ -2412,6 +2435,225 @@ func (s *Server) handleGetLBConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]string{"id": id, "config": conf})
+}
+
+// -------------------------------------------------------------
+// DNS as a Service (DNSaaS) Handlers
+// -------------------------------------------------------------
+
+func (s *Server) handleListDNSZones(w http.ResponseWriter, r *http.Request) {
+	tenantID := r.URL.Query().Get("tenant_id")
+	claims := getClaims(r)
+	if claims != nil && claims.Role != "admin" && claims.Role != "superadmin" {
+		if claims.TenantID != "" {
+			tenantID = claims.TenantID
+		}
+	}
+
+	zones, err := s.dnsSvc.ListZones(r.Context(), tenantID)
+	if err != nil {
+		http.Error(w, "failed listing dns zones: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if zones == nil {
+		zones = make([]*protocol.DNSZone, 0)
+	}
+	respondJSON(w, http.StatusOK, zones)
+}
+
+func (s *Server) handleCreateDNSZone(w http.ResponseWriter, r *http.Request) {
+	var req protocol.CreateDNSZoneRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	claims := getClaims(r)
+	if claims != nil && claims.Role != "admin" && claims.Role != "superadmin" {
+		if claims.TenantID != "" {
+			req.TenantID = claims.TenantID
+		}
+	}
+
+	zone, err := s.dnsSvc.CreateZone(r.Context(), req)
+	if err != nil {
+		http.Error(w, "failed creating dns zone: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "DNS_ZONE_CREATE", "dns_zone", zone.ID, r.RemoteAddr, fmt.Sprintf("name=%s, type=%s", zone.Name, zone.Type))
+
+	respondJSON(w, http.StatusCreated, zone)
+}
+
+func (s *Server) handleGetDNSZone(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing zone id", http.StatusBadRequest)
+		return
+	}
+
+	zone, err := s.dnsSvc.GetZone(r.Context(), id)
+	if err != nil {
+		http.Error(w, "dns zone not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, zone)
+}
+
+func (s *Server) handleUpdateDNSZone(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req protocol.CreateDNSZoneRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	zone, err := s.dnsSvc.UpdateZone(r.Context(), id, req)
+	if err != nil {
+		http.Error(w, "failed updating dns zone: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, zone)
+}
+
+func (s *Server) handleDeleteDNSZone(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing zone id", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.dnsSvc.DeleteZone(r.Context(), id); err != nil {
+		http.Error(w, "failed deleting dns zone: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "DNS_ZONE_DELETE", "dns_zone", id, r.RemoteAddr, "")
+
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
+}
+
+func (s *Server) handleListDNSRecords(w http.ResponseWriter, r *http.Request) {
+	zoneID := r.PathValue("id")
+	if zoneID == "" {
+		http.Error(w, "missing zone id", http.StatusBadRequest)
+		return
+	}
+
+	records, err := s.dnsSvc.ListRecords(r.Context(), zoneID)
+	if err != nil {
+		http.Error(w, "failed listing dns records: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if records == nil {
+		records = make([]*protocol.DNSRecord, 0)
+	}
+	respondJSON(w, http.StatusOK, records)
+}
+
+func (s *Server) handleCreateDNSRecord(w http.ResponseWriter, r *http.Request) {
+	zoneID := r.PathValue("id")
+	var req protocol.CreateDNSRecordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	rec, err := s.dnsSvc.CreateRecord(r.Context(), zoneID, req)
+	if err != nil {
+		http.Error(w, "failed creating dns record: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "DNS_RECORD_CREATE", "dns_record", rec.ID, r.RemoteAddr, fmt.Sprintf("zone=%s, name=%s, type=%s, val=%s", zoneID, rec.Name, rec.Type, rec.Value))
+
+	respondJSON(w, http.StatusCreated, rec)
+}
+
+func (s *Server) handleGetDNSRecord(w http.ResponseWriter, r *http.Request) {
+	rid := r.PathValue("rid")
+	rec, err := s.dnsSvc.GetRecord(r.Context(), rid)
+	if err != nil {
+		http.Error(w, "dns record not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, rec)
+}
+
+func (s *Server) handleUpdateDNSRecord(w http.ResponseWriter, r *http.Request) {
+	zoneID := r.PathValue("id")
+	rid := r.PathValue("rid")
+	var req protocol.CreateDNSRecordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	rec, err := s.dnsSvc.UpdateRecord(r.Context(), zoneID, rid, req)
+	if err != nil {
+		http.Error(w, "failed updating dns record: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, rec)
+}
+
+func (s *Server) handleDeleteDNSRecord(w http.ResponseWriter, r *http.Request) {
+	zoneID := r.PathValue("id")
+	rid := r.PathValue("rid")
+
+	if err := s.dnsSvc.DeleteRecord(r.Context(), zoneID, rid); err != nil {
+		http.Error(w, "failed deleting dns record: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "DNS_RECORD_DELETE", "dns_record", rid, r.RemoteAddr, "")
+
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": rid})
+}
+
+func (s *Server) handleExportBINDZone(w http.ResponseWriter, r *http.Request) {
+	zoneID := r.PathValue("id")
+	bindConf, err := s.dnsSvc.ExportBINDZone(r.Context(), zoneID)
+	if err != nil {
+		http.Error(w, "failed exporting BIND zone: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"id": zoneID, "bind_zone": bindConf})
+}
+
+func (s *Server) handleQueryDNS(w http.ResponseWriter, r *http.Request) {
+	var req protocol.DNSQueryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resp, err := s.dnsSvc.Query(r.Context(), req)
+	if err != nil {
+		http.Error(w, "dns query failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, resp)
 }
 
 func respondJSON(w http.ResponseWriter, code int, payload any) {

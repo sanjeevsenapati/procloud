@@ -301,4 +301,39 @@ CREATE INDEX IF NOT EXISTS idx_lb_members ON lb_members(pool_id);
 CREATE INDEX IF NOT EXISTS idx_lb_policies ON lb_policies(listener_id);
 `,
 	},
+	{
+		Version:     5,
+		Description: "Create DNS service hosted zones and authoritative records tables",
+		SQL: `
+CREATE TABLE IF NOT EXISTS dns_zones (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    vpc_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'private',
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dns_records (
+    id TEXT PRIMARY KEY,
+    zone_id TEXT NOT NULL REFERENCES dns_zones(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    value TEXT NOT NULL,
+    ttl INTEGER NOT NULL DEFAULT 300,
+    routing_policy TEXT NOT NULL DEFAULT 'simple',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_dns_zones_tenant ON dns_zones(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_dns_zones_name ON dns_zones(name);
+CREATE INDEX IF NOT EXISTS idx_dns_records_zone ON dns_records(zone_id);
+CREATE INDEX IF NOT EXISTS idx_dns_records_lookup ON dns_records(zone_id, name, type);
+`,
+	},
 }

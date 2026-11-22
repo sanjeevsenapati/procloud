@@ -130,3 +130,20 @@ type LoadBalancerRepository interface {
 	DeletePolicy(ctx context.Context, id string) error
 }
 
+// DNSRepository handles storage for DNS hosted zones and authoritative resource records.
+type DNSRepository interface {
+	CreateZone(ctx context.Context, zone *protocol.DNSZone) error
+	GetZoneByID(ctx context.Context, id string) (*protocol.DNSZone, error)
+	GetZoneByName(ctx context.Context, tenantID, name string) (*protocol.DNSZone, error)
+	ListZones(ctx context.Context, tenantID string) ([]*protocol.DNSZone, error)
+	UpdateZone(ctx context.Context, zone *protocol.DNSZone) error
+	DeleteZone(ctx context.Context, id string) error
+
+	CreateRecord(ctx context.Context, record *protocol.DNSRecord) error
+	GetRecordByID(ctx context.Context, id string) (*protocol.DNSRecord, error)
+	ListRecordsByZone(ctx context.Context, zoneID string) ([]*protocol.DNSRecord, error)
+	UpdateRecord(ctx context.Context, record *protocol.DNSRecord) error
+	DeleteRecord(ctx context.Context, id string) error
+	LookupRecords(ctx context.Context, zoneID, name, recordType string) ([]*protocol.DNSRecord, error)
+}
+

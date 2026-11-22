@@ -358,3 +358,67 @@ type CreatePolicyRequest struct {
 	Priority     int    `json:"priority,omitempty"`
 }
 
+// -------------------------------------------------------------
+// DNS Service as a Service (DNSaaS) Models
+// -------------------------------------------------------------
+
+// DNSZone represents a private or public DNS hosted zone.
+type DNSZone struct {
+	ID          string       `json:"id"`
+	TenantID    string       `json:"tenant_id"`
+	VPCID       string       `json:"vpc_id,omitempty"`
+	Name        string       `json:"name"` // e.g. "corp.internal"
+	Type        string       `json:"type"` // "private" or "public"
+	Description string       `json:"description,omitempty"`
+	Status      string       `json:"status"` // "active"
+	RecordCount int          `json:"record_count"`
+	Records     []*DNSRecord `json:"records,omitempty"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
+}
+
+// DNSRecord represents an authoritative resource record within a zone.
+type DNSRecord struct {
+	ID            string    `json:"id"`
+	ZoneID        string    `json:"zone_id"`
+	Name          string    `json:"name"` // e.g. "api", "db", "@", "*"
+	Type          string    `json:"type"` // "A", "AAAA", "CNAME", "TXT", "SRV", "PTR"
+	Value         string    `json:"value"`
+	TTL           int       `json:"ttl"`
+	RoutingPolicy string    `json:"routing_policy"` // "simple", "weighted"
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// DNS Request DTOs
+type CreateDNSZoneRequest struct {
+	TenantID    string `json:"tenant_id"`
+	VPCID       string `json:"vpc_id,omitempty"`
+	Name        string `json:"name"`
+	Type        string `json:"type"` // "private", "public"
+	Description string `json:"description,omitempty"`
+}
+
+type CreateDNSRecordRequest struct {
+	Name          string `json:"name"`
+	Type          string `json:"type"` // "A", "AAAA", "CNAME", "TXT", "SRV", "PTR"
+	Value         string `json:"value"`
+	TTL           int    `json:"ttl,omitempty"`
+	RoutingPolicy string `json:"routing_policy,omitempty"`
+}
+
+type DNSQueryRequest struct {
+	ZoneName string `json:"zone_name,omitempty"`
+	Host     string `json:"host"`
+	Type     string `json:"type"` // e.g. "A"
+}
+
+type DNSQueryResponse struct {
+	Host     string       `json:"host"`
+	Type     string       `json:"type"`
+	Answers  []*DNSRecord `json:"answers"`
+	Resolved string       `json:"resolved,omitempty"`
+	Status   string       `json:"status"` // "NOERROR", "NXDOMAIN"
+}
+
