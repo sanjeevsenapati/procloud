@@ -936,6 +936,35 @@ spec:
                         <div class="card-desc">Upload custom PEM certificate chains and private keys with automatic validation and hot storage into Secrets.</div>
                     </div>
                 </div>
+
+                <div class="doc-screenshot-frame">
+                    <img src="images/procloud-loadbalancer-metrics.png" alt="ProCloud Load Balancer Real-Time Traffic &amp; Error Monitoring" loading="lazy">
+                    <div class="doc-screenshot-caption">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <span>Fig 6.1: Live Load Balancer Observability &mdash; Ingress Traffic (RPS), Error Rate %, HTTP Status Code Distribution, and Upstream Member Latency</span>
+                    </div>
+                </div>
+
+                <h3 class="doc-h3">Real-Time Traffic, Error &amp; Latency Observability</h3>
+                <p class="doc-p">ProCloud LBaaS features a continuous, thread-safe telemetry engine that monitors Layer 4/Layer 7 ingress traffic and evaluates upstream member health:</p>
+                <div class="grid-2">
+                    <div class="feature-card">
+                        <div class="card-title">Live Ingress Traffic &amp; Throughput</div>
+                        <div class="card-desc">Tracks total requests, real-time Requests Per Second (RPS) rate, active TCP connections, and network bandwidth throughput (Bytes In / Bytes Out) with 2s/5s/10s auto-refresh polling.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">HTTP Status Distribution &amp; Error Badging</div>
+                        <div class="card-desc">Multi-color segmented status distribution bar (2xx Success, 3xx Redirect, 4xx Client Error, 5xx Server Error) with automatic error percentage calculation and dynamic severity alerts (HEALTHY, DEGRADED, CRITICAL).</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Upstream Member Health Probes</div>
+                        <div class="card-desc">Direct round-trip health probes to all attached containers and pods across backend pools, capturing per-member response latency in milliseconds and real-time connectivity states.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Live Ingress Stream &amp; Traffic Simulator</div>
+                        <div class="card-desc">Terminal-styled stream of recent requests showing client IPs, paths, methods, and status codes. Includes an interactive traffic simulator (<code>POST /api/v1/loadbalancers/{id}/metrics/simulate</code>) to test alert thresholds.</div>
+                    </div>
+                </div>
             </section>
 
             <!-- SECTION 7: STORAGE & VOLUMES -->
