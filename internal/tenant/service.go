@@ -4,11 +4,19 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"procloud.io/procloud/internal/repository"
 	"procloud.io/procloud/pkg/protocol"
 )
+
+var tenantSeq uint64
+
+func genTenantID(prefix string) string {
+	seq := atomic.AddUint64(&tenantSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type Service struct {
 	repo repository.TenantRepository
@@ -48,7 +56,7 @@ func (s *Service) CreateOrganization(ctx context.Context, name, description, pla
 	}
 
 	tenant := &protocol.Tenant{
-		ID:            fmt.Sprintf("tnt-%d", time.Now().UnixNano()),
+		ID:            genTenantID("tnt"),
 		Name:          name,
 		Slug:          slug,
 		Description:   description,
@@ -134,7 +142,7 @@ func (s *Service) CreateProject(ctx context.Context, tenantID, name, repoURL, br
 	}
 	slug := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
 	project := &protocol.Project{
-		ID:            fmt.Sprintf("prj-%d", time.Now().UnixNano()),
+		ID:            genTenantID("prj"),
 		TenantID:      tenantID,
 		Name:          name,
 		Slug:          slug,

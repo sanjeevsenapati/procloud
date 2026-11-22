@@ -8,12 +8,20 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"procloud.io/procloud/internal/repository"
 	"procloud.io/procloud/pkg/podman"
 	"procloud.io/procloud/pkg/protocol"
 )
+
+var volSeq uint64
+
+func genVolID(prefix string) string {
+	seq := atomic.AddUint64(&volSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type StorageProvider interface {
 	CreateVolume(ctx context.Context, name string) (string, error)
@@ -56,7 +64,7 @@ func (s *Service) CreateVolume(ctx context.Context, tenantID, projectID, name st
 	_, _ = s.runtime.CreateVolume(ctx, podmanVolName)
 
 	vol := &protocol.Volume{
-		ID:          fmt.Sprintf("vol-%d", time.Now().UnixNano()),
+		ID:          genVolID("vol"),
 		TenantID:    tenantID,
 		ProjectID:   projectID,
 		Name:        name,

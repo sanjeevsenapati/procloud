@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"procloud.io/procloud/internal/build"
@@ -20,6 +21,13 @@ import (
 	"procloud.io/procloud/pkg/protocol"
 	"procloud.io/procloud/pkg/quadlet"
 )
+
+var depSeq uint64
+
+func genDepID(prefix string) string {
+	seq := atomic.AddUint64(&depSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type Engine struct {
 	workloadRepo   repository.WorkloadRepository
@@ -206,7 +214,7 @@ func (e *Engine) Deploy(ctx context.Context, req DeployRequest) (*protocol.Deplo
 		}
 	}
 
-	deploymentID := fmt.Sprintf("dep-%d", time.Now().UnixNano())
+	deploymentID := genDepID("dep")
 	deployment := &protocol.Deployment{
 		ID:            deploymentID,
 		WorkloadID:    wl.ID,
@@ -347,7 +355,7 @@ func (e *Engine) Rollback(ctx context.Context, workloadIDOrName string, targetRe
 
 	// Record rollback deployment
 	now := time.Now()
-	rollbackDepID := fmt.Sprintf("dep-rb-%d", now.UnixNano())
+	rollbackDepID := genDepID("dep-rb")
 	rollbackDep := &protocol.Deployment{
 		ID:            rollbackDepID,
 		WorkloadID:    wl.ID,

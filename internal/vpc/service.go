@@ -4,12 +4,20 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"procloud.io/procloud/internal/network"
 	"procloud.io/procloud/internal/repository"
 	"procloud.io/procloud/pkg/protocol"
 )
+
+var vpcSeq uint64
+
+func genVPCID(prefix string) string {
+	seq := atomic.AddUint64(&vpcSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type Service struct {
 	repo            repository.VPCRepository
@@ -48,7 +56,7 @@ func (s *Service) CreateVPC(ctx context.Context, tenantID, name string) (*protoc
 	bridgeName := fmt.Sprintf("br-vpc-%d", s.nextVPCIndex)
 
 	vpc := &protocol.VPC{
-		ID:        fmt.Sprintf("vpc-%d", time.Now().UnixNano()),
+		ID:        genVPCID("vpc"),
 		TenantID:  tenantID,
 		Name:      name,
 		CIDR:      cidr,
@@ -108,7 +116,7 @@ func (s *Service) CreateSubnet(ctx context.Context, vpcID, name string) (*protoc
 	}
 
 	subnet := &protocol.Subnet{
-		ID:        fmt.Sprintf("sub-%d", time.Now().UnixNano()),
+		ID:        genVPCID("sub"),
 		VPCID:     vpcID,
 		Name:      name,
 		CIDR:      subnetCIDR,

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -16,6 +17,13 @@ import (
 	"procloud.io/procloud/pkg/podman"
 	"procloud.io/procloud/pkg/protocol"
 )
+
+var wfSeq uint64
+
+func genWorkflowID(prefix string) string {
+	seq := atomic.AddUint64(&wfSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type Engine struct {
 	repo    repository.WorkflowRepository
@@ -122,7 +130,7 @@ func (e *Engine) Execute(ctx context.Context, req protocol.WorkflowRunRequest, a
 		req.DeployYAML = defaultDeployYAML(req.Name, req.TargetType, req.ImageTag)
 	}
 
-	runID := fmt.Sprintf("wf-%d", time.Now().UnixNano())
+	runID := genWorkflowID("wf")
 
 	sourceSummary := "Inline source files"
 	if req.SourceType == "git" {

@@ -2240,6 +2240,49 @@
                     </div>
                 </div>
 
+                <!-- ProGit OSS Integration Card -->
+                <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--pg-blue-600); background: linear-gradient(180deg, rgba(239, 246, 255, 0.6) 0%, rgba(255, 255, 255, 1) 100%); padding: 16px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--pg-blue-100); color: var(--pg-blue-700); display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
+                            </div>
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 15px; font-weight: 700; color: var(--pg-text-primary);">ProGit OSS Integration</span>
+                                    <span id="progit-status-badge" class="badge" style="background: #e2e8f0; color: #475569;">CHECKING...</span>
+                                </div>
+                                <div style="font-size: 12px; color: var(--pg-text-secondary); margin-top: 2px;">
+                                    Self-hosted Git VCS &amp; Web UI for automated CI/CD workflows and automated webhook triggers.
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button id="progit-launch-btn" class="btn btn-sm btn-primary rbac-write-only" onclick="launchProGitOSS()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span>Launch ProGit</span>
+                            </button>
+                            <a id="progit-open-btn" href="http://localhost:3000" target="_blank" class="btn btn-sm" style="display: none; align-items: center; gap: 4px; text-decoration: none;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                <span>Open Web UI</span>
+                            </a>
+                            <button class="btn btn-sm" onclick="fetchProGitStatus()" title="Refresh Status">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="progit-details-row" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(226, 232, 240, 0.8); display: flex; gap: 20px; font-size: 12px; flex-wrap: wrap;">
+                        <div><strong style="color: var(--pg-text-secondary);">Image:</strong> <code style="font-size: 11px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">ghcr.io/sanjeevsenapati/progit:latest</code></div>
+                        <div><strong style="color: var(--pg-text-secondary);">Web Endpoint:</strong> <code id="progit-endpoint-lbl" style="font-size: 11px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">http://localhost:3000</code></div>
+                        <div><strong style="color: var(--pg-text-secondary);">SSH Clone:</strong> <code id="progit-ssh-lbl" style="font-size: 11px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">ssh://localhost:2222</code></div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <strong style="color: var(--pg-text-secondary);">Webhook URL:</strong>
+                            <code id="progit-webhook-lbl" style="font-size: 11px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">/api/v1/webhooks/progit</code>
+                            <button class="btn btn-xs" style="padding: 1px 6px; font-size: 11px;" onclick="copyProGitWebhook()">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Visual Pipeline Stage Graph / Architecture Diagram -->
                 <div style="margin-top: 10px;">
                     <div style="font-size: 11px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;">
@@ -12550,6 +12593,7 @@ spec:
 
         async function fetchWorkflows() {
             try {
+                fetchProGitStatus();
                 const res = await authFetch('/api/v1/workflows/runs?limit=100');
                 if (!res.ok) return;
                 currentWorkflowRuns = await res.json();
@@ -12558,6 +12602,93 @@ spec:
             } catch (err) {
                 console.error("fetchWorkflows error:", err);
             }
+        }
+
+        async function fetchProGitStatus() {
+            try {
+                const res = await authFetch('/api/v1/integrations/progit');
+                if (!res.ok) return;
+                const data = await res.json();
+                const badge = document.getElementById('progit-status-badge');
+                const launchBtn = document.getElementById('progit-launch-btn');
+                const openBtn = document.getElementById('progit-open-btn');
+                const endpointLbl = document.getElementById('progit-endpoint-lbl');
+                const sshLbl = document.getElementById('progit-ssh-lbl');
+                const webhookLbl = document.getElementById('progit-webhook-lbl');
+
+                if (endpointLbl && data.endpoint) endpointLbl.innerText = data.endpoint;
+                if (sshLbl && data.ssh_endpoint) sshLbl.innerText = data.ssh_endpoint;
+                if (webhookLbl && data.webhook_url) webhookLbl.innerText = data.webhook_url;
+
+                if (badge) {
+                    if (data.status === 'running') {
+                        badge.className = 'badge';
+                        badge.innerText = 'ONLINE';
+                        badge.style.background = '#dcfce7';
+                        badge.style.color = '#15803d';
+                        if (openBtn) {
+                            openBtn.style.display = 'inline-flex';
+                            openBtn.href = data.endpoint || 'http://localhost:3000';
+                        }
+                        if (launchBtn) {
+                            launchBtn.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Restart ProGit</span>`;
+                        }
+                    } else if (data.status === 'stopped') {
+                        badge.className = 'badge';
+                        badge.innerText = 'STOPPED';
+                        badge.style.background = '#fef3c7';
+                        badge.style.color = '#b45309';
+                        if (openBtn) openBtn.style.display = 'none';
+                        if (launchBtn) {
+                            launchBtn.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Start ProGit</span>`;
+                        }
+                    } else {
+                        badge.className = 'badge';
+                        badge.innerText = 'NOT DEPLOYED';
+                        badge.style.background = '#f1f5f9';
+                        badge.style.color = '#64748b';
+                        if (openBtn) openBtn.style.display = 'none';
+                        if (launchBtn) {
+                            launchBtn.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Launch ProGit</span>`;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("fetchProGitStatus error:", err);
+            }
+        }
+
+        async function launchProGitOSS() {
+            const btn = document.getElementById('progit-launch-btn');
+            try {
+                if (btn) btn.disabled = true;
+                showToast("Launching ProGit OSS Git Server...", "info");
+                const res = await authFetch('/api/v1/integrations/progit/launch', {
+                    method: 'POST'
+                });
+                if (res.ok) {
+                    showToast("ProGit OSS launched successfully!", "success");
+                    await fetchProGitStatus();
+                } else {
+                    const err = await res.text();
+                    showToast("Failed to launch ProGit: " + err, "error");
+                }
+            } catch (err) {
+                showToast("Network error launching ProGit", "error");
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function copyProGitWebhook() {
+            const lbl = document.getElementById('progit-webhook-lbl');
+            if (!lbl) return;
+            const text = lbl.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("ProGit Webhook URL copied to clipboard", "success");
+            }).catch(() => {
+                showToast("Could not copy URL", "error");
+            });
         }
 
         function updateWorkflowMetrics(runs) {

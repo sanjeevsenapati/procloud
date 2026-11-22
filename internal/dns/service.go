@@ -7,11 +7,19 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"procloud.io/procloud/internal/repository"
 	"procloud.io/procloud/pkg/protocol"
 )
+
+var dnsSeq uint64
+
+func genDNSID(prefix string) string {
+	seq := atomic.AddUint64(&dnsSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type Service struct {
 	repo    repository.DNSRepository
@@ -57,7 +65,7 @@ func (s *Service) CreateZone(ctx context.Context, req protocol.CreateDNSZoneRequ
 	}
 
 	zone := &protocol.DNSZone{
-		ID:          fmt.Sprintf("zone-%d", time.Now().UnixNano()),
+		ID:          genDNSID("zone"),
 		TenantID:    tenantID,
 		VPCID:       req.VPCID,
 		Name:        name,
@@ -74,7 +82,7 @@ func (s *Service) CreateZone(ctx context.Context, req protocol.CreateDNSZoneRequ
 
 	// Auto-provision initial SOA and NS records
 	soaRecord := &protocol.DNSRecord{
-		ID:            fmt.Sprintf("rec-%d-1", time.Now().UnixNano()),
+		ID:            genDNSID("rec"),
 		ZoneID:        zone.ID,
 		Name:          "@",
 		Type:          "SOA",
@@ -88,7 +96,7 @@ func (s *Service) CreateZone(ctx context.Context, req protocol.CreateDNSZoneRequ
 	_ = s.repo.CreateRecord(ctx, soaRecord)
 
 	nsRecord := &protocol.DNSRecord{
-		ID:            fmt.Sprintf("rec-%d-2", time.Now().UnixNano()),
+		ID:            genDNSID("rec"),
 		ZoneID:        zone.ID,
 		Name:          "@",
 		Type:          "NS",
@@ -189,7 +197,7 @@ func (s *Service) CreateRecord(ctx context.Context, zoneID string, req protocol.
 	}
 
 	rec := &protocol.DNSRecord{
-		ID:            fmt.Sprintf("rec-%d", time.Now().UnixNano()),
+		ID:            genDNSID("rec"),
 		ZoneID:        zoneID,
 		Name:          name,
 		Type:          recType,

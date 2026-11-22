@@ -80,7 +80,7 @@ func main() {
 	// 5. Start HTTP server
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf(":%d", *port),
-		Handler:      server.mux,
+		Handler:      server,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
 	}

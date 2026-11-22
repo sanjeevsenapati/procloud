@@ -17,12 +17,20 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"procloud.io/procloud/internal/repository"
 	"procloud.io/procloud/pkg/podman"
 	"procloud.io/procloud/pkg/protocol"
 )
+
+var lbSeq uint64
+
+func genLBID(prefix string) string {
+	seq := atomic.AddUint64(&lbSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type Service struct {
 	repo    repository.LoadBalancerRepository
@@ -84,7 +92,7 @@ func (s *Service) CreateLoadBalancer(ctx context.Context, req protocol.CreateLoa
 		}
 	}
 
-	lbID := fmt.Sprintf("lb-%d", time.Now().UnixNano())
+	lbID := genLBID("lb")
 
 	// If manual certificate data was provided, store it into the Secrets Engine!
 	if req.SSLCertData != "" {
@@ -241,7 +249,7 @@ func (s *Service) CreateListener(ctx context.Context, lbID string, req protocol.
 		}
 	}
 
-	listenerID := fmt.Sprintf("lsn-%d", time.Now().UnixNano())
+	listenerID := genLBID("lsn")
 
 	// If manual certificate data is provided, store it into the Secrets Engine and stage files
 	if req.SSLCertData != "" {
@@ -338,7 +346,7 @@ func (s *Service) CreatePool(ctx context.Context, lbID string, req protocol.Crea
 	}
 
 	pool := &protocol.LBPool{
-		ID:                       fmt.Sprintf("pool-%d", time.Now().UnixNano()),
+		ID:                       genLBID("pool"),
 		LoadBalancerID:           lbID,
 		Name:                     req.Name,
 		Protocol:                 req.Protocol,
@@ -393,7 +401,7 @@ func (s *Service) AttachMember(ctx context.Context, lbID, poolID string, req pro
 	}
 
 	member := &protocol.LBMember{
-		ID:         fmt.Sprintf("mbr-%d", time.Now().UnixNano()),
+		ID:         genLBID("mbr"),
 		PoolID:     poolID,
 		TargetType: req.TargetType,
 		TargetRef:  req.TargetRef,
@@ -442,7 +450,7 @@ func (s *Service) CreatePolicy(ctx context.Context, lbID, listenerID string, req
 	}
 
 	pol := &protocol.LBL7Policy{
-		ID:           fmt.Sprintf("pol-%d", time.Now().UnixNano()),
+		ID:           genLBID("pol"),
 		ListenerID:   listenerID,
 		Name:         req.Name,
 		Action:       "FORWARD",
@@ -745,9 +753,22 @@ func (s *Service) CheckMemberHealth(ctx context.Context, m *protocol.LBMember, p
 // TLS / SSL Certificate Management (Auto, Secret, Custom)
 // -------------------------------------------------------------
 
+func sanitizePathComponent(s string) string {
+	clean := filepath.Base(filepath.Clean(s))
+	clean = strings.ReplaceAll(clean, "..", "")
+	clean = strings.ReplaceAll(clean, "/", "")
+	clean = strings.ReplaceAll(clean, "\\", "")
+	return strings.TrimSpace(clean)
+}
+
 func (s *Service) storeSecretAndStage(ctx context.Context, tenantID, secretName, certData, keyData, lbID string) error {
+	tenantID = sanitizePathComponent(tenantID)
+	if tenantID == "" {
+		tenantID = "tnt-default"
+	}
+	secretName = sanitizePathComponent(secretName)
 	if secretName == "" {
-		return fmt.Errorf("secret name is required")
+		return fmt.Errorf("secret name is required and cannot be empty or a path")
 	}
 	certsDir := filepath.Join(s.confDir, "certs")
 	_ = os.MkdirAll(certsDir, 0755)
@@ -782,7 +803,7 @@ func (s *Service) storeSecretAndStage(ctx context.Context, tenantID, secretName,
 			Labels: map[string]string{
 				"type":            "tls",
 				"service":         "loadbalancer",
-				"loadbalancer_id": lbID,
+				"loadbalancer_id": sanitizePathComponent(lbID),
 			},
 		})
 	}
@@ -793,20 +814,24 @@ func (s *Service) getCertificatePaths(lb *protocol.LoadBalancer, l *protocol.LBL
 	certsDir := filepath.Join(s.confDir, "certs")
 	_ = os.MkdirAll(certsDir, 0755)
 
-	tenantID := lb.TenantID
-	certSecret := l.SSLCertSecret
+	tenantID := sanitizePathComponent(lb.TenantID)
+	if tenantID == "" {
+		tenantID = "tnt-default"
+	}
+	certSecret := sanitizePathComponent(l.SSLCertSecret)
 	certType := l.SSLCertType
 
 	// Inherit from Load Balancer if not specified on listener (and listener is not explicitly auto or custom)
 	if certSecret == "" && certType != "auto" && certType != "custom" && lb.SSLCertSecret != "" {
-		certSecret = lb.SSLCertSecret
+		certSecret = sanitizePathComponent(lb.SSLCertSecret)
 		certType = lb.SSLCertType
 	}
 
 	// 1. Custom Certificate Upload
 	if certType == "custom" {
-		customCert := filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", l.ID))
-		customKey := filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", l.ID))
+		listenerID := sanitizePathComponent(l.ID)
+		customCert := filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", listenerID))
+		customKey := filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", listenerID))
 		if fileExists(customCert) && fileExists(customKey) {
 			return customCert, customKey
 		}

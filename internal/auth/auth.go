@@ -8,13 +8,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"procloud.io/procloud/internal/repository"
 	"procloud.io/procloud/pkg/protocol"
 )
+
+var authSeq uint64
+
+func genAuthID(prefix string) string {
+	seq := atomic.AddUint64(&authSeq, 1)
+	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
+}
 
 type Service struct {
 	userRepo  repository.UserRepository
@@ -23,7 +32,11 @@ type Service struct {
 
 func NewService(userRepo repository.UserRepository, secret string) *Service {
 	if secret == "" {
-		secret = "procloud-default-secret-key-change-in-prod"
+		if envSec := os.Getenv("PROCLOUD_JWT_SECRET"); envSec != "" {
+			secret = envSec
+		} else {
+			secret = "procloud-default-secret-key-change-in-prod"
+		}
 	}
 	return &Service{
 		userRepo:  userRepo,
@@ -73,6 +86,10 @@ func (s *Service) CreateUserWithOrg(ctx context.Context, username, email, passwo
 		return nil, errors.New("email cannot be empty")
 	}
 
+	if len(password) < 6 {
+		return nil, errors.New("password must be at least 6 characters")
+	}
+
 	if role == "" {
 		count, _ := s.userRepo.CountUsers(ctx)
 		if count == 0 {
@@ -94,7 +111,7 @@ func (s *Service) CreateUserWithOrg(ctx context.Context, username, email, passwo
 	}
 
 	user := &protocol.User{
-		ID:           fmt.Sprintf("usr-%d", time.Now().UnixNano()),
+		ID:           genAuthID("usr"),
 		Username:     username,
 		Email:        email,
 		PasswordHash: string(hash),

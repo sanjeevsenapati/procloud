@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -156,10 +157,15 @@ func (d *DB) Migrate(ctx context.Context) error {
 
 // CheckpointWAL triggers a controlled WAL checkpoint (PASSIVE, RESTART, or TRUNCATE).
 func (d *DB) CheckpointWAL(ctx context.Context, mode string) error {
-	if mode == "" {
-		mode = "PASSIVE"
+	modeUpper := strings.ToUpper(strings.TrimSpace(mode))
+	switch modeUpper {
+	case "PASSIVE", "FULL", "RESTART", "TRUNCATE":
+	case "":
+		modeUpper = "PASSIVE"
+	default:
+		return fmt.Errorf("invalid checkpoint mode '%s': must be PASSIVE, FULL, RESTART, or TRUNCATE", mode)
 	}
-	query := fmt.Sprintf("PRAGMA wal_checkpoint(%s);", mode)
+	query := fmt.Sprintf("PRAGMA wal_checkpoint(%s);", modeUpper)
 	_, err := d.sqlDB.ExecContext(ctx, query)
 	return err
 }
@@ -169,21 +175,57 @@ func (d *DB) Backup(ctx context.Context, destPath string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
+	cleanPath := filepath.Clean(destPath)
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("invalid backup path: directory traversal disallowed")
+	}
+
 	// Ensure destination directory exists
-	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil && filepath.Dir(destPath) != "." {
+	if err := os.MkdirAll(filepath.Dir(cleanPath), 0755); err != nil && filepath.Dir(cleanPath) != "." {
 		return err
 	}
-	_ = os.Remove(destPath) // Remove if already exists
+	_ = os.Remove(cleanPath) // Remove if already exists
 
-	query := fmt.Sprintf("VACUUM INTO '%s';", destPath)
+	escapedPath := strings.ReplaceAll(cleanPath, "'", "''")
+	query := fmt.Sprintf("VACUUM INTO '%s';", escapedPath)
 	_, err := d.sqlDB.ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("sqlite backup failed: %w", err)
 	}
 
 	d.lastBackupTime = time.Now()
-	d.lastBackupPath = destPath
+	d.lastBackupPath = cleanPath
 	return nil
+}
+
+// ExecWithRetry executes a query, automatically retrying if SQLITE_BUSY or lock contention occurs.
+func (d *DB) ExecWithRetry(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	var result sql.Result
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		result, lastErr = d.sqlDB.ExecContext(ctx, query, args...)
+		if lastErr == nil {
+			return result, nil
+		}
+		if isBusyError(lastErr) {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(time.Duration(15*(attempt+1)) * time.Millisecond):
+				continue
+			}
+		}
+		return nil, lastErr
+	}
+	return nil, fmt.Errorf("sqlite query failed after retries: %w", lastErr)
+}
+
+func isBusyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "busy") || strings.Contains(msg, "locked") || strings.Contains(msg, "sqlite_busy")
 }
 
 // Status returns runtime database metrics, WAL size, and connection stats.

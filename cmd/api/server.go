@@ -196,8 +196,48 @@ func NewServer(
 	return s
 }
 
-// ServeHTTP implements http.Handler for Server.
+// ServeHTTP implements http.Handler for Server with full security & VA middleware.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// 1. Panic recovery to protect against crashes
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("[PANIC RECOVER] %v\n", rec)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"error": "internal server error: unexpected panic recovered",
+			})
+		}
+	}()
+
+	// 2. Set Security Headers (OWASP Top 10 / CIS benchmark compliance)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+	w.Header().Set("X-XSS-Protection", "1; mode=block")
+	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+	w.Header().Set("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: wss:; frame-ancestors 'self';")
+
+	// 3. CORS Handling
+	origin := r.Header.Get("Origin")
+	if origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Progit-Token")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+	}
+
+	// Handle preflight OPTIONS
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// 4. Request Body Limit (32MB max to prevent memory exhaustion DoS)
+	if r.Body != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
+	}
+
 	s.mux.ServeHTTP(w, r)
 }
 
@@ -431,7 +471,9 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/dns/zones/{id}/export", s.authRequired(s.handleExportBINDZone))
 	s.mux.HandleFunc("POST /api/v1/dns/query", s.authRequired(s.handleQueryDNS))
 
-	// Webhooks & Milestone
+	// ProGit OSS Integration & Webhooks
+	s.mux.HandleFunc("GET /api/v1/integrations/progit", s.authRequired(s.handleGetProGitIntegration))
+	s.mux.HandleFunc("POST /api/v1/integrations/progit/launch", s.writeRequired(s.handleLaunchProGitIntegration))
 	s.mux.HandleFunc("POST /api/v1/webhooks/progit", s.handleProGitWebhook)
 	s.mux.HandleFunc("POST /api/v1/milestone/run", s.adminOnly(s.handleRunMilestone))
 
@@ -616,6 +658,11 @@ func (s *Server) handleStartContainer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "CONTAINER_START", "Container", id, r.RemoteAddr, fmt.Sprintf("Started container %s", id))
 	respondJSON(w, http.StatusOK, map[string]string{"message": "container started", "id": id})
 }
 
@@ -625,6 +672,11 @@ func (s *Server) handleStopContainer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "CONTAINER_STOP", "Container", id, r.RemoteAddr, fmt.Sprintf("Stopped container %s", id))
 	respondJSON(w, http.StatusOK, map[string]string{"message": "container stopped", "id": id})
 }
 
@@ -634,6 +686,11 @@ func (s *Server) handleRestartContainer(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "CONTAINER_RESTART", "Container", id, r.RemoteAddr, fmt.Sprintf("Restarted container %s", id))
 	respondJSON(w, http.StatusOK, map[string]string{"message": "container restarted", "id": id})
 }
 
@@ -644,6 +701,11 @@ func (s *Server) handleRemoveContainer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "CONTAINER_DELETE", "Container", id, r.RemoteAddr, fmt.Sprintf("Removed container %s (force=%v)", id, force))
 	respondJSON(w, http.StatusOK, map[string]string{"message": "container removed", "id": id})
 }
 
@@ -765,6 +827,12 @@ func (s *Server) handleExecContainer(w http.ResponseWriter, r *http.Request) {
 			out = errStr
 		}
 	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "CONTAINER_EXEC", "Container", id, r.RemoteAddr, fmt.Sprintf("Executed command: %v (exit_code=%d)", command, exitCode))
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"output":    out,
@@ -1364,6 +1432,13 @@ func (s *Server) handleCreatePodmanSecret(w http.ResponseWriter, r *http.Request
 func (s *Server) handleInspectPodmanSecret(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	showSecret := r.URL.Query().Get("showsecret") == "true"
+	if showSecret {
+		claims := getClaims(r)
+		if claims != nil && claims.Role == protocol.RoleViewer {
+			http.Error(w, "forbidden: viewers are not authorized to reveal secret plaintext payloads", http.StatusForbidden)
+			return
+		}
+	}
 	sec, err := s.runtime.InspectSecret(r.Context(), id, showSecret)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -2045,35 +2120,180 @@ func (s *Server) handleListAudit(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, events)
 }
 
+func (s *Server) handleGetProGitIntegration(w http.ResponseWriter, r *http.Request) {
+	status := "not_deployed"
+	installed := false
+
+	// Check if procloud-progit-oss container exists in runtime
+	if inspect, err := s.runtime.InspectContainer(r.Context(), "procloud-progit-oss"); err == nil && inspect != nil {
+		installed = true
+		if inspect.Running || strings.ToLower(inspect.Status) == "running" {
+			status = "running"
+		} else {
+			status = "stopped"
+		}
+	}
+
+	host := "localhost"
+	if r.Host != "" {
+		host = strings.Split(r.Host, ":")[0]
+	}
+
+	res := map[string]any{
+		"installed":      installed,
+		"status":         status,
+		"container_name": "procloud-progit-oss",
+		"image":          "ghcr.io/sanjeevsenapati/progit:latest",
+		"endpoint":       fmt.Sprintf("http://%s:3000", host),
+		"ssh_endpoint":   fmt.Sprintf("ssh://%s:2222", host),
+		"webhook_url":    fmt.Sprintf("http://%s/api/v1/webhooks/progit", r.Host),
+		"webhook_path":   "/api/v1/webhooks/progit",
+	}
+	respondJSON(w, http.StatusOK, res)
+}
+
+func (s *Server) handleLaunchProGitIntegration(w http.ResponseWriter, r *http.Request) {
+	containerName := "procloud-progit-oss"
+
+	// 1. Check if already running or exists
+	inspect, err := s.runtime.InspectContainer(r.Context(), containerName)
+	if err == nil && inspect != nil {
+		if !inspect.Running && strings.ToLower(inspect.Status) != "running" {
+			_ = s.runtime.StartContainer(r.Context(), containerName)
+		}
+		actor := "admin"
+		if claims := getClaims(r); claims != nil {
+			actor = claims.Username
+		}
+		s.auditSvc.Log(r.Context(), actor, "PROGIT_LAUNCH", "Integration", containerName, r.RemoteAddr, "Started existing ProGit OSS instance")
+		s.handleGetProGitIntegration(w, r)
+		return
+	}
+
+	// 2. Ensure volume exists
+	_, _ = s.runtime.CreateVolume(r.Context(), "progit-data")
+
+	// 3. Launch ProGit OSS container
+	opts := podman.RunOptions{
+		Name:    containerName,
+		Image:   "ghcr.io/sanjeevsenapati/progit:latest",
+		Ports:   []string{"3000:3000", "2222:2222"},
+		Volumes: []string{"progit-data:/var/lib/progit:Z"},
+		Env: map[string]string{
+			"PROGIT_PORT":     "3000",
+			"PROGIT_SSH_PORT": "2222",
+		},
+		Labels: map[string]string{
+			"app":        "progit",
+			"service":    "git-vcs",
+			"managed-by": "procloud",
+		},
+		Restart: "always",
+		Detach:  true,
+	}
+
+	id, err := s.runtime.RunContainer(r.Context(), opts)
+	if err != nil {
+		http.Error(w, "failed launching ProGit OSS container: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "admin"
+	if claims := getClaims(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "PROGIT_LAUNCH", "Integration", containerName, r.RemoteAddr, fmt.Sprintf("Provisioned and launched ProGit OSS container (id: %s)", id))
+
+	s.handleGetProGitIntegration(w, r)
+}
+
 func (s *Server) handleProGitWebhook(w http.ResponseWriter, r *http.Request) {
+	// 1. Webhook Secret Verification (if configured via env or query parameter)
+	expectedSecret := os.Getenv("PROCLOUD_WEBHOOK_SECRET")
+	providedToken := r.Header.Get("X-Progit-Token")
+	if providedToken == "" {
+		providedToken = r.Header.Get("X-Gitlab-Token")
+	}
+	if providedToken == "" {
+		providedToken = r.URL.Query().Get("secret")
+	}
+
+	if expectedSecret != "" && providedToken != expectedSecret {
+		http.Error(w, "unauthorized: invalid webhook secret token", http.StatusUnauthorized)
+		return
+	}
+
+	// 2. Decode push payload
 	var payload struct {
 		Ref        string `json:"ref"`
 		After      string `json:"after"`
+		Before     string `json:"before"`
 		Repository struct {
-			Name     string `json:"name"`
-			CloneURL string `json:"clone_url"`
+			Name          string `json:"name"`
+			FullName      string `json:"full_name"`
+			CloneURL      string `json:"clone_url"`
+			DefaultBranch string `json:"default_branch"`
 		} `json:"repository"`
+		Pusher struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+		} `json:"pusher"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid webhook json payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	repoName := payload.Repository.Name
+	if repoName == "" {
+		repoName = payload.Repository.FullName
+	}
+	if repoName == "" {
+		http.Error(w, "missing repository name in payload", http.StatusBadRequest)
 		return
 	}
 
 	commitSHA := payload.After
-	if commitSHA == "" {
+	if commitSHA == "" || strings.HasPrefix(commitSHA, "00000000") {
 		commitSHA = fmt.Sprintf("sha-%d", time.Now().Unix())
 	}
 
+	branch := strings.TrimPrefix(payload.Ref, "refs/heads/")
+	if branch == "" {
+		branch = payload.Repository.DefaultBranch
+	}
+	if branch == "" {
+		branch = "main"
+	}
+
+	// 3. Queue Background Job
 	job, err := s.jobEngine.Enqueue(r.Context(), "build_and_deploy", map[string]string{
-		"repo":   payload.Repository.Name,
-		"commit": commitSHA,
-	}, fmt.Sprintf("git-push-%s-%s", payload.Repository.Name, commitSHA))
+		"repo":      repoName,
+		"commit":    commitSHA,
+		"branch":    branch,
+		"clone_url": payload.Repository.CloneURL,
+	}, fmt.Sprintf("git-push-%s-%s", repoName, commitSHA))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	respondJSON(w, http.StatusAccepted, map[string]any{"job_id": job.ID, "status": "QUEUED"})
+	pusherName := payload.Pusher.Name
+	if pusherName == "" {
+		pusherName = "git-pusher"
+	}
+
+	s.auditSvc.Log(r.Context(), pusherName, "GIT_WEBHOOK_TRIGGER", "Repository", repoName, r.RemoteAddr,
+		fmt.Sprintf("Triggered build & deploy from ProGit push (branch: %s, commit: %s)", branch, commitSHA))
+
+	respondJSON(w, http.StatusAccepted, map[string]any{
+		"job_id":     job.ID,
+		"status":     "QUEUED",
+		"repository": repoName,
+		"branch":     branch,
+		"commit":     commitSHA,
+	})
 }
 
 func (s *Server) handleRunMilestone(w http.ResponseWriter, r *http.Request) {
