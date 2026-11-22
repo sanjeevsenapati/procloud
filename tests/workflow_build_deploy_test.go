@@ -169,6 +169,19 @@ spec:
 			t.Errorf("expected rerun SUCCESS, got %s", rerun.Status)
 		}
 
+		// Update / Edit workflow run
+		updated, err := engine.UpdateRun(ctx, firstID, protocol.WorkflowRunRequest{
+			Name:          "api-microservice-v2",
+			ImageTag:      "localhost/api-microservice:v2",
+			Containerfile: "FROM alpine:3.18\nCMD [\"echo\", \"v2\"]",
+		})
+		if err != nil {
+			t.Fatalf("failed updating workflow run: %v", err)
+		}
+		if updated.Name != "api-microservice-v2" || updated.ImageTag != "localhost/api-microservice:v2" {
+			t.Errorf("unexpected updated workflow: %+v", updated)
+		}
+
 		// Delete a run
 		err = engine.DeleteRun(ctx, rerun.ID)
 		if err != nil {

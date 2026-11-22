@@ -396,6 +396,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/workflows/run", s.writeRequired(s.handleRunWorkflow))
 	s.mux.HandleFunc("GET /api/v1/workflows/runs", s.authRequired(s.handleListWorkflowRuns))
 	s.mux.HandleFunc("GET /api/v1/workflows/runs/{id}", s.authRequired(s.handleGetWorkflowRun))
+	s.mux.HandleFunc("PUT /api/v1/workflows/runs/{id}", s.writeRequired(s.handleUpdateWorkflowRun))
 	s.mux.HandleFunc("DELETE /api/v1/workflows/runs/{id}", s.writeRequired(s.handleDeleteWorkflowRun))
 	s.mux.HandleFunc("POST /api/v1/workflows/runs/{id}/rerun", s.writeRequired(s.handleRerunWorkflow))
 
@@ -2143,6 +2144,35 @@ func (s *Server) handleGetWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "workflow run not found: "+err.Error(), http.StatusNotFound)
 		return
 	}
+	respondJSON(w, http.StatusOK, run)
+}
+
+func (s *Server) handleUpdateWorkflowRun(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing workflow id", http.StatusBadRequest)
+		return
+	}
+
+	var req protocol.WorkflowRunRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	run, err := s.wfEngine.UpdateRun(r.Context(), id, req)
+	if err != nil {
+		http.Error(w, "failed updating workflow run: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "WORKFLOW_UPDATE", "workflow", id, r.RemoteAddr, fmt.Sprintf("name=%s, image=%s", run.Name, run.ImageTag))
+
 	respondJSON(w, http.StatusOK, run)
 }
 

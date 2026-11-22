@@ -1136,11 +1136,13 @@ func (r *Repository) UpdateWorkflowRun(ctx context.Context, run *protocol.Workfl
 	run.UpdatedAt = time.Now()
 	_, err := r.db.sqlDB.ExecContext(ctx, `
 		UPDATE workflow_runs SET
+			name = ?, target_type = ?, source_type = ?, containerfile = ?, deploy_yaml = ?,
 			status = ?, stage = ?, image_tag = ?, source_summary = ?,
 			build_logs = ?, deploy_logs = ?, target_id = ?, target_name = ?,
 			error_message = ?, duration_ms = ?, updated_at = ?
 		WHERE id = ?
-	`, run.Status, run.Stage, run.ImageTag, run.SourceSummary,
+	`, run.Name, run.TargetType, run.SourceType, run.Containerfile, run.DeployYAML,
+		run.Status, run.Stage, run.ImageTag, run.SourceSummary,
 		run.BuildLogs, run.DeployLogs, run.TargetID, run.TargetName,
 		run.ErrorMessage, run.DurationMs, run.UpdatedAt, run.ID)
 	return err

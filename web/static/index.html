@@ -5172,10 +5172,11 @@ spec:
                     <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/>
                     </svg>
-                    <span>Build &amp; Deploy Workflow Designer</span>
+                    <span id="wf-modal-title-text">Build &amp; Deploy Workflow Designer</span>
                 </div>
                 <div class="modal-dialog-close" onclick="closeModal('run-workflow-modal')">&times;</div>
             </div>
+            <input type="hidden" id="wf-editing-id" value="">
 
             <div style="overflow-y: auto; padding: 20px; flex: 1;">
                 <!-- Template Preset Selector -->
@@ -5314,6 +5315,10 @@ spec:
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button type="button" class="btn" onclick="closeModal('run-workflow-modal')">Cancel</button>
+                    <button type="button" id="wf-save-only-btn" class="btn btn-outline-primary" style="display:none; padding:8px 16px; font-weight:600;" onclick="submitSaveWorkflowOnly()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span>Save Flow Definition</span>
+                    </button>
                     <button type="button" id="wf-submit-btn" class="btn btn-primary" style="padding:8px 18px; font-weight:700;" onclick="submitRunWorkflow()">
                         <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         <span id="wf-submit-btn-label">Trigger Build &amp; Deploy Workflow</span>
@@ -5428,9 +5433,17 @@ spec:
                     <span>Copy Active View</span>
                 </button>
                 <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-outline-primary" onclick="editWorkflow(activeWorkflowDetail?.id)" title="Edit and configure this workflow pipeline">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span>Edit Flow</span>
+                    </button>
                     <button type="button" class="btn btn-primary" id="wf-modal-rerun-btn" onclick="rerunCurrentWorkflowModal()">
                         <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
                         <span>Re-run Pipeline</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-rose rbac-write-only" onclick="deleteWorkflow(activeWorkflowDetail?.id, activeWorkflowDetail?.name)" title="Delete this workflow run">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        <span>Delete Flow</span>
                     </button>
                     <button type="button" class="btn" onclick="closeModal('workflow-details-modal')">Close</button>
                 </div>
@@ -11895,20 +11908,24 @@ spec:
                     <td style="font-size:11px; color:var(--pg-text-secondary);">${createdTime}</td>
                     <td>
                         <div class="table-actions">
-                            <button class="btn btn-sm btn-outline-primary" onclick="openWorkflowDetails('${r.id}')" title="Inspect Pipeline Execution">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openWorkflowDetails('${escapeHtml(r.id)}')" title="Inspect Pipeline Execution">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 <span>Inspect</span>
                             </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editWorkflow('${escapeHtml(r.id)}')" title="Edit Pipeline Flow Configuration">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                <span>Edit</span>
+                            </button>
                             ${r.status === 'SUCCESS' && r.target_name ? `
-                                <button class="btn btn-sm btn-outline-primary" onclick="navigateToWorkload('${r.target_type}', '${r.target_name}')" title="View Resulting Workload">
+                                <button class="btn btn-sm btn-outline-primary" onclick="navigateToWorkload('${escapeHtml(r.target_type)}', '${escapeHtml(r.target_name)}')" title="View Resulting Workload">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                     <span>Workload</span>
                                 </button>
                             ` : ''}
-                            <button class="btn btn-sm btn-icon btn-outline-slate" onclick="rerunWorkflow('${r.id}')" title="Re-run Pipeline">
+                            <button class="btn btn-sm btn-icon btn-outline-slate" onclick="rerunWorkflow('${escapeHtml(r.id)}')" title="Re-run Pipeline">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
                             </button>
-                            <button class="btn btn-sm btn-icon btn-outline-rose" onclick="deleteWorkflow('${r.id}', '${r.name}')" title="Delete Pipeline Record">
+                            <button class="btn btn-sm btn-icon btn-outline-rose" onclick="deleteWorkflow('${escapeHtml(r.id)}', '${escapeHtml(r.name)}')" title="Delete Pipeline Record">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                             </button>
                         </div>
@@ -11934,12 +11951,113 @@ spec:
             renderWorkflowTable(filtered);
         }
 
+        let editingWorkflowId = null;
+
         function openRunWorkflowModal(presetKey) {
+            editingWorkflowId = null;
+            const inputId = document.getElementById('wf-editing-id');
+            if (inputId) inputId.value = '';
+
+            const titleEl = document.getElementById('wf-modal-title-text');
+            if (titleEl) titleEl.innerText = 'Build & Deploy Workflow Designer';
+
+            const saveBtn = document.getElementById('wf-save-only-btn');
+            if (saveBtn) saveBtn.style.display = 'none';
+
+            const submitLabel = document.getElementById('wf-submit-btn-label');
+            if (submitLabel) submitLabel.innerText = 'Trigger Build & Deploy Workflow';
+
             openModal('run-workflow-modal');
             if (presetKey) {
                 loadWorkflowTemplate(presetKey);
             } else if (!document.getElementById('wf-input-name').value) {
                 loadWorkflowTemplate('node');
+            }
+        }
+
+        async function editWorkflow(id) {
+            if (!id) return;
+            try {
+                let run = (currentWorkflowRuns || []).find(r => r.id === id);
+                if (!run || !run.containerfile) {
+                    const res = await authFetch(`/api/v1/workflows/runs/${encodeURIComponent(id)}`);
+                    if (res.ok) run = await res.json();
+                }
+                if (!run) {
+                    showToast('Workflow pipeline not found', 'error');
+                    return;
+                }
+
+                closeModal('workflow-details-modal');
+
+                editingWorkflowId = run.id;
+                const inputId = document.getElementById('wf-editing-id');
+                if (inputId) inputId.value = run.id;
+
+                const titleEl = document.getElementById('wf-modal-title-text');
+                if (titleEl) titleEl.innerHTML = `Edit Workflow Flow: <span style="color:var(--pg-blue-600);">${escapeHtml(run.name)}</span>`;
+
+                // Populate fields
+                document.getElementById('wf-input-name').value = run.name || '';
+                document.getElementById('wf-input-image-tag').value = run.image_tag || '';
+                document.getElementById('wf-containerfile-editor').value = run.containerfile || '';
+                document.getElementById('wf-deploy-yaml-editor').value = run.deploy_yaml || '';
+
+                setWorkflowTargetType(run.target_type || 'container');
+                setWorkflowSourceType(run.source_type || 'inline');
+
+                const saveBtn = document.getElementById('wf-save-only-btn');
+                if (saveBtn) saveBtn.style.display = 'inline-flex';
+
+                const submitLabel = document.getElementById('wf-submit-btn-label');
+                if (submitLabel) submitLabel.innerText = 'Save & Run Pipeline';
+
+                openModal('run-workflow-modal');
+            } catch (err) {
+                showToast('Failed to open workflow for editing: ' + err.message, 'error');
+            }
+        }
+
+        async function submitSaveWorkflowOnly() {
+            if (!editingWorkflowId) {
+                showToast("No active workflow being edited", "warning");
+                return;
+            }
+
+            const name = document.getElementById('wf-input-name').value.trim();
+            const imageTag = document.getElementById('wf-input-image-tag').value.trim();
+            const containerfile = document.getElementById('wf-containerfile-editor').value;
+            const deployYAML = document.getElementById('wf-deploy-yaml-editor').value;
+
+            if (!name) {
+                showToast("Please provide a workflow pipeline name", "warning");
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/workflows/runs/${encodeURIComponent(editingWorkflowId)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        target_type: wfTargetType,
+                        source_type: wfSourceType,
+                        image_tag: imageTag || `localhost/${name}:latest`,
+                        containerfile: containerfile,
+                        deploy_yaml: deployYAML
+                    })
+                });
+
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed saving workflow');
+                }
+
+                closeModal('run-workflow-modal');
+                showToast(`Workflow flow '${name}' updated successfully!`, "success");
+                await fetchWorkflows();
+            } catch (err) {
+                showToast("Error updating workflow: " + err.message, "error");
             }
         }
 
@@ -12165,6 +12283,23 @@ spec:
             if (submitLabel) submitLabel.innerText = "Building & Deploying...";
 
             try {
+                if (editingWorkflowId) {
+                    try {
+                        await authFetch(`/api/v1/workflows/runs/${encodeURIComponent(editingWorkflowId)}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: name,
+                                target_type: wfTargetType,
+                                source_type: wfSourceType,
+                                image_tag: payload.image_tag,
+                                containerfile: containerfile,
+                                deploy_yaml: deployYAML
+                            })
+                        });
+                    } catch (_) {}
+                }
+
                 showToast("Triggered Build & Deploy workflow: " + name, "info");
                 const res = await authFetch('/api/v1/workflows/run', {
                     method: 'POST',
@@ -12177,6 +12312,7 @@ spec:
                 }
 
                 const run = await res.json();
+                editingWorkflowId = null;
                 closeModal('run-workflow-modal');
                 await fetchWorkflows();
 
@@ -12233,16 +12369,27 @@ spec:
                 // Action buttons in modal
                 const actionsBar = document.getElementById('wf-modal-actions-bar');
                 if (actionsBar) {
+                    let btns = `
+                        <button class="btn btn-sm btn-outline-primary" onclick="editWorkflow('${escapeHtml(run.id)}')" title="Edit this workflow pipeline flow">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <span>Edit Flow</span>
+                        </button>
+                    `;
                     if (run.status === 'SUCCESS' && run.target_name) {
-                        actionsBar.innerHTML = `
-                            <button class="btn btn-primary" onclick="closeModal('workflow-details-modal'); navigateToWorkload('${run.target_type}', '${run.target_name}')">
+                        btns += `
+                            <button class="btn btn-sm btn-primary" onclick="closeModal('workflow-details-modal'); navigateToWorkload('${escapeHtml(run.target_type)}', '${escapeHtml(run.target_name)}')">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                 <span>View Target ${run.target_type === 'pod' ? 'Pod' : 'Container'}</span>
                             </button>
                         `;
-                    } else {
-                        actionsBar.innerHTML = '';
                     }
+                    btns += `
+                        <button class="btn btn-sm btn-outline-rose rbac-write-only" onclick="deleteWorkflow('${escapeHtml(run.id)}', '${escapeHtml(run.name)}')" title="Delete this workflow run">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            <span>Delete Flow</span>
+                        </button>
+                    `;
+                    actionsBar.innerHTML = btns;
                 }
 
                 switchWorkflowDetailsTab('build');
@@ -12309,17 +12456,23 @@ spec:
         }
 
         function deleteWorkflow(id, name) {
-            triggerThemedConfirm({
-                actionType: 'delete',
-                itemType: 'Pipeline Run',
-                itemName: name || id,
-                itemId: id,
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Pipeline Flow',
+                name: name || id,
+                id: id,
                 warning: 'The workflow execution record and logs will be permanently deleted from the authoritative SQLite database.',
                 onConfirm: async () => {
                     try {
                         const res = await authFetch(`/api/v1/workflows/runs/${encodeURIComponent(id)}`, { method: 'DELETE' });
-                        if (!res.ok) throw new Error("Failed deleting workflow run");
-                        showToast(`Deleted workflow run ${name || id}`, "success");
+                        if (!res.ok) {
+                            const errTxt = await res.text();
+                            throw new Error(errTxt || "Failed deleting workflow run");
+                        }
+                        showToast(`Deleted workflow flow '${name || id}'`, "success");
+                        if (activeWorkflowDetail && activeWorkflowDetail.id === id) {
+                            closeModal('workflow-details-modal');
+                        }
                         await fetchWorkflows();
                     } catch (err) {
                         showToast("Delete error: " + err.message, "error");

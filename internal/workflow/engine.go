@@ -41,6 +41,38 @@ func (e *Engine) DeleteRun(ctx context.Context, id string) error {
 	return e.repo.DeleteWorkflowRun(ctx, id)
 }
 
+func (e *Engine) UpdateRun(ctx context.Context, id string, req protocol.WorkflowRunRequest) (*protocol.WorkflowRun, error) {
+	run, err := e.repo.GetWorkflowRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("workflow run not found: %w", err)
+	}
+
+	if req.Name != "" {
+		run.Name = req.Name
+	}
+	if req.TargetType != "" {
+		run.TargetType = req.TargetType
+	}
+	if req.SourceType != "" {
+		run.SourceType = req.SourceType
+	}
+	if req.ImageTag != "" {
+		run.ImageTag = req.ImageTag
+	}
+	if req.Containerfile != "" {
+		run.Containerfile = req.Containerfile
+	}
+	if req.DeployYAML != "" {
+		run.DeployYAML = req.DeployYAML
+	}
+	run.UpdatedAt = time.Now()
+
+	if err := e.repo.UpdateWorkflowRun(ctx, run); err != nil {
+		return nil, fmt.Errorf("failed to update workflow run: %w", err)
+	}
+	return run, nil
+}
+
 func (e *Engine) Rerun(ctx context.Context, id string, actor string) (*protocol.WorkflowRun, error) {
 	oldRun, err := e.repo.GetWorkflowRun(ctx, id)
 	if err != nil {
