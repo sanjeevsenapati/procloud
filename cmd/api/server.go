@@ -477,6 +477,9 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/listeners/{lid}/policies", s.writeRequired(s.handleCreateLBPolicy))
 	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}/policies/{polid}", s.writeRequired(s.handleDeleteLBPolicy))
 	s.mux.HandleFunc("GET /api/v1/loadbalancers/{id}/config", s.authRequired(s.handleGetLBConfig))
+	s.mux.HandleFunc("GET /api/v1/loadbalancers/metrics", s.authRequired(s.handleListLBMetrics))
+	s.mux.HandleFunc("GET /api/v1/loadbalancers/{id}/metrics", s.authRequired(s.handleGetLBMetrics))
+	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/metrics/simulate", s.writeRequired(s.handleSimulateLBTraffic))
 
 	// DNS as a Service (DNSaaS) (Protected)
 	s.mux.HandleFunc("GET /api/v1/dns/zones", s.authRequired(s.handleListDNSZones))
@@ -2915,6 +2918,63 @@ func (s *Server) handleGetLBConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]string{"id": id, "config": conf})
+}
+
+func (s *Server) handleGetLBMetrics(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing loadbalancer id", http.StatusBadRequest)
+		return
+	}
+
+	metrics, err := s.lbSvc.GetMetrics(r.Context(), id)
+	if err != nil {
+		http.Error(w, "failed getting loadbalancer metrics: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, metrics)
+}
+
+func (s *Server) handleListLBMetrics(w http.ResponseWriter, r *http.Request) {
+	claims := getClaims(r)
+	tenantID := ""
+	if claims != nil && claims.Role != "admin" && claims.Role != "superadmin" {
+		tenantID = claims.TenantID
+	}
+	if t := r.URL.Query().Get("tenant_id"); t != "" && (claims == nil || claims.Role == "admin" || claims.Role == "superadmin") {
+		tenantID = t
+	}
+
+	metricsList, err := s.lbSvc.GetAllMetrics(r.Context(), tenantID)
+	if err != nil {
+		http.Error(w, "failed listing loadbalancer metrics: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if metricsList == nil {
+		metricsList = []*protocol.LBMetrics{}
+	}
+	respondJSON(w, http.StatusOK, metricsList)
+}
+
+func (s *Server) handleSimulateLBTraffic(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing loadbalancer id", http.StatusBadRequest)
+		return
+	}
+
+	var req protocol.SimulateLBTrafficRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		req.Count = 50
+		req.ErrorRatePct = 5.0
+	}
+
+	metrics, err := s.lbSvc.SimulateTraffic(r.Context(), id, req.Count, req.ErrorRatePct)
+	if err != nil {
+		http.Error(w, "failed simulating loadbalancer traffic: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, metrics)
 }
 
 // -------------------------------------------------------------

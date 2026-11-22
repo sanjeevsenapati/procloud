@@ -406,3 +406,102 @@ func TestLoadBalancer_AttachSSLSecret(t *testing.T) {
 		t.Errorf("expected listener to inherit secret my-attached-edge-cert, got %s", updatedLsn.SSLCertSecret)
 	}
 }
+
+func TestLoadBalancerMetrics(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	dbPath := filepath.Join(tmpDir, "test_lb_metrics.db")
+	db, err := sqlite.Open(sqlite.DefaultConfig(dbPath))
+	if err != nil {
+		t.Fatalf("failed opening sqlite db: %v", err)
+	}
+	defer db.Close()
+
+	repo := sqlite.NewRepository(db)
+	mockRuntime := podman.NewMockRuntime()
+	confDir := filepath.Join(tmpDir, "nginx_lb_metrics")
+	svc := NewService(repo, mockRuntime, confDir)
+
+	_ = repo.CreateTenant(ctx, &protocol.Tenant{
+		ID:        "tnt-metrics",
+		Name:      "Metrics Corp",
+		Slug:      "metrics-corp",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	lb, err := svc.CreateLoadBalancer(ctx, protocol.CreateLoadBalancerRequest{
+		TenantID: "tnt-metrics",
+		Name:     "metrics-edge-lb",
+		PublicIP: "198.51.100.50",
+	})
+	if err != nil {
+		t.Fatalf("CreateLoadBalancer failed: %v", err)
+	}
+
+	pool, err := svc.CreatePool(ctx, lb.ID, protocol.CreatePoolRequest{
+		Name:              "web-pool",
+		Protocol:          "HTTP",
+		Algorithm:         "round_robin",
+		HealthPath:        "/health",
+		HealthIntervalSec: 5,
+		HealthTimeoutSec:  2,
+	})
+	if err != nil {
+		t.Fatalf("CreatePool failed: %v", err)
+	}
+
+	_, err = svc.AttachMember(ctx, lb.ID, pool.ID, protocol.AttachMemberRequest{
+		TargetType: "ip",
+		IP:         "127.0.0.1",
+		Port:       9999, // Unreachable on purpose to test health probing
+		Weight:     1,
+	})
+	if err != nil {
+		t.Fatalf("AttachMember failed: %v", err)
+	}
+
+	// 1. Test GetMetrics
+	metrics, err := svc.GetMetrics(ctx, lb.ID)
+	if err != nil {
+		t.Fatalf("GetMetrics failed: %v", err)
+	}
+	if metrics.LoadBalancerID != lb.ID {
+		t.Errorf("expected lb ID %s, got %s", lb.ID, metrics.LoadBalancerID)
+	}
+	if metrics.VIP != "198.51.100.50" {
+		t.Errorf("expected VIP 198.51.100.50, got %s", metrics.VIP)
+	}
+	if len(metrics.UpstreamHealth) != 1 {
+		t.Errorf("expected 1 upstream member health record, got %d", len(metrics.UpstreamHealth))
+	}
+	if len(metrics.TrafficHistory) == 0 {
+		t.Errorf("expected non-empty traffic history")
+	}
+
+	// 2. Test SimulateTraffic
+	initialReqs := metrics.TotalRequests
+	simMetrics, err := svc.SimulateTraffic(ctx, lb.ID, 100, 15.0)
+	if err != nil {
+		t.Fatalf("SimulateTraffic failed: %v", err)
+	}
+	if simMetrics.TotalRequests != initialReqs+100 {
+		t.Errorf("expected %d total requests after simulation, got %d", initialReqs+100, simMetrics.TotalRequests)
+	}
+	if simMetrics.Status4xx+simMetrics.Status5xx == 0 {
+		t.Errorf("expected 4xx/5xx errors to be recorded from 15%% error rate simulation")
+	}
+	if len(simMetrics.RecentLogs) == 0 {
+		t.Errorf("expected recent logs to contain simulated requests")
+	}
+
+	// 3. Test GetAllMetrics
+	allMetrics, err := svc.GetAllMetrics(ctx, "tnt-metrics")
+	if err != nil {
+		t.Fatalf("GetAllMetrics failed: %v", err)
+	}
+	if len(allMetrics) != 1 {
+		t.Errorf("expected 1 LB metrics record for tenant, got %d", len(allMetrics))
+	}
+}

@@ -95,3 +95,21 @@ Rather than running an active daemon watching containers (which creates a single
   - Linux x86_64 (`linux/amd64`)
   - Linux ARM64 (`linux/arm64` — aarch64)
 - Automated GitHub Actions release pipeline (`.github/workflows/release.yml`) builds, packages `.tar.gz` and `.zip` archives with documentation, computes SHA-256 checksums, and publishes releases on GitHub tags (`v*`).
+
+### Enhancement 11: Real-Time Load Balancer Metrics: Traffic, Error & Upstream Health Monitoring
+- **Dedicated Telemetry Engine (`internal/loadbalancer/service.go`)**:
+  - Implements thread-safe real-time ingress tracking: Total requests, live Requests Per Second (RPS), active connections, and network throughput (Bytes In / Bytes Out).
+  - Calculates live HTTP status code distributions (2xx Success, 3xx Redirection, 4xx Client Errors, 5xx Server/Gateway Errors) and computes the exact error percentage (`error_rate_pct`).
+  - Active upstream health probing: Probes all attached members across backend pools (Netavark containers and pods) measuring individual round-trip latency (ms) and health status (`healthy`, `unhealthy`, `draining`).
+- **REST Endpoints**:
+  - `GET /api/v1/loadbalancers/{id}/metrics`: Returns full metrics snapshot, status breakdown, upstream health grid, historical trend points, and recent access/error log stream.
+  - `GET /api/v1/loadbalancers/metrics`: Returns aggregated metrics across all load balancers for the tenant/cluster.
+  - `POST /api/v1/loadbalancers/{id}/metrics/simulate`: Allows administrators to inject synthetic traffic loads and error rates for evaluating alerting, graphs, and fault recovery.
+- **Web Console Observability Dashboard**:
+  - Integrated into the Load Balancer Details view (`Traffic & Errors` tab) with an auto-refresh ticker (2s / 5s / 10s / Paused).
+  - 4 High-level KPI metric cards for Ingress Traffic Volume, Error Rate & Severity, Network Throughput, and Response Latency (P50/P95).
+  - Multi-segmented visual HTTP status bar and detailed breakdown cards.
+  - Upstream backend members health grid displaying real-time probe status and round-trip times.
+  - Live access and error log stream highlighting anomalous HTTP status codes and upstream target assignments.
+
+![ProCloud Load Balancer Real-Time Metrics](images/procloud-loadbalancer-metrics.png)

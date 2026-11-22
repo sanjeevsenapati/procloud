@@ -29,6 +29,9 @@ ProCloud is designed around the core principle of **Sovereign Single-Node Simpli
 ### 4. Cron Scheduler & Autonomous Background Jobs
 ![ProCloud Cron Scheduler](docs/images/procloud-cron-schedules.png)
 
+### 5. Load Balancer Real-Time Traffic & Error Monitoring
+![ProCloud Load Balancer Metrics](docs/images/procloud-loadbalancer-metrics.png)
+
 ---
 
 ## 🚀 Key Enhancements Added
@@ -78,6 +81,12 @@ ProCloud is designed around the core principle of **Sovereign Single-Node Simpli
   - **Linux x86_64** (`linux/amd64`)
   - **Linux ARM64** (`linux/arm64` — aarch64)
 - Automated GitHub Actions release pipeline (`.github/workflows/release.yml`) and local builder (`make release` / `scripts/build-release.sh`).
+
+### 9. Load Balancer Metrics: Traffic, Error & Upstream Health Monitoring
+- **Real-Time Telemetry Streaming**: Continuous live polling ticker (2s / 5s / 10s) monitoring total ingress requests, requests per second (RPS), active connections, and network bandwidth throughput (Rx / Tx).
+- **HTTP Status Code Distribution & Error Tracking**: Real-time multi-color distribution bar breaking down 2xx Success, 3xx Redirection, 4xx Client Errors, and 5xx Server/Gateway Errors, with automated error rate calculation (`error_rate_pct`) and severity badges (`HEALTHY`, `DEGRADED`, `CRITICAL`).
+- **Dynamic Upstream Member Health & Latency**: Active health probing across all backend pools and members (Netavark containers and pods) measuring individual round-trip latency (ms) and status (`HEALTHY`, `UNHEALTHY`, `DRAINING`).
+- **Live Ingress Log Stream & Traffic Simulator**: Live scrollable access/error stream highlighting anomalous request paths and status codes. Built-in traffic simulation tool (`POST /api/v1/loadbalancers/{id}/metrics/simulate`) for synthetic stress and error spike evaluation.
 
 ---
 

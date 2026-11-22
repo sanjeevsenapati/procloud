@@ -3536,7 +3536,7 @@
 
         <!-- 6a. LOAD BALANCERS (LBaaS) TAB -->
         <div id="tab-loadbalancers" class="tab-content">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px;">
                 <div class="pg-stat-card">
                     <div class="stat-label">Load Balancers</div>
                     <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-lbs-total">0</div>
@@ -3555,7 +3555,17 @@
                 <div class="pg-stat-card">
                     <div class="stat-label">Attached Backends</div>
                     <div class="stat-number" style="color: var(--pg-amber);" id="stat-lbs-backends">0</div>
-                    <div class="stat-hint">Dynamic container &amp; pod targets</div>
+                    <div class="stat-hint">Dynamic targets connected</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Edge Ingress Traffic</div>
+                    <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-lbs-requests">0</div>
+                    <div class="stat-hint" id="stat-lbs-rps">0 req/sec live</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Cluster Error Rate</div>
+                    <div class="stat-number" style="color: var(--pg-emerald);" id="stat-lbs-errors">0.00%</div>
+                    <div class="stat-hint" id="stat-lbs-errors-hint">0 total errors</div>
                 </div>
             </div>
 
@@ -3690,6 +3700,10 @@
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     <span>Synthesized Nginx Configuration</span>
                 </div>
+                <div class="lbd-subnav-tab cd-subnav-tab" data-subtab="metrics" onclick="switchLBSubTab('metrics')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    <span>Traffic &amp; Error Metrics</span>
+                </div>
             </div>
 
             <!-- SUB-TAB 1: Overview & Topology -->
@@ -3789,6 +3803,170 @@
                     </div>
                     <div style="padding: 16px; background: #0f172a; border-radius: 0 0 8px 8px;">
                         <pre id="lbd-config-code" style="color: #38bdf8; font-family: monospace; font-size: 12px; margin: 0; white-space: pre-wrap; line-height: 1.6;">Loading configuration...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 5: Traffic & Error Metrics -->
+            <div id="lbd-tab-metrics" class="lbd-subcontent cd-subcontent">
+                <!-- Header Control Bar: Status, Polling, Simulation -->
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px; padding:12px 16px; background:#ffffff; border:1px solid var(--pg-border); border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="pill pill-emerald" style="font-size:12px; font-weight:700;"><span class="pulse-dot" style="width:7px; height:7px; background:#10b981; border-radius:50%; display:inline-block; margin-right:5px;"></span>LIVE TELEMETRY STREAM</span>
+                        <span style="font-size:12px; color:var(--pg-text-muted);" id="lbm-last-updated">Last sampled: Just now</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:12px; font-weight:600; color:var(--pg-text-secondary); margin:0;">Auto-Refresh:</label>
+                        <select id="lbm-refresh-interval" class="form-input form-input-sm" style="width:auto; padding:3px 8px; font-size:12px;" onchange="updateLBMAutoRefresh()">
+                            <option value="2000" selected>Every 2s (Fast)</option>
+                            <option value="5000">Every 5s (Normal)</option>
+                            <option value="10000">Every 10s (Slow)</option>
+                            <option value="0">Paused</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchCurrentLBMetrics()" title="Refresh Now">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openSimulateTrafficModal()" title="Inject Synthetic Ingress Traffic to test metrics">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <span>⚡ Simulate Traffic</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Top KPI Metric Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px;">
+                    <div class="pg-stat-card">
+                        <div class="stat-label">Ingress Traffic Volume</div>
+                        <div style="display:flex; align-items:baseline; gap:8px;">
+                            <div class="stat-number" style="color: var(--pg-blue-600);" id="lbm-total-requests">0</div>
+                            <span class="pill pill-blue" style="font-size:11px; font-weight:700;" id="lbm-rps-badge">0 req/s</span>
+                        </div>
+                        <div class="stat-hint" id="lbm-conns-hint">Active Connections: 0</div>
+                    </div>
+
+                    <div class="pg-stat-card">
+                        <div class="stat-label">Error Rate &amp; Failure Pct</div>
+                        <div style="display:flex; align-items:baseline; gap:8px;">
+                            <div class="stat-number" style="color: var(--pg-emerald);" id="lbm-error-rate">0.00%</div>
+                            <span class="pill pill-emerald" style="font-size:11px; font-weight:700;" id="lbm-error-badge">HEALTHY</span>
+                        </div>
+                        <div class="stat-hint" id="lbm-errors-hint">4xx Client: 0 | 5xx Upstream: 0</div>
+                    </div>
+
+                    <div class="pg-stat-card">
+                        <div class="stat-label">Network Throughput</div>
+                        <div class="stat-number" style="font-size: 18px; color: var(--pg-purple);" id="lbm-bandwidth">-</div>
+                        <div class="stat-hint" id="lbm-bandwidth-hint">Rx: 0 KB | Tx: 0 KB</div>
+                    </div>
+
+                    <div class="pg-stat-card">
+                        <div class="stat-label">Response Latency (Roundtrip)</div>
+                        <div style="display:flex; align-items:baseline; gap:8px;">
+                            <div class="stat-number" style="font-size: 18px; color: var(--pg-amber);" id="lbm-latency-avg">0.0 ms</div>
+                            <span class="pill pill-slate" style="font-size:11px;" id="lbm-latency-p95">P95: 0.0 ms</span>
+                        </div>
+                        <div class="stat-hint">Upstream cluster roundtrip time</div>
+                    </div>
+                </div>
+
+                <!-- HTTP Status Distribution Progress Bar & Cards -->
+                <div class="pg-box" style="margin-bottom: 20px;">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                            <span>HTTP Status Code Distribution</span>
+                        </div>
+                        <span style="font-size:12px; color:var(--pg-text-muted);" id="lbm-status-total-reqs">Total: 0 requests</span>
+                    </div>
+                    <div style="padding: 16px;">
+                        <!-- Segmented multi-color bar -->
+                        <div style="height: 14px; border-radius: 7px; overflow: hidden; background: #e2e8f0; display: flex; width: 100%; margin-bottom: 14px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);">
+                            <div id="lbm-bar-2xx" style="background: #10b981; width: 0%; transition: width 0.4s ease;" title="2xx Success"></div>
+                            <div id="lbm-bar-3xx" style="background: #0ea5e9; width: 0%; transition: width 0.4s ease;" title="3xx Redirect"></div>
+                            <div id="lbm-bar-4xx" style="background: #f59e0b; width: 0%; transition: width 0.4s ease;" title="4xx Client Error"></div>
+                            <div id="lbm-bar-5xx" style="background: #ef4444; width: 0%; transition: width 0.4s ease;" title="5xx Server Error"></div>
+                        </div>
+
+                        <!-- 4 Breakdown mini stat cards -->
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
+                            <div style="padding: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase;">2xx Success</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #15803d; margin: 4px 0;" id="lbm-cnt-2xx">0</div>
+                                <div style="font-size: 11px; color: #16a34a;" id="lbm-pct-2xx">0%</div>
+                            </div>
+                            <div style="padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase;">3xx Redirection</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #0284c7; margin: 4px 0;" id="lbm-cnt-3xx">0</div>
+                                <div style="font-size: 11px; color: #0ea5e9;" id="lbm-pct-3xx">0%</div>
+                            </div>
+                            <div style="padding: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #b45309; text-transform: uppercase;">4xx Client Error</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #d97706; margin: 4px 0;" id="lbm-cnt-4xx">0</div>
+                                <div style="font-size: 11px; color: #f59e0b;" id="lbm-pct-4xx">0%</div>
+                            </div>
+                            <div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #991b1b; text-transform: uppercase;">5xx Server / Gateway</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #dc2626; margin: 4px 0;" id="lbm-cnt-5xx">0</div>
+                                <div style="font-size: 11px; color: #ef4444;" id="lbm-pct-5xx">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two-Column Layout: Upstream Backend Health & Live Traffic Stream -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <!-- Left: Upstream Backends Status & Probe Latency -->
+                    <div class="pg-box">
+                        <div class="pg-box-header">
+                            <div class="pg-box-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+                                <span>Upstream Members Health &amp; Latency</span>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="pg-table" style="font-size:12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Target</th>
+                                        <th>Pool</th>
+                                        <th>IP:Port</th>
+                                        <th>Health Status</th>
+                                        <th style="text-align:right;">Latency</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lbm-upstream-tbody">
+                                    <tr><td colspan="5" style="text-align:center; padding:16px; color:var(--pg-text-muted);">No upstream members attached</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right: Ingress Access & Error Log Stream -->
+                    <div class="pg-box">
+                        <div class="pg-box-header">
+                            <div class="pg-box-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                                <span>Recent Ingress Traffic &amp; Error Log Stream</span>
+                            </div>
+                        </div>
+                        <div style="max-height: 280px; overflow-y: auto; overflow-x: auto; font-family: monospace; font-size: 11px;">
+                            <table class="pg-table" style="font-size:11px; margin:0;">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Client</th>
+                                        <th>Method</th>
+                                        <th>Path</th>
+                                        <th>Status</th>
+                                        <th style="text-align:right;">Latency</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lbm-logs-tbody">
+                                    <tr><td colspan="6" style="text-align:center; padding:16px; color:var(--pg-text-muted);">Waiting for ingress traffic events...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -6728,6 +6906,51 @@ spec:
         </div>
     </div>
 
+    <!-- MODAL: Simulate Load Balancer Ingress Traffic & Errors -->
+    <div id="simulate-lb-traffic-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 480px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" style="color:var(--pg-blue-600);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span>Simulate Ingress Traffic &amp; Errors</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('simulate-lb-traffic-modal')">&times;</div>
+            </div>
+            <div style="padding: 16px;">
+                <p style="font-size:13px; color:var(--pg-text-secondary); margin-top:0; margin-bottom:14px; line-height:1.5;">
+                    Generate synthetic ingress traffic, latency profiles, and HTTP error distributions to test real-time monitoring and status code alerts.
+                </p>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Total Ingress Requests to Inject</label>
+                    <select id="sim-lb-count" class="form-input">
+                        <option value="50">50 Requests (Quick Burst)</option>
+                        <option value="100" selected>100 Requests (Standard Evaluation)</option>
+                        <option value="250">250 Requests (Moderate Traffic)</option>
+                        <option value="500">500 Requests (Heavy Ingress)</option>
+                        <option value="1000">1000 Requests (High Throughput Surge)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Simulated Error Rate (%)</label>
+                    <select id="sim-lb-error-pct" class="form-input">
+                        <option value="0">0% (100% Healthy 200 OK)</option>
+                        <option value="5" selected>5% (Nominal Error Level - Degraded)</option>
+                        <option value="15">15% (Elevated 4xx / 5xx Anomalies)</option>
+                        <option value="35">35% (High Severity Service Incident)</option>
+                        <option value="75">75% (Critical Upstream Outage)</option>
+                    </select>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" class="btn btn-sm" onclick="closeModal('simulate-lb-traffic-modal')">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="submitSimulateLBTraffic()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        <span>Send Test Traffic</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: Attach SSL Secret to Load Balancer -->
     <div id="attach-ssl-modal" class="modal-overlay">
         <div class="modal-dialog" style="max-width: 520px;">
@@ -7309,6 +7532,9 @@ spec:
             if (tabName !== 'pod-details') {
                 if (typeof stopPdLogsPolling === 'function') stopPdLogsPolling();
                 if (typeof stopPdTopPolling === 'function') stopPdTopPolling();
+            }
+            if (tabName !== 'loadbalancer-details') {
+                if (typeof stopLBMetricsPolling === 'function') stopLBMetricsPolling();
             }
             currentTab = tabName;
             document.querySelectorAll('.sidebar-item').forEach(t => t.classList.remove('active'));
@@ -9266,6 +9492,10 @@ spec:
                         <td><span style="font-size:11px; color:var(--pg-text-secondary); white-space:nowrap;">${new Date(lb.created_at).toLocaleString()}</span></td>
                         <td style="text-align:right;">
                             <div class="table-actions" style="justify-content:flex-end;">
+                                <button class="btn btn-sm btn-outline-primary" title="Live Traffic & Error Metrics" onclick="openLBPage('${escapeHtml(lb.id)}', 'metrics')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                    <span>Metrics</span>
+                                </button>
                                 <button class="btn btn-sm btn-outline-primary" title="Open Dedicated Load Balancer Dashboard" onclick="openLBPage('${escapeHtml(lb.id)}')">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
                                     <span>View</span>
@@ -9289,6 +9519,33 @@ spec:
                 const badge = document.getElementById('tab-badge-lbs');
                 if (badge) badge.innerText = allLoadBalancers.length;
                 filterAndRenderLoadBalancers();
+
+                // Fetch aggregate metrics for top summary cards
+                try {
+                    const mRes = await authFetch('/api/v1/loadbalancers/metrics');
+                    if (mRes.ok) {
+                        const allM = await mRes.json() || [];
+                        let totalReqs = 0, totalRPS = 0, totalErrors = 0;
+                        allM.forEach(m => {
+                            totalReqs += (m.total_requests || 0);
+                            totalRPS += (m.requests_per_sec || 0);
+                            totalErrors += (m.total_errors || 0);
+                        });
+                        const reqsEl = document.getElementById('stat-lbs-requests');
+                        if (reqsEl) reqsEl.innerText = totalReqs.toLocaleString();
+                        const rpsEl = document.getElementById('stat-lbs-rps');
+                        if (rpsEl) rpsEl.innerText = `${totalRPS.toFixed(1)} req/sec live`;
+
+                        const errsEl = document.getElementById('stat-lbs-errors');
+                        const errsHint = document.getElementById('stat-lbs-errors-hint');
+                        const overallErrRate = totalReqs > 0 ? (totalErrors / totalReqs * 100) : 0;
+                        if (errsEl) {
+                            errsEl.innerText = `${overallErrRate.toFixed(2)}%`;
+                            errsEl.style.color = overallErrRate > 5 ? 'var(--pg-rose)' : (overallErrRate > 0 ? 'var(--pg-amber)' : 'var(--pg-emerald)');
+                        }
+                        if (errsHint) errsHint.innerText = `${totalErrors} total errors`;
+                    }
+                } catch (_) {}
             } catch (err) {
                 console.error('fetchLoadBalancers error:', err);
                 const tbody = document.getElementById('lbs-table-body');
@@ -9299,7 +9556,7 @@ spec:
         // ==========================================
         // DEDICATED LB DETAILS PAGE LOGIC
         // ==========================================
-        async function openLBPage(id) {
+        async function openLBPage(id, initialSubTab) {
             try {
                 switchTab('loadbalancer-details');
                 const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(id)}`);
@@ -9310,7 +9567,7 @@ spec:
                 const data = await res.json();
                 currentDetailedLB = data;
                 renderLBDetailsPage(data);
-                switchLBSubTab('overview');
+                switchLBSubTab(initialSubTab || 'overview');
             } catch (err) {
                 showToast('Failed to open LB details page: ' + err.message, 'error');
             }
@@ -9325,6 +9582,8 @@ spec:
                     renderLBDetailsPage(currentDetailedLB);
                     if (currentLBDetailsSubTab === 'config') {
                         fetchAndDisplayLBDConfig();
+                    } else if (currentLBDetailsSubTab === 'metrics') {
+                        fetchCurrentLBMetrics();
                     }
                 }
             } catch (_) {}
@@ -9342,7 +9601,258 @@ spec:
             if (contentEl) contentEl.classList.add('active');
 
             if (subTab === 'config') {
+                stopLBMetricsPolling();
                 fetchAndDisplayLBDConfig();
+            } else if (subTab === 'metrics') {
+                startLBMetricsPolling();
+                fetchCurrentLBMetrics();
+            } else {
+                stopLBMetricsPolling();
+            }
+        }
+
+        // ==========================================
+        // LOAD BALANCER METRICS & TRAFFIC TELEMETRY
+        // ==========================================
+        let lbMetricsTimer = null;
+        let currentLBMetrics = null;
+
+        function startLBMetricsPolling() {
+            stopLBMetricsPolling();
+            const intervalVal = parseInt(document.getElementById('lbm-refresh-interval')?.value || '2000', 10);
+            if (intervalVal > 0) {
+                lbMetricsTimer = setInterval(fetchCurrentLBMetrics, intervalVal);
+            }
+        }
+
+        function stopLBMetricsPolling() {
+            if (lbMetricsTimer) {
+                clearInterval(lbMetricsTimer);
+                lbMetricsTimer = null;
+            }
+        }
+
+        function updateLBMAutoRefresh() {
+            startLBMetricsPolling();
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function fetchCurrentLBMetrics() {
+            if (!currentDetailedLB || !currentDetailedLB.id) return;
+            try {
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(currentDetailedLB.id)}/metrics`);
+                if (!res.ok) return;
+                const m = await res.json();
+                currentLBMetrics = m;
+                renderLBMetrics(m);
+            } catch (err) {
+                console.error('Failed fetching LB metrics:', err);
+            }
+        }
+
+        function renderLBMetrics(m) {
+            if (!m) return;
+
+            // 1. Last updated
+            const lastUpdatedEl = document.getElementById('lbm-last-updated');
+            if (lastUpdatedEl) {
+                const t = new Date(m.sample_time || Date.now());
+                lastUpdatedEl.innerText = `Sampled: ${t.toLocaleTimeString()}`;
+            }
+
+            // 2. Traffic Volume & RPS
+            const totalReqsEl = document.getElementById('lbm-total-requests');
+            if (totalReqsEl) totalReqsEl.innerText = (m.total_requests || 0).toLocaleString();
+
+            const rpsBadge = document.getElementById('lbm-rps-badge');
+            if (rpsBadge) rpsBadge.innerText = `${(m.requests_per_sec || 0).toFixed(1)} req/s`;
+
+            const connsHint = document.getElementById('lbm-conns-hint');
+            if (connsHint) connsHint.innerText = `Active Conns: ${m.active_conns || 0}`;
+
+            // 3. Error Rate
+            const errRateEl = document.getElementById('lbm-error-rate');
+            const errBadge = document.getElementById('lbm-error-badge');
+            const errHint = document.getElementById('lbm-errors-hint');
+
+            const rate = m.error_rate_pct || 0;
+            if (errRateEl) errRateEl.innerText = `${rate.toFixed(2)}%`;
+            if (errHint) errHint.innerText = `4xx Client: ${m.status_4xx || 0} | 5xx Upstream: ${m.status_5xx || 0}`;
+
+            if (errBadge && errRateEl) {
+                if (rate === 0) {
+                    errRateEl.style.color = 'var(--pg-emerald)';
+                    errBadge.className = 'pill pill-emerald';
+                    errBadge.innerText = 'HEALTHY';
+                } else if (rate < 5) {
+                    errRateEl.style.color = 'var(--pg-amber)';
+                    errBadge.className = 'pill pill-amber';
+                    errBadge.innerText = 'DEGRADED';
+                } else {
+                    errRateEl.style.color = 'var(--pg-rose)';
+                    errBadge.className = 'pill pill-rose';
+                    errBadge.innerText = 'CRITICAL';
+                }
+            }
+
+            // 4. Bandwidth
+            const bwEl = document.getElementById('lbm-bandwidth');
+            const bwHint = document.getElementById('lbm-bandwidth-hint');
+            if (bwEl) bwEl.innerText = `${formatBytes((m.bytes_in || 0) + (m.bytes_out || 0))}`;
+            if (bwHint) bwHint.innerText = `Rx: ${formatBytes(m.bytes_in || 0)} | Tx: ${formatBytes(m.bytes_out || 0)}`;
+
+            // 5. Latency
+            const latAvgEl = document.getElementById('lbm-latency-avg');
+            const latP95El = document.getElementById('lbm-latency-p95');
+            if (latAvgEl) latAvgEl.innerText = `${(m.avg_latency_ms || 0).toFixed(1)} ms`;
+            if (latP95El) latP95El.innerText = `P95: ${(m.p95_latency_ms || 0).toFixed(1)} ms`;
+
+            // 6. HTTP Status Code distribution
+            const total = (m.status_2xx || 0) + (m.status_3xx || 0) + (m.status_4xx || 0) + (m.status_5xx || 0);
+            const totalDisplay = Math.max(total, 1);
+
+            const p2xx = ((m.status_2xx || 0) / totalDisplay * 100).toFixed(1);
+            const p3xx = ((m.status_3xx || 0) / totalDisplay * 100).toFixed(1);
+            const p4xx = ((m.status_4xx || 0) / totalDisplay * 100).toFixed(1);
+            const p5xx = ((m.status_5xx || 0) / totalDisplay * 100).toFixed(1);
+
+            const b2xx = document.getElementById('lbm-bar-2xx');
+            const b3xx = document.getElementById('lbm-bar-3xx');
+            const b4xx = document.getElementById('lbm-bar-4xx');
+            const b5xx = document.getElementById('lbm-bar-5xx');
+
+            if (b2xx) b2xx.style.width = `${p2xx}%`;
+            if (b3xx) b3xx.style.width = `${p3xx}%`;
+            if (b4xx) b4xx.style.width = `${p4xx}%`;
+            if (b5xx) b5xx.style.width = `${p5xx}%`;
+
+            const cnt2xx = document.getElementById('lbm-cnt-2xx');
+            const pct2xx = document.getElementById('lbm-pct-2xx');
+            if (cnt2xx) cnt2xx.innerText = (m.status_2xx || 0).toLocaleString();
+            if (pct2xx) pct2xx.innerText = `${p2xx}%`;
+
+            const cnt3xx = document.getElementById('lbm-cnt-3xx');
+            const pct3xx = document.getElementById('lbm-pct-3xx');
+            if (cnt3xx) cnt3xx.innerText = (m.status_3xx || 0).toLocaleString();
+            if (pct3xx) pct3xx.innerText = `${p3xx}%`;
+
+            const cnt4xx = document.getElementById('lbm-cnt-4xx');
+            const pct4xx = document.getElementById('lbm-pct-4xx');
+            if (cnt4xx) cnt4xx.innerText = (m.status_4xx || 0).toLocaleString();
+            if (pct4xx) pct4xx.innerText = `${p4xx}%`;
+
+            const cnt5xx = document.getElementById('lbm-cnt-5xx');
+            const pct5xx = document.getElementById('lbm-pct-5xx');
+            if (cnt5xx) cnt5xx.innerText = (m.status_5xx || 0).toLocaleString();
+            if (pct5xx) pct5xx.innerText = `${p5xx}%`;
+
+            const totalReqsLabel = document.getElementById('lbm-status-total-reqs');
+            if (totalReqsLabel) totalReqsLabel.innerText = `Total: ${total.toLocaleString()} requests`;
+
+            // 7. Upstream Members Health Table
+            const upstreamTbody = document.getElementById('lbm-upstream-tbody');
+            if (upstreamTbody) {
+                const members = m.upstream_health || [];
+                if (members.length === 0) {
+                    upstreamTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:16px; color:var(--pg-text-muted);">No upstream members attached to this load balancer.</td></tr>`;
+                } else {
+                    upstreamTbody.innerHTML = members.map(mbr => {
+                        let statusPill = `<span class="pill pill-emerald"><span class="pulse-dot" style="width:6px; height:6px; background:#10b981; border-radius:50%; display:inline-block; margin-right:4px;"></span>HEALTHY</span>`;
+                        if (mbr.status === 'unhealthy') {
+                            statusPill = `<span class="pill pill-rose"><span class="pulse-dot" style="width:6px; height:6px; background:#ef4444; border-radius:50%; display:inline-block; margin-right:4px;"></span>UNHEALTHY</span>`;
+                        } else if (mbr.status === 'draining') {
+                            statusPill = `<span class="pill pill-amber">DRAINING</span>`;
+                        }
+
+                        return `
+                            <tr>
+                                <td>
+                                    <div style="font-weight:600; color:var(--pg-text);">${escapeHtml(mbr.target_ref || 'IP Target')}</div>
+                                    <div style="font-size:10px; color:var(--pg-text-muted);">Weight: ${mbr.weight || 1}</div>
+                                </td>
+                                <td><span class="pill pill-slate" style="font-size:11px;">${escapeHtml(mbr.pool_name || 'default')}</span></td>
+                                <td><code style="color:var(--pg-blue-600); font-weight:600;">${escapeHtml(mbr.ip)}:${mbr.port}</code></td>
+                                <td>${statusPill}</td>
+                                <td style="text-align:right;"><span style="font-weight:600; color:var(--pg-text);">${(mbr.latency_ms || 0).toFixed(1)} ms</span></td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // 8. Recent Access & Error Logs Stream
+            const logsTbody = document.getElementById('lbm-logs-tbody');
+            if (logsTbody) {
+                const logs = m.recent_logs || [];
+                if (logs.length === 0) {
+                    logsTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:16px; color:var(--pg-text-muted);">Waiting for ingress traffic events...</td></tr>`;
+                } else {
+                    logsTbody.innerHTML = logs.map(l => {
+                        let statusPill = `<span class="pill pill-emerald" style="padding:1px 6px; font-size:10px; font-weight:700;">${l.status_code}</span>`;
+                        if (l.status_code >= 500) {
+                            statusPill = `<span class="pill pill-rose" style="padding:1px 6px; font-size:10px; font-weight:700;">${l.status_code}</span>`;
+                        } else if (l.status_code >= 400) {
+                            statusPill = `<span class="pill pill-amber" style="padding:1px 6px; font-size:10px; font-weight:700;">${l.status_code}</span>`;
+                        } else if (l.status_code >= 300) {
+                            statusPill = `<span class="pill pill-blue" style="padding:1px 6px; font-size:10px; font-weight:700;">${l.status_code}</span>`;
+                        }
+
+                        const d = new Date(l.timestamp || Date.now());
+                        const timeStr = d.toTimeString().split(' ')[0];
+
+                        let methodPill = `<span class="pill pill-slate" style="padding:1px 5px; font-size:10px;">${escapeHtml(l.method || 'GET')}</span>`;
+                        if (l.method === 'POST') methodPill = `<span class="pill pill-blue" style="padding:1px 5px; font-size:10px;">POST</span>`;
+
+                        return `
+                            <tr>
+                                <td style="color:var(--pg-text-muted);">${timeStr}</td>
+                                <td style="color:var(--pg-text-secondary);">${escapeHtml(l.client_ip || '-')}</td>
+                                <td>${methodPill}</td>
+                                <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--pg-text);" title="${escapeHtml(l.path)}"><code>${escapeHtml(l.path)}</code></td>
+                                <td>${statusPill}</td>
+                                <td style="text-align:right; color:var(--pg-text);">${(l.latency_ms || 0).toFixed(1)}ms</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        function openSimulateTrafficModal() {
+            openModal('simulate-lb-traffic-modal');
+        }
+
+        async function submitSimulateLBTraffic() {
+            if (!currentDetailedLB || !currentDetailedLB.id) return;
+            const count = parseInt(document.getElementById('sim-lb-count')?.value || '100', 10);
+            const errorPct = parseFloat(document.getElementById('sim-lb-error-pct')?.value || '5');
+
+            try {
+                showToast(`Injecting ${count} requests (${errorPct}% errors)...`, 'info');
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(currentDetailedLB.id)}/metrics/simulate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count: count, error_rate_pct: errorPct })
+                });
+
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed simulating traffic');
+                }
+
+                const updatedMetrics = await res.json();
+                closeModal('simulate-lb-traffic-modal');
+                showToast(`Simulated ${count} requests successfully! Metrics updated.`, 'success');
+                renderLBMetrics(updatedMetrics);
+            } catch (err) {
+                showToast('Simulation error: ' + err.message, 'error');
             }
         }
 
@@ -11697,7 +12207,7 @@ spec:
                 'create-secret-modal', 'play-kube-modal', 'build-image-modal',
                 'run-workflow-modal', 'actual-shell-modal', 'create-lb-modal',
                 'create-listener-modal', 'create-pool-modal', 'attach-member-modal',
-                'create-policy-modal', 'create-dns-zone-modal', 'create-dns-record-modal', 'create-schedule-modal', 'edit-schedule-modal'
+                'create-policy-modal', 'simulate-lb-traffic-modal', 'create-dns-zone-modal', 'create-dns-record-modal', 'create-schedule-modal', 'edit-schedule-modal'
             ];
             if (writeModals.includes(id) && !canWrite()) {
                 showToast('Read-only role: action not permitted', 'error');

@@ -449,6 +449,67 @@ type CreatePolicyRequest struct {
 	Priority     int    `json:"priority,omitempty"`
 }
 
+// LBMetrics represents real-time operational telemetry for a Load Balancer instance.
+type LBMetrics struct {
+	LoadBalancerID string            `json:"load_balancer_id"`
+	Name           string            `json:"name"`
+	VIP            string            `json:"vip"`
+	TotalRequests  uint64            `json:"total_requests"`
+	RequestsPerSec float64           `json:"requests_per_sec"`
+	ActiveConns    int               `json:"active_conns"`
+	BytesIn        uint64            `json:"bytes_in"`
+	BytesOut       uint64            `json:"bytes_out"`
+	TotalErrors    uint64            `json:"total_errors"`
+	ErrorRatePct   float64           `json:"error_rate_pct"`
+	Status2xx      uint64            `json:"status_2xx"`
+	Status3xx      uint64            `json:"status_3xx"`
+	Status4xx      uint64            `json:"status_4xx"`
+	Status5xx      uint64            `json:"status_5xx"`
+	AvgLatencyMs   float64           `json:"avg_latency_ms"`
+	P95LatencyMs   float64           `json:"p95_latency_ms"`
+	UpstreamHealth []*LBMemberHealth `json:"upstream_health"`
+	TrafficHistory []*LBTrafficPoint `json:"traffic_history"`
+	RecentLogs     []*LBLogEntry     `json:"recent_logs"`
+	SampleTime     time.Time         `json:"sample_time"`
+}
+
+// LBMemberHealth represents health and latency telemetry for an individual upstream member.
+type LBMemberHealth struct {
+	MemberID  string  `json:"member_id"`
+	TargetRef string  `json:"target_ref"`
+	IP        string  `json:"ip"`
+	Port      int     `json:"port"`
+	Weight    int     `json:"weight"`
+	Status    string  `json:"status"` // "healthy", "unhealthy", "draining"
+	LatencyMs float64 `json:"latency_ms"`
+	PoolName  string  `json:"pool_name"`
+}
+
+// LBTrafficPoint represents a historical sample point for charts.
+type LBTrafficPoint struct {
+	Timestamp int64   `json:"timestamp"` // unix seconds
+	RPS       float64 `json:"rps"`
+	Errors    uint64  `json:"errors"`
+	LatencyMs float64 `json:"latency_ms"`
+}
+
+// LBLogEntry represents a sampled or recent ingress access/error log event.
+type LBLogEntry struct {
+	Timestamp  time.Time `json:"timestamp"`
+	ClientIP   string    `json:"client_ip"`
+	Method     string    `json:"method"`
+	Path       string    `json:"path"`
+	StatusCode int       `json:"status_code"`
+	LatencyMs  float64   `json:"latency_ms"`
+	Upstream   string    `json:"upstream"`
+}
+
+// SimulateLBTrafficRequest is the request payload to simulate synthetic traffic for testing.
+type SimulateLBTrafficRequest struct {
+	Count        int     `json:"count"`          // Number of requests to simulate
+	ErrorRatePct float64 `json:"error_rate_pct"` // Simulated error rate (e.g. 5.0 for 5%)
+}
+
 // -------------------------------------------------------------
 // DNS Service as a Service (DNSaaS) Models
 // -------------------------------------------------------------
