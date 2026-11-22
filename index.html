@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProCloud Documentation — Single-Node Sovereign Cloud Platform</title>
+    <meta name="description" content="Official documentation for ProCloud: a single-node SQLite-first sovereign cloud control plane powered by Podman, Quadlet, systemd, Netavark, and Nginx.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pg-base: #f0f6ff;
+            --pg-header: #ffffff;
+            --pg-card: #ffffff;
+            --pg-border: #dbeafe;
+            --pg-border-subtle: #e2e8f0;
+            --pg-text: #0f172a;
+            --pg-text-secondary: #475569;
+            --pg-text-muted: #64748b;
+            --pg-blue-600: #2563eb;
+            --pg-blue-700: #1d4ed8;
+            --pg-light-blue: #eff6ff;
+            --pg-light-blue-border: #bfdbfe;
+            --pg-emerald: #059669;
+            --pg-emerald-bg: #ecfdf5;
+            --pg-emerald-border: #a7f3d0;
+            --pg-purple: #7e22ce;
+            --pg-purple-bg: #faf5ff;
+            --pg-purple-border: #e9d5ff;
+            --pg-rose: #e11d48;
+            --pg-rose-bg: #fff1f2;
+            --pg-rose-border: #fecdd3;
+            --pg-amber: #d97706;
+            --pg-amber-bg: #fffbeb;
+            --pg-amber-border: #fde68a;
+            --pg-dark: #0f172a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; font-size: 15px; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--pg-base);
+            color: var(--pg-text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Header Navbar */
+        header.docs-navbar {
+            background: var(--pg-header);
+            border-bottom: 1px solid var(--pg-border);
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.05);
+        }
+
+        .brand-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--pg-text);
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+        }
+        .brand-link svg {
+            color: var(--pg-blue-600);
+            flex-shrink: 0;
+        }
+        .brand-pill {
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-600);
+            border: 1px solid var(--pg-light-blue-border);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .btn-gh {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            background: #ffffff;
+            color: var(--pg-text);
+            border: 1px solid var(--pg-border);
+            transition: all 0.15s ease;
+        }
+        .btn-gh:hover {
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-600);
+            border-color: var(--pg-blue-600);
+        }
+
+        .menu-toggle-btn {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--pg-border);
+            border-radius: 6px;
+            padding: 6px;
+            cursor: pointer;
+            color: var(--pg-text);
+        }
+
+        /* Documentation Layout Container */
+        .docs-layout {
+            display: flex;
+            min-height: calc(100vh - 64px);
+            max-width: 1560px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Left Navigation Sidebar */
+        aside.docs-sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: #ffffff;
+            border-right: 1px solid var(--pg-border);
+            position: sticky;
+            top: 64px;
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-self: flex-start;
+            flex-shrink: 0;
+        }
+
+        .sidebar-search-box {
+            position: relative;
+        }
+        .sidebar-search-input {
+            width: 100%;
+            padding: 8px 12px 8px 34px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--pg-border);
+            background: #f8fafc;
+            color: var(--pg-text);
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.15s ease;
+        }
+        .sidebar-search-input:focus {
+            border-color: var(--pg-blue-600);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        .sidebar-search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            color: var(--pg-text-muted);
+            pointer-events: none;
+        }
+
+        .nav-group-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--pg-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 6px;
+            padding-left: 8px;
+        }
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .nav-link-item a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 10px;
+            border-radius: 7px;
+            color: var(--pg-text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+        .nav-link-item a svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+            flex-shrink: 0;
+            color: var(--pg-text-muted);
+        }
+        .nav-link-item a:hover {
+            background: #f1f5f9;
+            color: var(--pg-text);
+        }
+        .nav-link-item a:hover svg {
+            color: var(--pg-text);
+        }
+        .nav-link-item a.active {
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-600);
+            font-weight: 700;
+        }
+        .nav-link-item a.active svg {
+            color: var(--pg-blue-600);
+        }
+
+        /* Main Content Viewport */
+        main.docs-content {
+            flex: 1;
+            min-width: 0;
+            padding: 40px 48px;
+            overflow-x: hidden;
+        }
+
+        /* Documentation Sections & Typography */
+        section.doc-section {
+            margin-bottom: 56px;
+            scroll-margin-top: 80px;
+        }
+        h1.doc-hero-title {
+            font-size: 34px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--pg-text);
+            margin-bottom: 12px;
+            line-height: 1.25;
+        }
+        p.doc-hero-sub {
+            font-size: 17px;
+            color: var(--pg-text-secondary);
+            margin-bottom: 28px;
+            max-width: 860px;
+            line-height: 1.6;
+        }
+
+        h2.doc-h2 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--pg-text);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--pg-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h2.doc-h2 svg {
+            color: var(--pg-blue-600);
+            width: 24px;
+            height: 24px;
+            stroke-width: 2.2;
+        }
+
+        h3.doc-h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--pg-text);
+            margin: 24px 0 12px;
+            letter-spacing: -0.3px;
+        }
+
+        p.doc-p {
+            font-size: 15px;
+            color: var(--pg-text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.65;
+        }
+
+        /* Feature Cards & Grids */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+            margin: 20px 0;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            background: #ffffff;
+            border: 1px solid var(--pg-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.04);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -3px rgba(37, 99, 235, 0.08);
+        }
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--pg-light-blue);
+            color: var(--pg-blue-600);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+        .card-icon svg { width: 20px; height: 20px; stroke-width: 2.2; }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--pg-text);
+            margin-bottom: 6px;
+        }
+        .card-desc {
+            font-size: 13px;
+            color: var(--pg-text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Alerts & Callouts */
+        .callout {
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-left: 4px solid;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .callout-info {
+            background: #eff6ff;
+            border-color: #2563eb;
+            color: #1e3a8a;
+        }
+        .callout-tip {
+            background: #ecfdf5;
+            border-color: #059669;
+            color: #064e3b;
+        }
+        .callout-warning {
+            background: #fffbeb;
+            border-color: #d97706;
+            color: #78350f;
+        }
+
+        /* Code Blocks & Terminal Snippets */
+        .code-container {
+            background: #0f172a;
+            border-radius: 10px;
+            margin: 16px 0;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+        .code-header {
+            background: #1e293b;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .code-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .code-copy-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            color: #cbd5e1;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease;
+        }
+        .code-copy-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        pre.code-block {
+            padding: 16px;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+        code.inline-code {
+            background: #e2e8f0;
+            color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        /* Tables */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 18px 0 28px;
+            border: 1px solid var(--pg-border);
+            border-radius: 10px;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        table.docs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            text-align: left;
+        }
+        table.docs-table th {
+            background: #f8faff;
+            padding: 12px 16px;
+            font-weight: 700;
+            color: var(--pg-text);
+            border-bottom: 1px solid var(--pg-border);
+            white-space: nowrap;
+        }
+        table.docs-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            color: var(--pg-text-secondary);
+            vertical-align: top;
+        }
+        table.docs-table tr:last-child td {
+            border-bottom: none;
+        }
+        table.docs-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* Status & Method Pills */
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+        .pill-get { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .pill-post { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .pill-put { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .pill-delete { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+        .pill-admin { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+
+        /* Responsive Mobile Drawer */
+        @media (max-width: 960px) {
+            header.docs-navbar { padding: 0 16px; }
+            .menu-toggle-btn { display: block; }
+            aside.docs-sidebar {
+                position: fixed;
+                top: 64px;
+                left: 0;
+                bottom: 0;
+                z-index: 999;
+                transform: translateX(-100%);
+                transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 10px 0 25px rgba(0,0,0,0.15);
+            }
+            aside.docs-sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .sidebar-backdrop {
+                display: none;
+                position: fixed;
+                inset: 64px 0 0 0;
+                background: rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(2px);
+                z-index: 998;
+            }
+            .sidebar-backdrop.active { display: block; }
+            main.docs-content { padding: 24px 18px; }
+            h1.doc-hero-title { font-size: 26px; }
+            p.doc-hero-sub { font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="docs-navbar">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <button class="menu-toggle-btn" onclick="toggleMobileSidebar()" aria-label="Toggle Navigation Menu">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <a href="#overview" class="brand-link">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
+                <span>ProCloud</span>
+                <span class="brand-pill">Docs</span>
+            </a>
+        </div>
+        <div class="header-actions">
+            <a href="https://github.com/sanjeevsenapati/procloud" target="_blank" class="btn-gh">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                <span>GitHub</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Docs Layout -->
+    <div class="docs-layout">
+        <!-- Sidebar Backdrop for Mobile -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleMobileSidebar(false)"></div>
+
+        <!-- Left Navigation Sidebar -->
+        <aside class="docs-sidebar" id="docs-sidebar">
+            <div class="sidebar-search-box">
+                <svg class="sidebar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="doc-filter" class="sidebar-search-input" placeholder="Search docs..." oninput="filterDocLinks(this.value)">
+            </div>
+
+            <nav>
+                <div class="nav-group-title">Getting Started</div>
+                <ul class="nav-links">
+                    <li class="nav-link-item"><a href="#overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>Overview &amp; Philosophy</a></li>
+                    <li class="nav-link-item"><a href="#quickstart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>Quickstart &amp; Installation</a></li>
+                </ul>
+
+                <div class="nav-group-title" style="margin-top:16px;">Core Infrastructure</div>
+                <ul class="nav-links">
+                    <li class="nav-link-item"><a href="#containers-pods"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Containers &amp; Pods</a></li>
+                    <li class="nav-link-item"><a href="#build-deploy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/></svg>Build &amp; Deploy CI/CD</a></li>
+                    <li class="nav-link-item"><a href="#networking-dns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/><circle cx="12" cy="12" r="3"/></svg>Networking &amp; DNSaaS</a></li>
+                    <li class="nav-link-item"><a href="#load-balancers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>Load Balancers &amp; SSL</a></li>
+                    <li class="nav-link-item"><a href="#storage-volumes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>Storage &amp; Volumes</a></li>
+                    <li class="nav-link-item"><a href="#secrets-vault"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>Secrets Vault</a></li>
+                    <li class="nav-link-item"><a href="#cron-scheduler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Cron &amp; Scheduled Jobs</a></li>
+                </ul>
+
+                <div class="nav-group-title" style="margin-top:16px;">Platform Management</div>
+                <ul class="nav-links">
+                    <li class="nav-link-item"><a href="#telemetry-wal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>SQLite WAL &amp; Hot Backup</a></li>
+                    <li class="nav-link-item"><a href="#organizations-rbac"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Multi-Tenant &amp; RBAC</a></li>
+                    <li class="nav-link-item"><a href="#api-reference"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>REST API Reference</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Right Content Main Column -->
+        <main class="docs-content">
+            
+            <!-- SECTION 1: OVERVIEW -->
+            <section id="overview" class="doc-section">
+                <h1 class="doc-hero-title">ProCloud Documentation</h1>
+                <p class="doc-hero-sub">Single-Node, SQLite-First Sovereign Cloud Control Plane built with Go, Podman, systemd Quadlet, Netavark, and Nginx.</p>
+
+                <div class="callout callout-info">
+                    <strong>Zero Heavy Orchestrators:</strong> ProCloud is engineered to transform a single bare-metal server or virtual machine into a complete cloud platform with no Kubernetes, no distributed etcd clusters, no external Redis/RabbitMQ brokers, and zero cloud lock-in.
+                </div>
+
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    <span>Architectural Philosophy</span>
+                </h2>
+                <p class="doc-p">Traditional modern cloud setups introduce massive operational complexity and RAM consumption before deploying a single workload. Running etcd, PostgreSQL, Redis, and multi-node orchestrators on a single machine wastes gigabytes of memory and introduces IPC latency over the local network stack.</p>
+                <p class="doc-p">ProCloud replaces these layers with native Linux kernel facilities and in-process engines:</p>
+
+                <div class="grid-3">
+                    <div class="feature-card">
+                        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+                        <div class="card-title">Embedded SQLite WAL</div>
+                        <div class="card-desc">Zero-latency in-process database with concurrent reader threads, 5000ms busy timeout retry loop, and automated non-blocking WAL truncate checkpoints.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg></div>
+                        <div class="card-title">Systemd Quadlet Engine</div>
+                        <div class="card-desc">Workloads compile into native Linux Quadlet unit files (<code class="inline-code">.container</code>, <code class="inline-code">.network</code>, <code class="inline-code">.volume</code>). Containers survive control plane upgrades.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                        <div class="card-title">Durable Async Queue</div>
+                        <div class="card-desc">Transactional SQLite job queue with microsecond atomic claims (<code class="inline-code">ClaimNextJob</code>) executing builds and batch workflows completely outside transactions.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: QUICKSTART -->
+            <section id="quickstart" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span>Quickstart &amp; Installation</span>
+                </h2>
+                <p class="doc-p">ProCloud compiles into a single, self-contained binary embedding its entire web console and database migration suite.</p>
+
+                <h3 class="doc-h3">1. Prerequisites</h3>
+                <ul style="padding-left: 20px; color: var(--pg-text-secondary); margin-bottom: 16px;">
+                    <li><strong>Operating System:</strong> Linux (Debian, Ubuntu, Fedora, RHEL) or macOS (with Podman Machine)</li>
+                    <li><strong>Go Toolchain:</strong> Go 1.22+ installed</li>
+                    <li><strong>Container Runtime:</strong> Podman 4.5+ or 5.0+ installed and accessible in <code class="inline-code">$PATH</code></li>
+                </ul>
+
+                <h3 class="doc-h3">2. Clone &amp; Compile</h3>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="code-title">Terminal &mdash; Build Binary</span>
+                        <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre class="code-block">git clone https://github.com/sanjeevsenapati/procloud.git
+cd procloud
+go build -o bin/procloud ./cmd/api</pre>
+                </div>
+
+                <h3 class="doc-h3">3. Launch Control Plane</h3>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="code-title">Terminal &mdash; Start ProCloud</span>
+                        <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre class="code-block">./bin/procloud -port 8080 -db procloud.db</pre>
+                </div>
+
+                <div class="callout callout-tip">
+                    <strong>Default Credentials:</strong><br>
+                    Upon first boot, ProCloud automatically applies SQLite database migrations and creates the primary Support Administrator account:<br>
+                    &bull; <strong>Username:</strong> <code class="inline-code">admin</code><br>
+                    &bull; <strong>Password:</strong> <code class="inline-code">admin123</code><br>
+                    Access the Web Console at <code class="inline-code">http://localhost:8080</code>.
+                </div>
+            </section>
+
+            <!-- SECTION 3: CONTAINERS & PODS -->
+            <section id="containers-pods" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    <span>Containers &amp; Pod Management</span>
+                </h2>
+                <p class="doc-p">ProCloud provides complete Podman Desktop capabilities through both an intuitive web interface and secure REST API.</p>
+
+                <h3 class="doc-h3">Key Capabilities</h3>
+                <div class="grid-2">
+                    <div class="feature-card">
+                        <div class="card-title">Interactive Web Terminal</div>
+                        <div class="card-desc">Execute commands inside any container namespace via <code class="inline-code">POST /api/v1/containers/{id}/exec</code> with ANSI color rendering, history navigation, and 1-click diagnostics (<code class="inline-code">ps aux</code>, <code class="inline-code">df -h</code>, <code class="inline-code">env</code>).</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Live Log Streamer</div>
+                        <div class="card-desc">Stream container stdout/stderr in real-time with configurable tail depths (50, 100, 250, 500 lines), regex text search, auto-scroll, and 1-click raw log export.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Top Process Explorer</div>
+                        <div class="card-desc">Inspect active processes running inside container namespaces with PID, PPID, %CPU, %MEM, user, and command strings updated on a 2.5s ticker.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Kubernetes Pod Groups</div>
+                        <div class="card-desc">Deploy multi-container pods sharing network namespaces and storage volumes. Export Pod definitions directly into standard Kubernetes Pod YAML via <code class="inline-code">podman generate kube</code>.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: BUILD & DEPLOY CI/CD -->
+            <section id="build-deploy" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/></svg>
+                    <span>Build &amp; Deploy (GitOps CI/CD)</span>
+                </h2>
+                <p class="doc-p">Automate container builds and deployments using declarative <code class="inline-code">deploy.yml</code> manifests and systemd Quadlet unit compilation.</p>
+
+                <h3 class="doc-h3">Sample deploy.yml Manifest</h3>
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="code-title">deploy.yml</span>
+                        <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre class="code-block">apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: web-api
+spec:
+  replicas: 2
+  image: docker.io/library/nginx:alpine
+  ports:
+    - hostPort: 8080
+      containerPort: 80
+  resources:
+    limits:
+      cpu: "1.0"
+      memory: "512MB"
+  ingress:
+    domain: api.procloud.internal
+  healthCheck:
+    path: /healthz
+    intervalSeconds: 10</pre>
+                </div>
+
+                <div class="callout callout-tip">
+                    <strong>Immutable Releases &amp; 1-Click Rollback:</strong> Every deployment creates an immutable release snapshot capturing the Git commit SHA, OCI image digest, manifest YAML, and compiled Quadlet unit. Rolling back to a previous version executes in under 500ms without needing an image rebuild.
+                </div>
+            </section>
+
+            <!-- SECTION 5: NETWORKING & DNSAAS -->
+            <section id="networking-dns" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>Networking &amp; Authoritative DNSaaS</span>
+                </h2>
+                <p class="doc-p">ProCloud includes a built-in Software Defined Network (SDN) powered by Netavark bridge networks and an authoritative RFC 1035 UDP DNS daemon running natively on port 1053.</p>
+
+                <h3 class="doc-h3">DNS Zone Types</h3>
+                <div class="grid-2">
+                    <div class="feature-card">
+                        <div class="card-title">Private VPC Zones</div>
+                        <div class="card-desc">Internal hosted zones (e.g., <code class="inline-code">corp.internal</code>) bound to private VPC subnets. Resolves microservices without exposing endpoints to public networks.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Public Authoritative Zones</div>
+                        <div class="card-desc">RFC 1035 compliant authoritative DNS resolution supporting standard resource records: A, CNAME, TXT, SRV, SOA, and MX with sub-millisecond query response times.</div>
+                    </div>
+                </div>
+
+                <div class="code-container">
+                    <div class="code-header">
+                        <span class="code-title">Terminal &mdash; Query Authoritative DNS Server</span>
+                        <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre class="code-block">dig @127.0.0.1 -p 1053 web.corp.internal A</pre>
+                </div>
+            </section>
+
+            <!-- SECTION 6: LOAD BALANCERS & SSL -->
+            <section id="load-balancers" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>
+                    <span>Load Balancers &amp; SSL/TLS Termination</span>
+                </h2>
+                <p class="doc-p">High-performance Layer 4 (TCP) and Layer 7 (HTTP/HTTPS) reverse proxying with weighted round-robin backend pools and automated SSL management.</p>
+
+                <h3 class="doc-h3">3-Option SSL/TLS Architecture</h3>
+                <div class="grid-3">
+                    <div class="feature-card">
+                        <div class="card-title">1. ProCloud Sovereign CA</div>
+                        <div class="card-desc">Generates self-signed sovereign X.509 certificates on-the-fly for immediate HTTPS termination with zero configuration.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">2. Attach from Vault</div>
+                        <div class="card-desc">Attach pre-existing TLS certificate secrets stored securely in ProCloud's encrypted Secrets Vault.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">3. Custom Certificate Upload</div>
+                        <div class="card-desc">Upload custom PEM certificate chains and private keys with automatic validation and hot storage into Secrets.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 7: STORAGE & VOLUMES -->
+            <section id="storage-volumes" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+                    <span>Persistent Storage &amp; Volumes</span>
+                </h2>
+                <p class="doc-p">Manage durable local storage volumes for stateful applications (databases, message queues, blob caches). Supports local drivers, mount path inspection, quota tracking, and automatic Quadlet volume attachments.</p>
+            </section>
+
+            <!-- SECTION 8: SECRETS VAULT -->
+            <section id="secrets-vault" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
+                    <span>Secrets Vault</span>
+                </h2>
+                <p class="doc-p">Secure encrypted storage for API keys, passwords, database credentials, and TLS certificates. Secrets can be mounted as environment variables or injected as memory-backed files inside container workloads.</p>
+            </section>
+
+            <!-- SECTION 9: CRON SCHEDULES & JOBS -->
+            <section id="cron-scheduler" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Cron Schedules &amp; Background Jobs</span>
+                </h2>
+                <p class="doc-p">A native, zero-dependency cron scheduling and batch processing engine backed by durable SQLite queueing.</p>
+
+                <h3 class="doc-h3">Key Capabilities</h3>
+                <div class="grid-2">
+                    <div class="feature-card">
+                        <div class="card-title">Standard 5-Part Cron &amp; Macros</div>
+                        <div class="card-desc">Supports standard cron expressions (<code class="inline-code">*/15 * * * *</code>, <code class="inline-code">0 2 * * *</code>) and macros (<code class="inline-code">@hourly</code>, <code class="inline-code">@daily</code>, <code class="inline-code">@weekly</code>) with next-run evaluation.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Ephemeral Container Execution</div>
+                        <div class="card-desc">Dispatches short-lived Podman containers (<code class="inline-code">--rm</code>) with environment variables, volume bindings, and resource constraints.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Combined Log &amp; Exit Code Capture</div>
+                        <div class="card-desc">Captures stdout/stderr outputs and numerical exit codes (<code class="inline-code">0</code> for success, non-zero for failure) persisted directly into SQLite.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Concurrency &amp; Manual Triggers</div>
+                        <div class="card-desc">Enforces concurrency policies (<code class="inline-code">Forbid</code> / <code class="inline-code">Allow</code>) and provides immediate 1-click manual execution ("Run Now").</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 10: TELEMETRY & WAL -->
+            <section id="telemetry-wal" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <span>SQLite WAL Coordinator &amp; Hot Backups</span>
+                </h2>
+                <p class="doc-p">ProCloud continuously monitors SQLite Write-Ahead Logging (WAL) journal files to maintain sub-millisecond query performance and ensure automated zero-downtime backups.</p>
+
+                <div class="grid-2">
+                    <div class="feature-card">
+                        <div class="card-title">Automatic WAL Truncation</div>
+                        <div class="card-desc">Background monitor samples journal size every 30 seconds. Executes passive checkpoints during quiet windows and truncate checkpoints when journal size exceeds 20MB.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Non-Blocking Hot Backups</div>
+                        <div class="card-desc">Executes zero-downtime backups using SQLite's native <code class="inline-code">VACUUM INTO 'backup.db'</code> without acquiring table locks or blocking reader threads.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 11: ORGANIZATIONS & RBAC -->
+            <section id="organizations-rbac" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>Multi-Tenant Organizations &amp; RBAC</span>
+                </h2>
+                <p class="doc-p">Multi-tenant boundary enforcement with resource quotas (max CPU, RAM, storage, workloads) across 4 role tiers:</p>
+
+                <div class="table-wrap">
+                    <table class="docs-table">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th>Scope</th>
+                                <th>Capabilities</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="pill pill-admin">Super Admin (admin)</span></td>
+                                <td>Global (Platform-wide)</td>
+                                <td>Full administrative authority across all tenants, nodes, WAL checkpoints, and cluster secrets.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-get">Org Admin (org_admin)</span></td>
+                                <td>Tenant Bound</td>
+                                <td>Manage team members, workloads, quotas, and certificates within their assigned organization.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-post">Developer (developer)</span></td>
+                                <td>Tenant Bound</td>
+                                <td>Deploy containers and pods, build images, trigger batch jobs, and access web terminals.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill" style="background:#f1f5f9; color:#475569;">Viewer (viewer)</span></td>
+                                <td>Tenant Bound</td>
+                                <td>Read-only access to metrics, dashboards, container logs, and inspect views. Mutation calls denied (403).</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECTION 12: REST API REFERENCE -->
+            <section id="api-reference" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>RESTful API Reference</span>
+                </h2>
+                <p class="doc-p">All API calls require authentication via JWT Bearer token (<code class="inline-code">Authorization: Bearer &lt;token&gt;</code>).</p>
+
+                <div class="table-wrap">
+                    <table class="docs-table">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Required Role</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="pill pill-post">POST</span></td>
+                                <td><code class="inline-code">/api/v1/auth/login</code></td>
+                                <td>Public</td>
+                                <td>Authenticate user credentials and receive JWT Bearer token.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-get">GET</span></td>
+                                <td><code class="inline-code">/api/v1/auth/me</code></td>
+                                <td>Authenticated</td>
+                                <td>Retrieve current session identity, organization, and role permissions.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-get">GET</span></td>
+                                <td><code class="inline-code">/api/v1/containers</code></td>
+                                <td>Viewer</td>
+                                <td>List containers with real-time status, image tags, and port publishings.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-post">POST</span></td>
+                                <td><code class="inline-code">/api/v1/containers/{id}/exec</code></td>
+                                <td>Developer</td>
+                                <td>Execute interactive command inside container namespaces.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-get">GET</span></td>
+                                <td><code class="inline-code">/api/v1/dns/zones</code></td>
+                                <td>Viewer</td>
+                                <td>List authoritative and private hosted DNS zones.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-post">POST</span></td>
+                                <td><code class="inline-code">/api/v1/dns/zones</code></td>
+                                <td>Developer</td>
+                                <td>Create a new private VPC or public authoritative DNS zone.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-get">GET</span></td>
+                                <td><code class="inline-code">/api/v1/schedules</code></td>
+                                <td>Viewer</td>
+                                <td>List configured cron schedules and next upcoming run timestamps.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-post">POST</span></td>
+                                <td><code class="inline-code">/api/v1/schedules</code></td>
+                                <td>Developer</td>
+                                <td>Create a scheduled container or workflow cron job.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-post">POST</span></td>
+                                <td><code class="inline-code">/api/v1/schedules/{id}/run</code></td>
+                                <td>Developer</td>
+                                <td>Immediately trigger a scheduled job ("Run Now").</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-get">GET</span></td>
+                                <td><code class="inline-code">/api/v1/jobs/{id}/logs</code></td>
+                                <td>Viewer</td>
+                                <td>Retrieve execution output, exit code, and timestamps for a job run.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-get">GET</span></td>
+                                <td><code class="inline-code">/api/v1/database/status</code></td>
+                                <td>Super Admin</td>
+                                <td>Retrieve SQLite WAL journal size, active connections, and integrity state.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="pill pill-post">POST</span></td>
+                                <td><code class="inline-code">/api/v1/database/backup</code></td>
+                                <td>Super Admin</td>
+                                <td>Trigger a non-blocking hot online backup using SQLite VACUUM INTO.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- FOOTER -->
+            <footer style="margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--pg-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--pg-text-muted); font-size: 13px;">
+                <div>&copy; 2026 ProCloud Platform &mdash; Single-Node Sovereign Cloud. Open Source.</div>
+                <div>Hosted with GitHub Pages from branch <code class="inline-code">docs</code></div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- JavaScript for Interactive Controls & Live Search -->
+    <script>
+        function toggleMobileSidebar(open) {
+            const sb = document.getElementById('docs-sidebar');
+            const bd = document.getElementById('sidebar-backdrop');
+            if (open === undefined) {
+                sb.classList.toggle('mobile-open');
+                bd.classList.toggle('active');
+            } else if (open) {
+                sb.classList.add('mobile-open');
+                bd.classList.add('active');
+            } else {
+                sb.classList.remove('mobile-open');
+                bd.classList.remove('active');
+            }
+        }
+
+        // Close drawer on navigation click
+        document.querySelectorAll('.nav-link-item a').forEach(a => {
+            a.addEventListener('click', () => {
+                if (window.innerWidth < 960) {
+                    toggleMobileSidebar(false);
+                }
+            });
+        });
+
+        // Live Sidebar Search Filter
+        function filterDocLinks(query) {
+            const q = (query || '').toLowerCase().trim();
+            const items = document.querySelectorAll('.nav-link-item');
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = (text.includes(q)) ? 'block' : 'none';
+            });
+        }
+
+        // Copy Code Snippet
+        function copyCode(btn) {
+            const container = btn.closest('.code-container');
+            const code = container.querySelector('pre.code-block')?.innerText;
+            if (code) {
+                navigator.clipboard.writeText(code).then(() => {
+                    const orig = btn.innerText;
+                    btn.innerText = 'Copied!';
+                    btn.style.color = '#34d399';
+                    btn.style.borderColor = '#34d399';
+                    setTimeout(() => {
+                        btn.innerText = orig;
+                        btn.style.color = '';
+                        btn.style.borderColor = '';
+                    }, 2000);
+                });
+            }
+        }
+
+        // IntersectionObserver for active navigation highlight
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.id;
+                    document.querySelectorAll('.nav-link-item a').forEach(link => {
+                        if (link.getAttribute('href') === `#${id}`) {
+                            link.classList.add('active');
+                        } else {
+                            link.classList.remove('active');
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.25 });
+
+        document.querySelectorAll('section.doc-section').forEach(sec => observer.observe(sec));
+    </script>
+</body>
+</html>
