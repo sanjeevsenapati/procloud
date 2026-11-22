@@ -15,14 +15,26 @@ import (
 	"procloud.io/procloud/pkg/podman"
 )
 
+var (
+	Version   = "1.0.0"
+	GitCommit = "HEAD"
+	BuildDate = "unknown"
+)
+
 func main() {
 	port := flag.Int("port", 8080, "HTTP server listening port")
 	dbPath := flag.String("db", "procloud.db", "SQLite database path")
 	useMockRuntime := flag.Bool("mock", false, "Use in-memory mock container runtime")
+	showVersion := flag.Bool("version", false, "Print ProCloud version and exit")
 	flag.Parse()
 
+	if *showVersion {
+		fmt.Printf("ProCloud %s (commit: %s, built: %s)\n", Version, GitCommit, BuildDate)
+		os.Exit(0)
+	}
+
 	log.Printf("==========================================================")
-	log.Printf(" ⚡ ProCloud Control Plane — Single Node SQLite-First")
+	log.Printf(" ⚡ ProCloud Control Plane v%s — Single Node SQLite-First", Version)
 	log.Printf("==========================================================")
 
 	// 1. Initialise SQLite with WAL Mode per specification
