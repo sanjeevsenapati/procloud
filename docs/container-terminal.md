@@ -2,6 +2,8 @@
 
 ProCloud provides a high-performance, real interactive terminal session attached directly to running container namespaces via host-native pseudo-terminals (PTY) and WebSockets.
 
+![ProCloud Interactive Container Terminal](images/procloud-container-terminal.png)
+
 ---
 
 ## Architecture Overview
