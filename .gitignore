@@ -124,3 +124,30 @@ Desktop.ini
 # Sublime Text
 *.sublime-workspace
 *.sublime-project
+
+# ------------------------------------------------------------------------------
+# 9. AI Assistants, Coding Agents & LLM Tool Artifacts
+# ------------------------------------------------------------------------------
+.gemini/
+.antigravity/
+.agent/
+.agents/
+.claude/
+.cursor/
+.cursorrules
+.copilot/
+.github/copilot-instructions.md
+.aider*
+.codex/
+.continue/
+.windsurf/
+.cline/
+.roo/
+.v0/
+.devin/
+.openai/
+agent-transcripts/
+*.prompt
+*.prompt.md
+*.chat
+
