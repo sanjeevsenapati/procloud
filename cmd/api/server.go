@@ -22,6 +22,7 @@ import (
 	"procloud.io/procloud/internal/deployment"
 	"procloud.io/procloud/internal/ingress"
 	"procloud.io/procloud/internal/job"
+	"procloud.io/procloud/internal/loadbalancer"
 	"procloud.io/procloud/internal/monitoring"
 	"procloud.io/procloud/internal/network"
 	"procloud.io/procloud/internal/repository"
@@ -48,6 +49,7 @@ type Server struct {
 	vpcSvc        *vpc.Service
 	storageSvc    *storage.Service
 	ingressCtrl   *ingress.Controller
+	lbSvc         *loadbalancer.Service
 	deployEngine  *deployment.Engine
 	jobEngine     *job.Engine
 	monitoringSvc *monitoring.Service
@@ -66,6 +68,7 @@ func NewServer(
 	sched := scheduler.NewSingleNodeScheduler(repo)
 	storageSvc := storage.NewService(repo, runtime, "")
 	ingressCtrl := ingress.NewController("")
+	lbSvc := loadbalancer.NewService(repo, runtime, "")
 	deployEngine := deployment.NewEngine(repo, repo, builder, runtime, sched, storageSvc, ingressCtrl)
 
 	jobEngine := job.NewEngine(repo, "api-worker-1")
@@ -91,6 +94,7 @@ func NewServer(
 		vpcSvc:        vpcSvc,
 		storageSvc:    storageSvc,
 		ingressCtrl:   ingressCtrl,
+		lbSvc:         lbSvc,
 		deployEngine:  deployEngine,
 		jobEngine:     jobEngine,
 		monitoringSvc: monitoringSvc,
@@ -385,6 +389,22 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/workflows/runs/{id}", s.authRequired(s.handleGetWorkflowRun))
 	s.mux.HandleFunc("DELETE /api/v1/workflows/runs/{id}", s.writeRequired(s.handleDeleteWorkflowRun))
 	s.mux.HandleFunc("POST /api/v1/workflows/runs/{id}/rerun", s.writeRequired(s.handleRerunWorkflow))
+
+	// Load Balancer as a Service (LBaaS) (Protected)
+	s.mux.HandleFunc("GET /api/v1/loadbalancers", s.authRequired(s.handleListLoadBalancers))
+	s.mux.HandleFunc("POST /api/v1/loadbalancers", s.writeRequired(s.handleCreateLoadBalancer))
+	s.mux.HandleFunc("GET /api/v1/loadbalancers/{id}", s.authRequired(s.handleGetLoadBalancer))
+	s.mux.HandleFunc("PUT /api/v1/loadbalancers/{id}", s.writeRequired(s.handleUpdateLoadBalancer))
+	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}", s.writeRequired(s.handleDeleteLoadBalancer))
+	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/listeners", s.writeRequired(s.handleCreateLBListener))
+	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}/listeners/{lid}", s.writeRequired(s.handleDeleteLBListener))
+	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/pools", s.writeRequired(s.handleCreateLBPool))
+	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}/pools/{pid}", s.writeRequired(s.handleDeleteLBPool))
+	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/pools/{pid}/members", s.writeRequired(s.handleAttachLBMember))
+	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}/members/{mid}", s.writeRequired(s.handleDetachLBMember))
+	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/listeners/{lid}/policies", s.writeRequired(s.handleCreateLBPolicy))
+	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}/policies/{polid}", s.writeRequired(s.handleDeleteLBPolicy))
+	s.mux.HandleFunc("GET /api/v1/loadbalancers/{id}/config", s.authRequired(s.handleGetLBConfig))
 
 	// Webhooks & Milestone
 	s.mux.HandleFunc("POST /api/v1/webhooks/progit", s.handleProGitWebhook)
@@ -2147,6 +2167,251 @@ func (s *Server) handleRerunWorkflow(w http.ResponseWriter, r *http.Request) {
 	s.auditSvc.Log(r.Context(), actor, "WORKFLOW_RERUN", "workflow", run.ID, r.RemoteAddr, fmt.Sprintf("rerun_of=%s, status=%s", id, run.Status))
 
 	respondJSON(w, http.StatusOK, run)
+}
+
+// -------------------------------------------------------------
+// Load Balancer as a Service (LBaaS) API Handlers
+// -------------------------------------------------------------
+
+func (s *Server) handleListLoadBalancers(w http.ResponseWriter, r *http.Request) {
+	claims := getClaims(r)
+	tenantID := r.URL.Query().Get("tenant_id")
+	if claims != nil && claims.Role != "admin" && claims.Role != "superadmin" {
+		if claims.TenantID != "" {
+			tenantID = claims.TenantID
+		}
+	}
+
+	lbs, err := s.lbSvc.ListLoadBalancers(r.Context(), tenantID)
+	if err != nil {
+		http.Error(w, "failed listing loadbalancers: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if lbs == nil {
+		lbs = []*protocol.LoadBalancer{}
+	}
+	respondJSON(w, http.StatusOK, lbs)
+}
+
+func (s *Server) handleCreateLoadBalancer(w http.ResponseWriter, r *http.Request) {
+	var req protocol.CreateLoadBalancerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	claims := getClaims(r)
+	if claims != nil && claims.Role != "admin" && claims.Role != "superadmin" {
+		if claims.TenantID != "" {
+			req.TenantID = claims.TenantID
+		}
+	}
+
+	lb, err := s.lbSvc.CreateLoadBalancer(r.Context(), req)
+	if err != nil {
+		http.Error(w, "failed creating loadbalancer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "LB_CREATE", "loadbalancer", lb.ID, r.RemoteAddr, fmt.Sprintf("name=%s, vip=%s", lb.Name, lb.PublicIP))
+
+	respondJSON(w, http.StatusCreated, lb)
+}
+
+func (s *Server) handleGetLoadBalancer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing loadbalancer id", http.StatusBadRequest)
+		return
+	}
+
+	lb, err := s.lbSvc.GetLoadBalancer(r.Context(), id)
+	if err != nil {
+		http.Error(w, "loadbalancer not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, lb)
+}
+
+func (s *Server) handleUpdateLoadBalancer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req protocol.CreateLoadBalancerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	lb, err := s.lbSvc.GetLoadBalancer(r.Context(), id)
+	if err != nil {
+		http.Error(w, "loadbalancer not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	if req.Name != "" {
+		lb.Name = req.Name
+	}
+	if req.Description != "" {
+		lb.Description = req.Description
+	}
+	if req.Type != "" {
+		lb.Type = req.Type
+	}
+	if req.PublicIP != "" {
+		lb.PublicIP = req.PublicIP
+	}
+
+	if err := s.nodeRepo.(*sqlite.Repository).UpdateLoadBalancer(r.Context(), lb); err != nil {
+		http.Error(w, "failed updating loadbalancer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, _ = s.lbSvc.SynthesizeConfig(r.Context(), lb.ID)
+	respondJSON(w, http.StatusOK, lb)
+}
+
+func (s *Server) handleDeleteLoadBalancer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing loadbalancer id", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.lbSvc.DeleteLoadBalancer(r.Context(), id); err != nil {
+		http.Error(w, "failed deleting loadbalancer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "LB_DELETE", "loadbalancer", id, r.RemoteAddr, "")
+
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
+}
+
+func (s *Server) handleCreateLBListener(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	var req protocol.CreateListenerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	l, err := s.lbSvc.CreateListener(r.Context(), lbID, req)
+	if err != nil {
+		http.Error(w, "failed creating listener: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusCreated, l)
+}
+
+func (s *Server) handleDeleteLBListener(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	lid := r.PathValue("lid")
+
+	if err := s.lbSvc.DeleteListener(r.Context(), lbID, lid); err != nil {
+		http.Error(w, "failed deleting listener: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": lid})
+}
+
+func (s *Server) handleCreateLBPool(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	var req protocol.CreatePoolRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	p, err := s.lbSvc.CreatePool(r.Context(), lbID, req)
+	if err != nil {
+		http.Error(w, "failed creating pool: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusCreated, p)
+}
+
+func (s *Server) handleDeleteLBPool(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	pid := r.PathValue("pid")
+
+	if err := s.lbSvc.DeletePool(r.Context(), lbID, pid); err != nil {
+		http.Error(w, "failed deleting pool: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": pid})
+}
+
+func (s *Server) handleAttachLBMember(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	pid := r.PathValue("pid")
+	var req protocol.AttachMemberRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	m, err := s.lbSvc.AttachMember(r.Context(), lbID, pid, req)
+	if err != nil {
+		http.Error(w, "failed attaching member: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusCreated, m)
+}
+
+func (s *Server) handleDetachLBMember(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	mid := r.PathValue("mid")
+
+	if err := s.lbSvc.DetachMember(r.Context(), lbID, mid); err != nil {
+		http.Error(w, "failed detaching member: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": mid})
+}
+
+func (s *Server) handleCreateLBPolicy(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	lid := r.PathValue("lid")
+	var req protocol.CreatePolicyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	pol, err := s.lbSvc.CreatePolicy(r.Context(), lbID, lid, req)
+	if err != nil {
+		http.Error(w, "failed creating policy: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusCreated, pol)
+}
+
+func (s *Server) handleDeleteLBPolicy(w http.ResponseWriter, r *http.Request) {
+	lbID := r.PathValue("id")
+	polid := r.PathValue("polid")
+
+	if err := s.lbSvc.DeletePolicy(r.Context(), lbID, polid); err != nil {
+		http.Error(w, "failed deleting policy: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": polid})
+}
+
+func (s *Server) handleGetLBConfig(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	conf, err := s.lbSvc.SynthesizeConfig(r.Context(), id)
+	if err != nil {
+		http.Error(w, "failed synthesizing config: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"id": id, "config": conf})
 }
 
 func respondJSON(w http.ResponseWriter, code int, payload any) {

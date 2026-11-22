@@ -228,4 +228,77 @@ ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active';
 ALTER TABLE users ADD COLUMN last_login_at DATETIME;
 `,
 	},
+	{
+		Version:     4,
+		Description: "Load Balancer as a Service (LBaaS): L4/L7 listeners, pools, members, policies",
+		SQL: `
+CREATE TABLE IF NOT EXISTS loadbalancers (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    vpc_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    type TEXT NOT NULL DEFAULT 'hybrid',
+    public_ip TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS lb_listeners (
+    id TEXT PRIMARY KEY,
+    loadbalancer_id TEXT NOT NULL REFERENCES loadbalancers(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    port INTEGER NOT NULL,
+    protocol TEXT NOT NULL,
+    ssl_cert_secret TEXT NOT NULL DEFAULT '',
+    default_pool_id TEXT NOT NULL DEFAULT '',
+    http_redirect INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS lb_pools (
+    id TEXT PRIMARY KEY,
+    loadbalancer_id TEXT NOT NULL REFERENCES loadbalancers(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    protocol TEXT NOT NULL DEFAULT 'HTTP',
+    algorithm TEXT NOT NULL DEFAULT 'round_robin',
+    health_path TEXT NOT NULL DEFAULT '/healthz',
+    health_interval_sec INTEGER NOT NULL DEFAULT 5,
+    health_timeout_sec INTEGER NOT NULL DEFAULT 2,
+    health_unhealthy_threshold INTEGER NOT NULL DEFAULT 3,
+    created_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS lb_members (
+    id TEXT PRIMARY KEY,
+    pool_id TEXT NOT NULL REFERENCES lb_pools(id) ON DELETE CASCADE,
+    target_type TEXT NOT NULL DEFAULT 'container',
+    target_ref TEXT NOT NULL DEFAULT '',
+    ip TEXT NOT NULL,
+    port INTEGER NOT NULL,
+    weight INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'healthy',
+    created_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS lb_policies (
+    id TEXT PRIMARY KEY,
+    listener_id TEXT NOT NULL REFERENCES lb_listeners(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    action TEXT NOT NULL DEFAULT 'FORWARD',
+    rule_type TEXT NOT NULL DEFAULT 'PATH_PREFIX',
+    rule_value TEXT NOT NULL,
+    target_pool_id TEXT NOT NULL REFERENCES lb_pools(id) ON DELETE CASCADE,
+    priority INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_lb_tenant ON loadbalancers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_lb_listeners ON lb_listeners(loadbalancer_id);
+CREATE INDEX IF NOT EXISTS idx_lb_pools ON lb_pools(loadbalancer_id);
+CREATE INDEX IF NOT EXISTS idx_lb_members ON lb_members(pool_id);
+CREATE INDEX IF NOT EXISTS idx_lb_policies ON lb_policies(listener_id);
+`,
+	},
 }

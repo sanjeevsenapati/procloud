@@ -102,3 +102,31 @@ type WorkflowRepository interface {
 	DeleteWorkflowRun(ctx context.Context, id string) error
 }
 
+type LoadBalancerRepository interface {
+	CreateLoadBalancer(ctx context.Context, lb *protocol.LoadBalancer) error
+	GetLoadBalancerByID(ctx context.Context, id string) (*protocol.LoadBalancer, error)
+	ListLoadBalancers(ctx context.Context, tenantID string) ([]*protocol.LoadBalancer, error)
+	UpdateLoadBalancer(ctx context.Context, lb *protocol.LoadBalancer) error
+	DeleteLoadBalancer(ctx context.Context, id string) error
+
+	CreateListener(ctx context.Context, listener *protocol.LBListener) error
+	GetListenerByID(ctx context.Context, id string) (*protocol.LBListener, error)
+	ListListenersByLB(ctx context.Context, lbID string) ([]*protocol.LBListener, error)
+	DeleteListener(ctx context.Context, id string) error
+
+	CreatePool(ctx context.Context, pool *protocol.LBPool) error
+	GetPoolByID(ctx context.Context, id string) (*protocol.LBPool, error)
+	ListPoolsByLB(ctx context.Context, lbID string) ([]*protocol.LBPool, error)
+	DeletePool(ctx context.Context, id string) error
+
+	CreateMember(ctx context.Context, member *protocol.LBMember) error
+	GetMemberByID(ctx context.Context, id string) (*protocol.LBMember, error)
+	ListMembersByPool(ctx context.Context, poolID string) ([]*protocol.LBMember, error)
+	UpdateMemberStatus(ctx context.Context, id, status string) error
+	DeleteMember(ctx context.Context, id string) error
+
+	CreatePolicy(ctx context.Context, policy *protocol.LBL7Policy) error
+	ListPoliciesByListener(ctx context.Context, listenerID string) ([]*protocol.LBL7Policy, error)
+	DeletePolicy(ctx context.Context, id string) error
+}
+

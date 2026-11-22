@@ -1991,6 +1991,11 @@
                     <span class="sidebar-label">Networks</span>
                     <span class="sidebar-badge" id="tab-badge-networks">0</span>
                 </a>
+                <a class="sidebar-item" onclick="switchTab('loadbalancers')" data-tab="loadbalancers" data-tooltip="Load Balancers">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>
+                    <span class="sidebar-label">Load Balancers</span>
+                    <span class="sidebar-badge pill-blue" id="tab-badge-lbs">0</span>
+                </a>
                 <a class="sidebar-item" onclick="switchTab('secrets')" data-tab="secrets" data-tooltip="Secrets">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
                     <span class="sidebar-label">Secrets</span>
@@ -3429,6 +3434,84 @@
                         </thead>
                         <tbody id="networks-table">
                             <tr><td colspan="6" style="text-align:center;">Loading networks...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6a. LOAD BALANCERS (LBaaS) TAB -->
+        <div id="tab-loadbalancers" class="tab-content">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <div class="pg-stat-card">
+                    <div class="stat-label">Load Balancers</div>
+                    <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-lbs-total">0</div>
+                    <div class="stat-hint">Active L4 &amp; L7 instances</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Public Edge VIPs</div>
+                    <div class="stat-number" style="color: var(--pg-purple);" id="stat-lbs-vips">0</div>
+                    <div class="stat-hint">Floating IP bindings</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Frontend Listeners</div>
+                    <div class="stat-number" style="color: var(--pg-emerald);" id="stat-lbs-listeners">0</div>
+                    <div class="stat-hint">HTTP / HTTPS / TCP / UDP</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Attached Backends</div>
+                    <div class="stat-number" style="color: var(--pg-amber);" id="stat-lbs-backends">0</div>
+                    <div class="stat-hint">Dynamic container &amp; pod targets</div>
+                </div>
+            </div>
+
+            <div class="pg-box">
+                <div class="pg-box-header">
+                    <div class="pg-box-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>
+                        <span>Load Balancers as a Service (LBaaS)</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <div style="position:relative; display:inline-flex; align-items:center;">
+                            <svg class="icon-svg" style="position:absolute; left:8px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="lb-search-input" class="form-input form-input-sm" style="width:190px; padding-left:26px;" placeholder="Filter load balancers..." oninput="filterAndRenderLoadBalancers()">
+                        </div>
+                        <select id="lb-type-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderLoadBalancers()" title="Filter by Type">
+                            <option value="">All Types</option>
+                            <option value="hybrid">Hybrid (L4 + L7)</option>
+                            <option value="layer7">Layer 7 (HTTP/HTTPS)</option>
+                            <option value="layer4">Layer 4 (TCP/UDP Stream)</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="fetchLoadBalancers()" title="Refresh Load Balancers">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openModal('create-lb-modal')">+ Create Load Balancer</button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="pg-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortLoadBalancers('name')" title="Click to sort by Name">
+                                    <div class="th-content"><span>Name / VIP</span><span class="sort-indicator" id="sort-lb-name"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortLoadBalancers('type')" title="Click to sort by Type">
+                                    <div class="th-content"><span>Type</span><span class="sort-indicator" id="sort-lb-type"></span></div>
+                                </th>
+                                <th>Listeners (Ports)</th>
+                                <th>Pools &amp; Upstreams</th>
+                                <th class="sortable" onclick="sortLoadBalancers('status')" title="Click to sort by Status">
+                                    <div class="th-content"><span>Status</span><span class="sort-indicator" id="sort-lb-status"></span></div>
+                                </th>
+                                <th class="sortable" onclick="sortLoadBalancers('created')" title="Click to sort by Created">
+                                    <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-lb-created"></span></div>
+                                </th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lbs-table-body">
+                            <tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">Loading load balancers...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -5236,6 +5319,404 @@ spec:
             </div>
         </div>
     </div>
+
+    <!-- MODAL: Create Load Balancer (LBaaS) -->
+    <div id="create-lb-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 580px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>
+                    <span>Create Load Balancer (LBaaS)</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('create-lb-modal')">&times;</div>
+            </div>
+            <div style="padding: 4px 0;">
+                <div class="form-group">
+                    <label class="form-label">Load Balancer Name <span style="color:var(--pg-rose)">*</span></label>
+                    <input type="text" id="new-lb-name" class="form-input" placeholder="e.g. edge-ingress-lb, api-gateway">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" id="new-lb-desc" class="form-input" placeholder="e.g. Production L7/L4 high-availability load balancer">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Architecture Type</label>
+                        <select id="new-lb-type" class="form-input">
+                            <option value="hybrid" selected>Hybrid (Layer 7 &amp; Layer 4 Stream)</option>
+                            <option value="layer7">Layer 7 (HTTP / HTTPS / WebSockets)</option>
+                            <option value="layer4">Layer 4 (Raw TCP / UDP Stream Proxy)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">VPC Bridge Network</label>
+                        <select id="new-lb-vpc" class="form-input">
+                            <option value="podman" selected>podman (Default Podman Bridge)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Public Edge Floating IP / VIP</label>
+                    <input type="text" id="new-lb-vip" class="form-input" placeholder="e.g. 198.51.100.10 or leave blank for Host IP">
+                    <div style="font-size: 11px; color: var(--pg-text-muted); margin-top: 4px;">Public VIP binds external edge requests and proxies to isolated Netavark tenant subnets.</div>
+                </div>
+
+                <div style="border-top: 1px solid var(--pg-border-subtle); margin: 16px 0 12px 0; padding-top: 12px;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--pg-text); margin-bottom: 8px;">Initial Ingress Listener &amp; Pool Configuration</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Listener Port</label>
+                            <input type="number" id="new-lb-initial-port" class="form-input" value="80" placeholder="80">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Listener Protocol</label>
+                            <select id="new-lb-initial-protocol" class="form-input">
+                                <option value="HTTP" selected>HTTP (Layer 7)</option>
+                                <option value="HTTPS">HTTPS (Layer 7 SSL/TLS)</option>
+                                <option value="TCP">TCP Stream (Layer 4)</option>
+                                <option value="UDP">UDP Stream (Layer 4)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Backend Load Balancing Algorithm</label>
+                        <select id="new-lb-initial-algo" class="form-input">
+                            <option value="round_robin" selected>Round Robin (Equal distribution)</option>
+                            <option value="least_conn">Least Connections (Adaptive load)</option>
+                            <option value="ip_hash">Client IP Hash (Sticky sessions)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="submitCreateLB()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Provision Load Balancer</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Load Balancer Details & Topology Manager -->
+    <div id="lb-details-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 980px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title" style="display: flex; align-items: center; gap: 10px;">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>
+                    <span id="lb-details-title">Load Balancer Details</span>
+                    <span id="lb-details-status-badge" class="pill pill-emerald">ACTIVE</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('lb-details-modal')">&times;</div>
+            </div>
+
+            <div style="overflow-y: auto; padding: 16px; flex: 1;">
+                <!-- Header Metadata Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                    <div style="background: #f8faff; border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 10px 14px;">
+                        <div style="font-size: 11px; color: var(--pg-text-muted); font-weight: 600;">PUBLIC VIP / FLOATING IP</div>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--pg-blue-600); margin-top: 3px;" id="lb-details-vip">-</div>
+                    </div>
+                    <div style="background: #f8faff; border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 10px 14px;">
+                        <div style="font-size: 11px; color: var(--pg-text-muted); font-weight: 600;">ARCHITECTURE TYPE</div>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--pg-purple); margin-top: 3px;" id="lb-details-type">-</div>
+                    </div>
+                    <div style="background: #f8faff; border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 10px 14px;">
+                        <div style="font-size: 11px; color: var(--pg-text-muted); font-weight: 600;">VPC NETWORK</div>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--pg-text); margin-top: 3px;" id="lb-details-vpc">-</div>
+                    </div>
+                    <div style="background: #f8faff; border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 10px 14px;">
+                        <div style="font-size: 11px; color: var(--pg-text-muted); font-weight: 600;">ACTIVE LISTENERS / POOLS</div>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--pg-emerald); margin-top: 3px;" id="lb-details-counts">-</div>
+                    </div>
+                </div>
+
+                <!-- Action Toolbar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm btn-primary rbac-write-only" id="lb-add-listener-btn" onclick="openCreateListenerModal(currentDetailedLB?.id)">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <span>+ Add Listener</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary rbac-write-only" id="lb-add-pool-btn" onclick="openCreatePoolModal(currentDetailedLB?.id)">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <span>+ Add Backend Pool</span>
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm" onclick="viewLBConfig(currentDetailedLB?.id)">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            <span>View Synthesized Nginx Config</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section: Ingress Listeners & L7 Policies -->
+                <div class="pg-box" style="margin-bottom: 20px;">
+                    <div class="pg-box-header" style="background: #f8faff;">
+                        <div class="pg-box-title" style="font-size: 13px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                            <span>Frontend Listeners &amp; Layer 7 Routing Policies</span>
+                        </div>
+                    </div>
+                    <div id="lb-listeners-container" style="padding: 12px;">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Section: Backend Pools & Upstream Members -->
+                <div class="pg-box">
+                    <div class="pg-box-header" style="background: #f8faff;">
+                        <div class="pg-box-title" style="font-size: 13px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                            <span>Backend Pools &amp; Dynamic Upstream Targets</span>
+                        </div>
+                    </div>
+                    <div id="lb-pools-container" style="padding: 12px;">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; padding: 12px 16px; border-top: 1px solid var(--pg-border-subtle); background: #fafcff;">
+                <button type="button" class="btn" onclick="closeModal('lb-details-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Create Listener -->
+    <div id="create-listener-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 480px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    <span>Add Frontend Ingress Listener</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('create-listener-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="listener-lb-id">
+            <div class="form-group">
+                <label class="form-label">Listener Name <span style="color:var(--pg-rose)">*</span></label>
+                <input type="text" id="new-listener-name" class="form-input" placeholder="e.g. https-443, postgres-5432">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Port <span style="color:var(--pg-rose)">*</span></label>
+                    <input type="number" id="new-listener-port" class="form-input" placeholder="443" value="443">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Protocol</label>
+                    <select id="new-listener-protocol" class="form-input">
+                        <option value="HTTPS" selected>HTTPS (L7 SSL/TLS)</option>
+                        <option value="HTTP">HTTP (L7 Plain)</option>
+                        <option value="TCP">TCP Stream (L4)</option>
+                        <option value="UDP">UDP Stream (L4)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Default Target Pool</label>
+                <select id="new-listener-pool" class="form-input">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">SSL Certificate Secret (Optional)</label>
+                <input type="text" id="new-listener-ssl-secret" class="form-input" placeholder="e.g. wild-card-cert-secret">
+                <div style="font-size: 11px; color: var(--pg-text-muted); margin-top: 3px;">Mounted from ProCloud Secrets engine for automatic TLS termination.</div>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
+                <input type="checkbox" id="new-listener-redirect" style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="new-listener-redirect" class="form-label" style="margin-bottom: 0; cursor: pointer;">Redirect HTTP requests to HTTPS automatically (301)</label>
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitCreateListener()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Add Ingress Listener</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Create Pool -->
+    <div id="create-pool-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 480px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                    <span>Add Backend Upstream Pool</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('create-pool-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="pool-lb-id">
+            <div class="form-group">
+                <label class="form-label">Pool Name <span style="color:var(--pg-rose)">*</span></label>
+                <input type="text" id="new-pool-name" class="form-input" placeholder="e.g. web-app-pool, api-services-pool">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Target Protocol</label>
+                    <select id="new-pool-protocol" class="form-input">
+                        <option value="HTTP" selected>HTTP (L7)</option>
+                        <option value="HTTPS">HTTPS (L7)</option>
+                        <option value="TCP">TCP Stream (L4)</option>
+                        <option value="UDP">UDP Stream (L4)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Balancing Algorithm</label>
+                    <select id="new-pool-algo" class="form-input">
+                        <option value="round_robin" selected>Round Robin</option>
+                        <option value="least_conn">Least Connections</option>
+                        <option value="ip_hash">Client IP Hash</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Health Check Path</label>
+                    <input type="text" id="new-pool-health-path" class="form-input" value="/healthz" placeholder="/healthz">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Interval (s)</label>
+                    <input type="number" id="new-pool-health-interval" class="form-input" value="10" placeholder="10">
+                </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitCreatePool()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Add Upstream Pool</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Attach Member (Dynamic Container/Pod/IP upstream resolution) -->
+    <div id="attach-member-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 500px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <span>Attach Upstream Target to Pool</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('attach-member-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="member-lb-id">
+            <input type="hidden" id="member-pool-id">
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #166534; margin-bottom: 12px;">
+                Target Pool: <strong id="member-pool-name-display">-</strong>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Upstream Target Type</label>
+                <select id="member-target-type" class="form-input" onchange="onLBTargetTypeChange()">
+                    <option value="container" selected>Running OCI Container (Auto-Resolves Virtual Netavark IP)</option>
+                    <option value="pod">Podman Pod (Auto-Resolves Infra Pod Virtual IP)</option>
+                    <option value="ip">Custom Virtual IP or External VIP</option>
+                </select>
+            </div>
+
+            <!-- Container Target Selector -->
+            <div class="form-group" id="member-target-container-group">
+                <label class="form-label">Select Container <span style="color:var(--pg-rose)">*</span></label>
+                <select id="member-container-select" class="form-input">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Pod Target Selector -->
+            <div class="form-group" id="member-target-pod-group" style="display: none;">
+                <label class="form-label">Select Pod <span style="color:var(--pg-rose)">*</span></label>
+                <select id="member-pod-select" class="form-input">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Custom IP Input -->
+            <div class="form-group" id="member-target-ip-group" style="display: none;">
+                <label class="form-label">Target IPv4 Address <span style="color:var(--pg-rose)">*</span></label>
+                <input type="text" id="member-custom-ip" class="form-input" placeholder="e.g. 10.89.0.45 or 192.168.1.100">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Target Service Port <span style="color:var(--pg-rose)">*</span></label>
+                    <input type="number" id="member-port" class="form-input" value="8080" placeholder="8080">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Traffic Weight</label>
+                    <input type="number" id="member-weight" class="form-input" value="1" placeholder="1" min="1" max="100">
+                </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:12px;" onclick="submitAttachMember()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Attach Target to Pool</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Create L7 Policy -->
+    <div id="create-policy-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 480px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="m12 8 4 4-4 4"/></svg>
+                    <span>Add Layer 7 Routing Policy</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('create-policy-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="policy-lb-id">
+            <input type="hidden" id="policy-listener-id">
+            <div style="background: #f8faff; border: 1px solid var(--pg-border-subtle); border-radius: 6px; padding: 8px 12px; font-size: 12px; color: var(--pg-blue-600); margin-bottom: 12px;">
+                Ingress Listener: <strong id="policy-listener-name-display">-</strong>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Policy Name <span style="color:var(--pg-rose)">*</span></label>
+                <input type="text" id="new-policy-name" class="form-input" placeholder="e.g. route-api-v1, route-billing">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Rule Type</label>
+                <select id="new-policy-rule-type" class="form-input">
+                    <option value="PATH_PREFIX" selected>PATH_PREFIX (Route requests by URI prefix)</option>
+                    <option value="HOST_HEADER">HOST_HEADER (Route requests by Host / SNI domain)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Rule Match Value <span style="color:var(--pg-rose)">*</span></label>
+                <input type="text" id="new-policy-rule-value" class="form-input" placeholder="e.g. /api/v1/ or api.example.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Destination Backend Pool <span style="color:var(--pg-rose)">*</span></label>
+                <select id="new-policy-pool" class="form-input">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Rule Priority</label>
+                <input type="number" id="new-policy-priority" class="form-input" value="10" placeholder="10">
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitCreatePolicy()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Save Routing Policy</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: View Synthesized Nginx Config -->
+    <div id="view-lb-config-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 800px; max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>Synthesized Nginx Configuration (LBaaS)</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('view-lb-config-modal')">&times;</div>
+            </div>
+            <div style="padding: 12px 16px; background: #0f172a; border-radius: 8px; margin: 12px 16px; flex: 1; overflow: auto;">
+                <pre id="lb-config-content" style="color: #38bdf8; font-family: monospace; font-size: 12px; margin: 0; white-space: pre-wrap; line-height: 1.5;">Generating Nginx config...</pre>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--pg-border-subtle); background: #fafcff;">
+                <button type="button" class="btn btn-sm" onclick="copyLBConfig()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span>Copy Configuration</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="closeModal('view-lb-config-modal')">Done</button>
+            </div>
+        </div>
+    </div>
     </div> <!-- /#app-screen -->
 
     <script>
@@ -5417,6 +5898,7 @@ spec:
                 case 'images': fetchImages(); break;
                 case 'volumes': fetchVolumes(); break;
                 case 'networks': fetchNetworks(); break;
+                case 'loadbalancers': fetchLoadBalancers(); break;
                 case 'secrets': fetchSecrets(); break;
                 case 'deployments': fetchDeployments(); break;
                 case 'telemetry': fetchTelemetry(); break;
@@ -6100,6 +6582,11 @@ spec:
                 authFetch('/api/v1/podman/networks').then(r => r.json()).then(nets => {
                     const b = document.getElementById('tab-badge-networks');
                     if (b && nets) b.innerText = nets.length;
+                }).catch(() => {});
+
+                authFetch('/api/v1/loadbalancers').then(r => r.json()).then(lbs => {
+                    const b = document.getElementById('tab-badge-lbs');
+                    if (b && lbs) b.innerText = lbs.length;
                 }).catch(() => {});
 
                 // Live updates for Organization & User badges and stat cards
@@ -6924,10 +7411,767 @@ spec:
                 const badge = document.getElementById('tab-badge-networks');
                 if (badge) badge.innerText = allNetworks.length;
                 filterAndRenderNetworks();
+
+                // Populate LB VPC selector
+                const vpcSelect = document.getElementById('new-lb-vpc');
+                if (vpcSelect && allNetworks.length > 0) {
+                    vpcSelect.innerHTML = allNetworks.map(n => `
+                        <option value="${escapeHtml(n.name)}">${escapeHtml(n.name)} (${escapeHtml(n.subnet || 'bridge')})</option>
+                    `).join('');
+                }
             } catch (err) {
                 console.error('fetchNetworks error:', err);
                 const tbody = document.getElementById('networks-table');
                 if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load networks: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        // ==========================================
+        // 5b. LOAD BALANCERS (LBaaS)
+        // ==========================================
+        let allLoadBalancers = [];
+        let lbSortKey = 'name';
+        let lbSortDir = 'asc';
+        let currentDetailedLB = null;
+
+        function sortLoadBalancers(key) {
+            if (lbSortKey === key) {
+                lbSortDir = lbSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                lbSortKey = key;
+                lbSortDir = 'asc';
+            }
+            filterAndRenderLoadBalancers();
+        }
+
+        function filterAndRenderLoadBalancers() {
+            updateTableSortIndicators('lb', lbSortKey, lbSortDir, ['name', 'type', 'status', 'created']);
+            const tbody = document.getElementById('lbs-table-body');
+            if (!tbody) return;
+
+            const search = (document.getElementById('lb-search-input')?.value || '').toLowerCase().trim();
+            const typeFilter = (document.getElementById('lb-type-filter')?.value || '').toLowerCase().trim();
+
+            let filtered = (allLoadBalancers || []).filter(lb => {
+                const name = (lb.name || '').toLowerCase();
+                const desc = (lb.description || '').toLowerCase();
+                const ip = (lb.public_ip || '').toLowerCase();
+                const type = (lb.type || '').toLowerCase();
+                if (search && !name.includes(search) && !desc.includes(search) && !ip.includes(search)) return false;
+                if (typeFilter && type !== typeFilter) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                let valA, valB;
+                switch (lbSortKey) {
+                    case 'type': valA = a.type || ''; valB = b.type || ''; break;
+                    case 'status': valA = a.status || ''; valB = b.status || ''; break;
+                    case 'created': valA = a.created_at || ''; valB = b.created_at || ''; break;
+                    default: valA = a.name || ''; valB = b.name || ''; break;
+                }
+                return compareValues(valA, valB, lbSortDir);
+            });
+
+            // Update stats cards
+            const totalLBs = allLoadBalancers.length;
+            const vipCount = allLoadBalancers.filter(l => l.public_ip && l.public_ip !== '' && l.public_ip !== '0.0.0.0').length;
+            let totalListeners = 0;
+            let totalMembers = 0;
+            allLoadBalancers.forEach(l => {
+                if (l.listeners) totalListeners += l.listeners.length;
+                if (l.pools) {
+                    l.pools.forEach(p => {
+                        if (p.members) totalMembers += p.members.length;
+                    });
+                }
+            });
+
+            const statTotal = document.getElementById('stat-lbs-total');
+            const statVips = document.getElementById('stat-lbs-vips');
+            const statList = document.getElementById('stat-lbs-listeners');
+            const statBack = document.getElementById('stat-lbs-backends');
+            if (statTotal) statTotal.innerText = totalLBs;
+            if (statVips) statVips.innerText = vipCount;
+            if (statList) statList.innerText = totalListeners;
+            if (statBack) statBack.innerText = totalMembers;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No load balancers found matching current filters. Click "+ Create Load Balancer" to launch one.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(lb => {
+                const listenersList = (lb.listeners || []).map(l => `<span class="pill pill-blue" style="font-size:11px; margin-right:4px;">${escapeHtml(l.protocol)}:${l.port}</span>`).join('') || '<span style="color:var(--pg-text-muted); font-size:11px;">No listeners</span>';
+                const poolsCount = (lb.pools || []).length;
+                let memberCount = 0;
+                (lb.pools || []).forEach(p => memberCount += (p.members || []).length);
+                const poolsSummary = poolsCount > 0 ? `<span class="pill pill-slate" style="font-size:11px;">${poolsCount} pools (${memberCount} targets)</span>` : '<span style="color:var(--pg-text-muted); font-size:11px;">No pools</span>';
+
+                const typePill = lb.type === 'hybrid' ? '<span class="pill pill-purple">Hybrid (L4/L7)</span>' : (lb.type === 'layer7' ? '<span class="pill pill-blue">Layer 7</span>' : '<span class="pill pill-amber">Layer 4 Stream</span>');
+                const statusPill = lb.status === 'active' ? '<span class="pill pill-emerald">ACTIVE</span>' : '<span class="pill pill-amber">' + escapeHtml(lb.status || 'unknown') + '</span>';
+
+                return `
+                    <tr>
+                        <td>
+                            <div><strong>${escapeHtml(lb.name)}</strong></div>
+                            <div style="font-size:11px; color:var(--pg-text-secondary); margin-top:2px;">
+                                <code style="color:var(--pg-blue-600);">${escapeHtml(lb.public_ip || 'Auto Host VIP')}</code>
+                                ${lb.description ? ` • <span>${escapeHtml(lb.description)}</span>` : ''}
+                            </div>
+                        </td>
+                        <td>${typePill}</td>
+                        <td>${listenersList}</td>
+                        <td>${poolsSummary}</td>
+                        <td>${statusPill}</td>
+                        <td><span style="font-size:12px; color:var(--pg-text-secondary);">${new Date(lb.created_at).toLocaleString()}</span></td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="btn btn-sm btn-outline-primary" title="Manage Topology & Upstreams" onclick="openLBDetails('${escapeHtml(lb.id)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+                                    <span>Manage</span>
+                                </button>
+                                <button class="btn btn-sm" title="View Synthesized Nginx Config" onclick="viewLBConfig('${escapeHtml(lb.id)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                    <span>Config</span>
+                                </button>
+                                ${canWrite() ? `
+                                <button class="btn btn-sm btn-outline-rose" title="Delete Load Balancer" onclick="deleteLoadBalancer('${escapeHtml(lb.id)}', '${escapeHtml(lb.name)}')">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    <span>Delete</span>
+                                </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function fetchLoadBalancers() {
+            try {
+                const res = await authFetch('/api/v1/loadbalancers');
+                allLoadBalancers = await res.json() || [];
+                const badge = document.getElementById('tab-badge-lbs');
+                if (badge) badge.innerText = allLoadBalancers.length;
+                filterAndRenderLoadBalancers();
+            } catch (err) {
+                console.error('fetchLoadBalancers error:', err);
+                const tbody = document.getElementById('lbs-table-body');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load loadbalancers: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        async function submitCreateLB() {
+            const name = (document.getElementById('new-lb-name')?.value || '').trim();
+            const desc = (document.getElementById('new-lb-desc')?.value || '').trim();
+            const type = document.getElementById('new-lb-type')?.value || 'hybrid';
+            const vip = (document.getElementById('new-lb-vip')?.value || '').trim();
+            const vpc = document.getElementById('new-lb-vpc')?.value || 'podman';
+            const port = parseInt(document.getElementById('new-lb-initial-port')?.value || '80', 10);
+            const protocol = document.getElementById('new-lb-initial-protocol')?.value || 'HTTP';
+            const algo = document.getElementById('new-lb-initial-algo')?.value || 'round_robin';
+
+            if (!name) {
+                showToast('Please specify a Load Balancer name', 'error');
+                return;
+            }
+
+            try {
+                // 1. Create Load Balancer
+                const res = await authFetch('/api/v1/loadbalancers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: desc,
+                        type: type,
+                        public_ip: vip,
+                        vpc_network: vpc
+                    })
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed creating load balancer');
+                }
+                const lb = await res.json();
+
+                // 2. Create Default Pool
+                let defaultPoolId = '';
+                try {
+                    const poolRes = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lb.id)}/pools`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: `${name}-pool`,
+                            protocol: protocol === 'HTTPS' ? 'HTTP' : protocol,
+                            algorithm: algo,
+                            health_check_path: '/healthz',
+                            health_check_port: port,
+                            health_interval_sec: 10
+                        })
+                    });
+                    if (poolRes.ok) {
+                        const pool = await poolRes.json();
+                        defaultPoolId = pool.id;
+                    }
+                } catch (_) {}
+
+                // 3. Create Default Listener
+                try {
+                    await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lb.id)}/listeners`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: `${name}-${protocol.toLowerCase()}-${port}`,
+                            port: port,
+                            protocol: protocol,
+                            default_pool_id: defaultPoolId,
+                            redirect_to_https: false
+                        })
+                    });
+                } catch (_) {}
+
+                closeModal('create-lb-modal');
+                // Clear input
+                document.getElementById('new-lb-name').value = '';
+                document.getElementById('new-lb-desc').value = '';
+                document.getElementById('new-lb-vip').value = '';
+
+                showToast(`Load Balancer '${name}' provisioned successfully`, 'success');
+                fetchLoadBalancers();
+            } catch (err) {
+                showToast('Failed to create load balancer: ' + err.message, 'error');
+            }
+        }
+
+        function deleteLoadBalancer(id, name) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Load Balancer',
+                name: name,
+                id: id,
+                warning: 'All frontend listeners, routing policies, and dynamic upstream attachments will be removed.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    showToast(`Load Balancer '${name}' deleted`, 'success');
+                    fetchLoadBalancers();
+                    closeModal('lb-details-modal');
+                }
+            });
+        }
+
+        async function openLBDetails(id) {
+            try {
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(id)}`);
+                if (!res.ok) throw new Error('Failed to load details');
+                const lb = await res.json();
+                currentDetailedLB = lb;
+                renderLBDetails(lb);
+                openModal('lb-details-modal');
+            } catch (err) {
+                showToast('Failed to open LB details: ' + err.message, 'error');
+            }
+        }
+
+        function renderLBDetails(lb) {
+            const titleEl = document.getElementById('lb-details-title');
+            if (titleEl) titleEl.innerText = `Load Balancer: ${lb.name}`;
+
+            const vipEl = document.getElementById('lb-details-vip');
+            const typeEl = document.getElementById('lb-details-type');
+            const vpcEl = document.getElementById('lb-details-vpc');
+            const countsEl = document.getElementById('lb-details-counts');
+
+            if (vipEl) vipEl.innerText = lb.public_ip || 'Auto Host VIP';
+            if (typeEl) typeEl.innerText = (lb.type || 'hybrid').toUpperCase();
+            if (vpcEl) vpcEl.innerText = lb.vpc_network || 'podman';
+            if (countsEl) countsEl.innerText = `${(lb.listeners || []).length} Listeners / ${(lb.pools || []).length} Pools`;
+
+            // Render Listeners
+            const listCont = document.getElementById('lb-listeners-container');
+            if (listCont) {
+                if (!lb.listeners || lb.listeners.length === 0) {
+                    listCont.innerHTML = '<div style="text-align:center; padding:16px; color:var(--pg-text-muted); font-size:12px;">No ingress listeners configured. Click "+ Add Listener" above to open a port.</div>';
+                } else {
+                    listCont.innerHTML = lb.listeners.map(l => {
+                        const defaultPool = (lb.pools || []).find(p => p.id === l.default_pool_id);
+                        const poolName = defaultPool ? defaultPool.name : (l.default_pool_id || 'None');
+                        const pols = l.policies || [];
+
+                        return `
+                            <div style="border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #ffffff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="pill pill-blue" style="font-weight: 700;">${escapeHtml(l.protocol)} : ${l.port}</span>
+                                        <strong style="font-size: 13px;">${escapeHtml(l.name)}</strong>
+                                        <span style="font-size: 12px; color: var(--pg-text-secondary);">Default Pool: <strong>${escapeHtml(poolName)}</strong></span>
+                                        ${l.ssl_secret_name ? `<span class="pill pill-emerald" style="font-size:11px;">SSL: ${escapeHtml(l.ssl_secret_name)}</span>` : ''}
+                                        ${l.redirect_to_https ? '<span class="pill pill-purple" style="font-size:11px;">Redirect HTTPS</span>' : ''}
+                                    </div>
+                                    <div style="display: flex; gap: 6px;">
+                                        <button class="btn btn-sm btn-outline-primary rbac-write-only" onclick="openCreatePolicyModal('${escapeHtml(lb.id)}', '${escapeHtml(l.id)}')">
+                                            <span>+ L7 Policy</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-rose rbac-write-only" onclick="deleteListener('${escapeHtml(lb.id)}', '${escapeHtml(l.id)}')">
+                                            <span>Delete</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- L7 Policies Sub-Table -->
+                                <div style="margin-top: 8px; padding-left: 12px; border-left: 2px solid var(--pg-border-subtle);">
+                                    <div style="font-size: 11px; font-weight: 600; color: var(--pg-text-muted); margin-bottom: 4px;">LAYER 7 ROUTING RULES:</div>
+                                    ${pols.length === 0 ? '<div style="font-size: 11px; color: var(--pg-text-muted);">Direct passthrough to default pool (no custom host or path rules).</div>' : `
+                                        <table class="pg-table" style="font-size: 11px; margin-top: 4px;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Policy Name</th>
+                                                    <th>Rule Type</th>
+                                                    <th>Match Pattern / Value</th>
+                                                    <th>Target Pool</th>
+                                                    <th>Priority</th>
+                                                    <th style="text-align:right;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${pols.map(pol => {
+                                                    const targetP = (lb.pools || []).find(p => p.id === pol.target_pool_id);
+                                                    return `
+                                                        <tr>
+                                                            <td><strong>${escapeHtml(pol.name)}</strong></td>
+                                                            <td><span class="pill ${pol.rule_type === 'HOST_HEADER' ? 'pill-purple' : 'pill-blue'}">${escapeHtml(pol.rule_type)}</span></td>
+                                                            <td><code>${escapeHtml(pol.rule_value)}</code></td>
+                                                            <td><span class="pill pill-slate">${escapeHtml(targetP ? targetP.name : pol.target_pool_id)}</span></td>
+                                                            <td>${pol.priority}</td>
+                                                            <td style="text-align:right;">
+                                                                <button class="btn btn-sm btn-outline-rose rbac-write-only" style="padding: 2px 6px; font-size: 10px;" onclick="deletePolicy('${escapeHtml(lb.id)}', '${escapeHtml(pol.id)}')">Remove</button>
+                                                            </td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // Render Pools
+            const poolCont = document.getElementById('lb-pools-container');
+            if (poolCont) {
+                if (!lb.pools || lb.pools.length === 0) {
+                    poolCont.innerHTML = '<div style="text-align:center; padding:16px; color:var(--pg-text-muted); font-size:12px;">No backend pools configured. Click "+ Add Backend Pool" above.</div>';
+                } else {
+                    poolCont.innerHTML = lb.pools.map(p => {
+                        const members = p.members || [];
+                        return `
+                            <div style="border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #ffffff;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="pill pill-purple" style="font-weight: 700;">${escapeHtml(p.protocol)}</span>
+                                        <strong style="font-size: 13px;">${escapeHtml(p.name)}</strong>
+                                        <span class="pill pill-slate" style="font-size: 11px;">Algorithm: ${escapeHtml(p.algorithm)}</span>
+                                        <span style="font-size: 11px; color: var(--pg-text-secondary);">Health: <code>${escapeHtml(p.health_check_path || '/')}</code> (${p.health_interval_sec || 10}s)</span>
+                                    </div>
+                                    <div style="display: flex; gap: 6px;">
+                                        <button class="btn btn-sm btn-outline-primary rbac-write-only" onclick="openAttachMemberModal('${escapeHtml(lb.id)}', '${escapeHtml(p.id)}')">
+                                            <span>+ Attach Upstream Target</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-rose rbac-write-only" onclick="deletePool('${escapeHtml(lb.id)}', '${escapeHtml(p.id)}')">
+                                            <span>Delete Pool</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Upstream Members Sub-Table -->
+                                <div style="margin-top: 8px;">
+                                    ${members.length === 0 ? '<div style="font-size: 11px; color: var(--pg-text-muted); padding: 4px 0;">No upstream targets attached. Click "+ Attach Upstream Target" to link a container or pod.</div>' : `
+                                        <table class="pg-table" style="font-size: 11px;">
+                                            <thead>
+                                                <tr>
+                                                    <th>Target</th>
+                                                    <th>Type</th>
+                                                    <th>Resolved Virtual IP</th>
+                                                    <th>Port</th>
+                                                    <th>Weight</th>
+                                                    <th>Health State</th>
+                                                    <th style="text-align:right;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${members.map(m => `
+                                                    <tr>
+                                                        <td><strong>${escapeHtml(m.target_ref)}</strong></td>
+                                                        <td><span class="pill ${m.target_type === 'container' ? 'pill-blue' : (m.target_type === 'pod' ? 'pill-purple' : 'pill-slate')}">${escapeHtml(m.target_type)}</span></td>
+                                                        <td><code style="color:var(--pg-blue-600);">${escapeHtml(m.ip || '127.0.0.1')}</code></td>
+                                                        <td>${m.port}</td>
+                                                        <td>${m.weight}</td>
+                                                        <td><span class="pill ${m.status === 'HEALTHY' ? 'pill-emerald' : 'pill-amber'}">${escapeHtml(m.status || 'HEALTHY')}</span></td>
+                                                        <td style="text-align:right;">
+                                                            <button class="btn btn-sm btn-outline-rose rbac-write-only" style="padding: 2px 6px; font-size: 10px;" onclick="detachMember('${escapeHtml(lb.id)}', '${escapeHtml(m.id)}')">Detach</button>
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+        }
+
+        async function openAttachMemberModal(lbId, poolId) {
+            document.getElementById('member-lb-id').value = lbId;
+            document.getElementById('member-pool-id').value = poolId;
+            const pool = (currentDetailedLB?.pools || []).find(p => p.id === poolId);
+            const poolNameEl = document.getElementById('member-pool-name-display');
+            if (poolNameEl) poolNameEl.innerText = pool ? `${pool.name} (${pool.protocol})` : poolId;
+
+            // Load containers for dropdown
+            try {
+                const ctrRes = await authFetch('/api/v1/containers');
+                const containers = await ctrRes.json() || [];
+                const ctrSelect = document.getElementById('member-container-select');
+                if (ctrSelect) {
+                    if (containers.length === 0) {
+                        ctrSelect.innerHTML = '<option value="">No running containers found</option>';
+                    } else {
+                        ctrSelect.innerHTML = containers.map(c => `
+                            <option value="${escapeHtml(c.name)}">${escapeHtml(c.name)} (${(c.id || '').substring(0, 12)} - ${escapeHtml(c.state || '')})</option>
+                        `).join('');
+                    }
+                }
+            } catch (_) {}
+
+            // Load pods for dropdown
+            try {
+                const podRes = await authFetch('/api/v1/pods');
+                const pods = await podRes.json() || [];
+                const podSelect = document.getElementById('member-pod-select');
+                if (podSelect) {
+                    if (pods.length === 0) {
+                        podSelect.innerHTML = '<option value="">No active pods found</option>';
+                    } else {
+                        podSelect.innerHTML = pods.map(p => `
+                            <option value="${escapeHtml(p.name)}">${escapeHtml(p.name)} (${(p.id || '').substring(0, 12)} - ${escapeHtml(p.status || '')})</option>
+                        `).join('');
+                    }
+                }
+            } catch (_) {}
+
+            onLBTargetTypeChange();
+            openModal('attach-member-modal');
+        }
+
+        function onLBTargetTypeChange() {
+            const type = document.getElementById('member-target-type')?.value || 'container';
+            const ctrGroup = document.getElementById('member-target-container-group');
+            const podGroup = document.getElementById('member-target-pod-group');
+            const ipGroup = document.getElementById('member-target-ip-group');
+
+            if (ctrGroup) ctrGroup.style.display = type === 'container' ? 'block' : 'none';
+            if (podGroup) podGroup.style.display = type === 'pod' ? 'block' : 'none';
+            if (ipGroup) ipGroup.style.display = type === 'ip' ? 'block' : 'none';
+        }
+
+        async function submitAttachMember() {
+            const lbId = document.getElementById('member-lb-id')?.value;
+            const poolId = document.getElementById('member-pool-id')?.value;
+            const targetType = document.getElementById('member-target-type')?.value || 'container';
+            let targetRef = '';
+            if (targetType === 'container') {
+                targetRef = document.getElementById('member-container-select')?.value;
+            } else if (targetType === 'pod') {
+                targetRef = document.getElementById('member-pod-select')?.value;
+            } else {
+                targetRef = (document.getElementById('member-custom-ip')?.value || '').trim();
+            }
+            const port = parseInt(document.getElementById('member-port')?.value || '80', 10);
+            const weight = parseInt(document.getElementById('member-weight')?.value || '1', 10);
+
+            if (!targetRef) {
+                showToast('Please choose or enter an upstream target', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/pools/${encodeURIComponent(poolId)}/members`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_type: targetType,
+                        target_ref: targetRef,
+                        port: port,
+                        weight: weight
+                    })
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed attaching upstream member');
+                }
+                const member = await res.json();
+                closeModal('attach-member-modal');
+                showToast(`Upstream target attached (Resolved IP: ${member.ip || 'Virtual'})`, 'success');
+                openLBDetails(lbId);
+                fetchLoadBalancers();
+            } catch (err) {
+                showToast('Failed to attach upstream: ' + err.message, 'error');
+            }
+        }
+
+        async function detachMember(lbId, memberId) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Upstream Member',
+                name: memberId,
+                id: memberId,
+                warning: 'This upstream target will be removed from the balancing pool and Nginx config.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/members/${encodeURIComponent(memberId)}`, {
+                        method: 'DELETE'
+                    });
+                    showToast('Upstream target detached', 'success');
+                    openLBDetails(lbId);
+                    fetchLoadBalancers();
+                }
+            });
+        }
+
+        function openCreateListenerModal(lbId) {
+            document.getElementById('listener-lb-id').value = lbId;
+            const poolSelect = document.getElementById('new-listener-pool');
+            if (poolSelect) {
+                const pools = currentDetailedLB?.pools || [];
+                poolSelect.innerHTML = '<option value="">-- No Default Pool --</option>' + pools.map(p => `
+                    <option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${p.protocol} - ${p.algorithm})</option>
+                `).join('');
+            }
+            openModal('create-listener-modal');
+        }
+
+        async function submitCreateListener() {
+            const lbId = document.getElementById('listener-lb-id')?.value;
+            const name = (document.getElementById('new-listener-name')?.value || '').trim();
+            const port = parseInt(document.getElementById('new-listener-port')?.value || '80', 10);
+            const protocol = document.getElementById('new-listener-protocol')?.value || 'HTTP';
+            const poolId = document.getElementById('new-listener-pool')?.value || '';
+            const sslSecret = (document.getElementById('new-listener-ssl-secret')?.value || '').trim();
+            const redirect = document.getElementById('new-listener-redirect')?.checked || false;
+
+            if (!name || isNaN(port)) {
+                showToast('Please specify a valid name and port number', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/listeners`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        port: port,
+                        protocol: protocol,
+                        default_pool_id: poolId,
+                        ssl_secret_name: sslSecret,
+                        redirect_to_https: redirect
+                    })
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed creating listener');
+                }
+                closeModal('create-listener-modal');
+                showToast(`Listener '${name}' created`, 'success');
+                openLBDetails(lbId);
+                fetchLoadBalancers();
+            } catch (err) {
+                showToast('Failed to create listener: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteListener(lbId, listenerId) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Ingress Listener',
+                name: listenerId,
+                id: listenerId,
+                warning: 'The listening port will be unbound and all attached L7 policies will be deleted.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/listeners/${encodeURIComponent(listenerId)}`, {
+                        method: 'DELETE'
+                    });
+                    showToast('Listener deleted', 'success');
+                    openLBDetails(lbId);
+                    fetchLoadBalancers();
+                }
+            });
+        }
+
+        function openCreatePoolModal(lbId) {
+            document.getElementById('pool-lb-id').value = lbId;
+            openModal('create-pool-modal');
+        }
+
+        async function submitCreatePool() {
+            const lbId = document.getElementById('pool-lb-id')?.value;
+            const name = (document.getElementById('new-pool-name')?.value || '').trim();
+            const protocol = document.getElementById('new-pool-protocol')?.value || 'HTTP';
+            const algo = document.getElementById('new-pool-algo')?.value || 'round_robin';
+            const healthPath = (document.getElementById('new-pool-health-path')?.value || '/healthz').trim();
+            const interval = parseInt(document.getElementById('new-pool-health-interval')?.value || '10', 10);
+
+            if (!name) {
+                showToast('Please specify a pool name', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/pools`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        protocol: protocol,
+                        algorithm: algo,
+                        health_check_path: healthPath,
+                        health_check_port: 80,
+                        health_interval_sec: interval
+                    })
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed creating pool');
+                }
+                closeModal('create-pool-modal');
+                showToast(`Upstream pool '${name}' created`, 'success');
+                openLBDetails(lbId);
+                fetchLoadBalancers();
+            } catch (err) {
+                showToast('Failed to create pool: ' + err.message, 'error');
+            }
+        }
+
+        async function deletePool(lbId, poolId) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Backend Pool',
+                name: poolId,
+                id: poolId,
+                warning: 'All attached member target bindings will be removed.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/pools/${encodeURIComponent(poolId)}`, {
+                        method: 'DELETE'
+                    });
+                    showToast('Backend pool deleted', 'success');
+                    openLBDetails(lbId);
+                    fetchLoadBalancers();
+                }
+            });
+        }
+
+        function openCreatePolicyModal(lbId, listenerId) {
+            document.getElementById('policy-lb-id').value = lbId;
+            document.getElementById('policy-listener-id').value = listenerId;
+            const listener = (currentDetailedLB?.listeners || []).find(l => l.id === listenerId);
+            const listenerNameEl = document.getElementById('policy-listener-name-display');
+            if (listenerNameEl) listenerNameEl.innerText = listener ? `${listener.name} (${listener.protocol}:${listener.port})` : listenerId;
+
+            const poolSelect = document.getElementById('new-policy-pool');
+            if (poolSelect) {
+                const pools = currentDetailedLB?.pools || [];
+                poolSelect.innerHTML = pools.map(p => `
+                    <option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${p.protocol})</option>
+                `).join('') || '<option value="">-- No pools available --</option>';
+            }
+            openModal('create-policy-modal');
+        }
+
+        async function submitCreatePolicy() {
+            const lbId = document.getElementById('policy-lb-id')?.value;
+            const listenerId = document.getElementById('policy-listener-id')?.value;
+            const name = (document.getElementById('new-policy-name')?.value || '').trim();
+            const ruleType = document.getElementById('new-policy-rule-type')?.value || 'PATH_PREFIX';
+            const ruleValue = (document.getElementById('new-policy-rule-value')?.value || '').trim();
+            const poolId = document.getElementById('new-policy-pool')?.value;
+            const prio = parseInt(document.getElementById('new-policy-priority')?.value || '10', 10);
+
+            if (!name || !ruleValue || !poolId) {
+                showToast('Please specify policy name, rule match value, and destination pool', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/listeners/${encodeURIComponent(listenerId)}/policies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        rule_type: ruleType,
+                        rule_value: ruleValue,
+                        target_pool_id: poolId,
+                        priority: prio
+                    })
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed creating L7 policy');
+                }
+                closeModal('create-policy-modal');
+                showToast(`Policy '${name}' created`, 'success');
+                openLBDetails(lbId);
+                fetchLoadBalancers();
+            } catch (err) {
+                showToast('Failed to create policy: ' + err.message, 'error');
+            }
+        }
+
+        async function deletePolicy(lbId, policyId) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'L7 Routing Policy',
+                name: policyId,
+                id: policyId,
+                warning: 'Traffic routing under this rule will revert to the default pool.',
+                onConfirm: async () => {
+                    await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/policies/${encodeURIComponent(policyId)}`, {
+                        method: 'DELETE'
+                    });
+                    showToast('L7 Routing Policy deleted', 'success');
+                    openLBDetails(lbId);
+                    fetchLoadBalancers();
+                }
+            });
+        }
+
+        async function viewLBConfig(lbId) {
+            try {
+                const pre = document.getElementById('lb-config-content');
+                if (pre) pre.innerText = 'Generating Nginx configuration...';
+                openModal('view-lb-config-modal');
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/config`);
+                if (!res.ok) throw new Error('Failed to synthesize config');
+                const data = await res.json();
+                if (pre) pre.innerText = data.config || '# No listeners or pools configured';
+            } catch (err) {
+                showToast('Failed to view config: ' + err.message, 'error');
+            }
+        }
+
+        function copyLBConfig() {
+            const pre = document.getElementById('lb-config-content');
+            if (pre && pre.innerText) {
+                navigator.clipboard.writeText(pre.innerText).then(() => {
+                    showToast('Nginx configuration copied to clipboard', 'success');
+                }).catch(() => {
+                    showToast('Failed to copy to clipboard', 'error');
+                });
             }
         }
 
@@ -7795,7 +9039,9 @@ spec:
                 'run-container-modal', 'create-pod-modal', 'create-deployment-modal',
                 'pull-image-modal', 'create-volume-modal', 'create-network-modal',
                 'create-secret-modal', 'play-kube-modal', 'build-image-modal',
-                'run-workflow-modal', 'actual-shell-modal'
+                'run-workflow-modal', 'actual-shell-modal', 'create-lb-modal',
+                'create-listener-modal', 'create-pool-modal', 'attach-member-modal',
+                'create-policy-modal'
             ];
             if (writeModals.includes(id) && !canWrite()) {
                 showToast('Read-only role: action not permitted', 'error');

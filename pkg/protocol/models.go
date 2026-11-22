@@ -238,3 +238,123 @@ type WorkflowRunRequest struct {
 	Env           map[string]string `json:"env,omitempty"`
 }
 
+// -------------------------------------------------------------
+// Load Balancer as a Service (LBaaS) Models
+// -------------------------------------------------------------
+
+// LoadBalancer represents an LBaaS instance managing L4/L7 ingress traffic.
+type LoadBalancer struct {
+	ID          string        `json:"id"`
+	TenantID    string        `json:"tenant_id"`
+	VPCID       string        `json:"vpc_id,omitempty"`
+	Name        string        `json:"name"`
+	Description string        `json:"description,omitempty"`
+	Type        string        `json:"type"`      // "l4", "l7", "hybrid"
+	PublicIP    string        `json:"public_ip"` // Bound Floating IP / VIP
+	Status      string        `json:"status"`    // "active", "provisioning", "error", "disabled"
+	CreatedAt   time.Time     `json:"created_at"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+	Listeners   []*LBListener `json:"listeners,omitempty"`
+	Pools       []*LBPool     `json:"pools,omitempty"`
+}
+
+// LBListener represents a frontend listening port and protocol on the Load Balancer.
+type LBListener struct {
+	ID             string        `json:"id"`
+	LoadBalancerID string        `json:"loadbalancer_id"`
+	Name           string        `json:"name"`
+	Port           int           `json:"port"`
+	Protocol       string        `json:"protocol"` // "HTTP", "HTTPS", "TCP", "UDP"
+	SSLCertSecret  string        `json:"ssl_cert_secret,omitempty"`
+	DefaultPoolID  string        `json:"default_pool_id,omitempty"`
+	HTTPRedirect   bool          `json:"http_redirect"`
+	CreatedAt      time.Time     `json:"created_at"`
+	Policies       []*LBL7Policy `json:"policies,omitempty"`
+}
+
+// LBPool represents an upstream backend group with load balancing algorithm and health monitor.
+type LBPool struct {
+	ID                       string      `json:"id"`
+	LoadBalancerID           string      `json:"loadbalancer_id"`
+	Name                     string      `json:"name"`
+	Protocol                 string      `json:"protocol"` // "HTTP", "HTTPS", "TCP", "UDP"
+	Algorithm                string      `json:"algorithm"` // "round_robin", "least_conn", "ip_hash"
+	HealthPath               string      `json:"health_path"`
+	HealthIntervalSec        int         `json:"health_interval_sec"`
+	HealthTimeoutSec         int         `json:"health_timeout_sec"`
+	HealthUnhealthyThreshold int         `json:"health_unhealthy_threshold"`
+	CreatedAt                time.Time   `json:"created_at"`
+	Members                  []*LBMember `json:"members,omitempty"`
+}
+
+// LBMember represents a single upstream destination (container, pod, or IP) inside a pool.
+type LBMember struct {
+	ID         string    `json:"id"`
+	PoolID     string    `json:"pool_id"`
+	TargetType string    `json:"target_type"` // "container", "pod", "ip"
+	TargetRef  string    `json:"target_ref"`  // Name or ID of container/pod
+	IP         string    `json:"ip"`
+	Port       int       `json:"port"`
+	Weight     int       `json:"weight"`
+	Status     string    `json:"status"` // "healthy", "unhealthy", "draining"
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// LBL7Policy represents a Layer 7 routing rule matching host or path prefix.
+type LBL7Policy struct {
+	ID           string    `json:"id"`
+	ListenerID   string    `json:"listener_id"`
+	Name         string    `json:"name"`
+	Action       string    `json:"action"`    // "FORWARD"
+	RuleType     string    `json:"rule_type"` // "PATH_PREFIX", "HOST_HEADER"
+	RuleValue    string    `json:"rule_value"`
+	TargetPoolID string    `json:"target_pool_id"`
+	Priority     int       `json:"priority"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// LBaaS Request DTOs
+type CreateLoadBalancerRequest struct {
+	TenantID    string `json:"tenant_id"`
+	VPCID       string `json:"vpc_id,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Type        string `json:"type"`      // "l4", "l7", "hybrid"
+	PublicIP    string `json:"public_ip"` // VIP
+}
+
+type CreateListenerRequest struct {
+	Name          string `json:"name"`
+	Port          int    `json:"port"`
+	Protocol      string `json:"protocol"` // "HTTP", "HTTPS", "TCP", "UDP"
+	SSLCertSecret string `json:"ssl_cert_secret,omitempty"`
+	DefaultPoolID string `json:"default_pool_id,omitempty"`
+	HTTPRedirect  bool   `json:"http_redirect"`
+}
+
+type CreatePoolRequest struct {
+	Name                     string `json:"name"`
+	Protocol                 string `json:"protocol"` // "HTTP", "HTTPS", "TCP", "UDP"
+	Algorithm                string `json:"algorithm"`
+	HealthPath               string `json:"health_path,omitempty"`
+	HealthIntervalSec        int    `json:"health_interval_sec,omitempty"`
+	HealthTimeoutSec         int    `json:"health_timeout_sec,omitempty"`
+	HealthUnhealthyThreshold int    `json:"health_unhealthy_threshold,omitempty"`
+}
+
+type AttachMemberRequest struct {
+	TargetType string `json:"target_type"` // "container", "pod", "ip"
+	TargetRef  string `json:"target_ref,omitempty"`
+	IP         string `json:"ip,omitempty"`
+	Port       int    `json:"port"`
+	Weight     int    `json:"weight,omitempty"`
+}
+
+type CreatePolicyRequest struct {
+	Name         string `json:"name"`
+	RuleType     string `json:"rule_type"` // "PATH_PREFIX", "HOST_HEADER"
+	RuleValue    string `json:"rule_value"`
+	TargetPoolID string `json:"target_pool_id"`
+	Priority     int    `json:"priority,omitempty"`
+}
+
