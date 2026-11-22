@@ -550,11 +550,13 @@
                 <ul class="nav-links">
                     <li class="nav-link-item"><a href="#overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>Overview &amp; Philosophy</a></li>
                     <li class="nav-link-item"><a href="#quickstart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>Quickstart &amp; Installation</a></li>
+                    <li class="nav-link-item"><a href="#releases-compilation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Releases &amp; Packaging</a></li>
                 </ul>
 
                 <div class="nav-group-title" style="margin-top:16px;">Core Infrastructure</div>
                 <ul class="nav-links">
                     <li class="nav-link-item"><a href="#containers-pods"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Containers &amp; Pods</a></li>
+                    <li class="nav-link-item"><a href="#container-terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>Interactive Terminal (PTY)</a></li>
                     <li class="nav-link-item"><a href="#build-deploy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/></svg>Build &amp; Deploy CI/CD</a></li>
                     <li class="nav-link-item"><a href="#networking-dns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/><circle cx="12" cy="12" r="3"/></svg>Networking &amp; DNSaaS</a></li>
                     <li class="nav-link-item"><a href="#load-balancers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>Load Balancers &amp; SSL</a></li>
@@ -654,6 +656,67 @@ go build -o bin/procloud ./cmd/api</pre>
                 </div>
             </section>
 
+            <!-- SECTION: RELEASES & CROSS-COMPILATION -->
+            <section id="releases-compilation" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    <span>Multi-Platform Releases &amp; Packaging</span>
+                </h2>
+                <p class="doc-p">ProCloud is written in pure Go (<code class="inline-code">CGO_ENABLED=0</code>) and uses modern pure-Go SQLite, enabling cross-compilation across multiple operating systems and CPU architectures without external toolchain requirements.</p>
+
+                <div class="table-card" style="margin-top:14px; margin-bottom:18px;">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>Platform</th>
+                                <th>Architecture</th>
+                                <th>Target Description</th>
+                                <th>Package Formats</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>macOS</strong></td>
+                                <td><code class="inline-code">arm64</code></td>
+                                <td>Apple Silicon (M1, M2, M3, M4)</td>
+                                <td><code class="inline-code">.tar.gz</code> and <code class="inline-code">.zip</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>macOS</strong></td>
+                                <td><code class="inline-code">amd64</code></td>
+                                <td>Intel x86_64 Mac</td>
+                                <td><code class="inline-code">.tar.gz</code> and <code class="inline-code">.zip</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Linux</strong></td>
+                                <td><code class="inline-code">amd64</code></td>
+                                <td>Standard x86_64 servers (RHEL, Ubuntu, Debian, Fedora)</td>
+                                <td><code class="inline-code">.tar.gz</code> and <code class="inline-code">.zip</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Linux</strong></td>
+                                <td><code class="inline-code">arm64</code></td>
+                                <td>64-bit ARM (AWS Graviton, Ampere, Raspberry Pi 4/5)</td>
+                                <td><code class="inline-code">.tar.gz</code> and <code class="inline-code">.zip</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="doc-h3">Release Packaging Commands</h3>
+                <div class="code-box">
+                    <pre><code class="language-bash"># Build all 4 platform archives and compute SHA-256 checksums
+make release
+
+# Specify a custom version tag
+./scripts/build-release.sh v1.0.0
+
+# Verify compiled version
+./bin/procloud -version
+# Output: ProCloud 1.0.0 (commit: 9018097, built: 2026-11-22T10:24:05Z)</code></pre>
+                </div>
+            </section>
+
             <!-- SECTION 3: CONTAINERS & PODS -->
             <section id="containers-pods" class="doc-section">
                 <h2 class="doc-h2">
@@ -679,6 +742,42 @@ go build -o bin/procloud ./cmd/api</pre>
                     <div class="feature-card">
                         <div class="card-title">Kubernetes Pod Groups</div>
                         <div class="card-desc">Deploy multi-container pods sharing network namespaces and storage volumes. Export Pod definitions directly into standard Kubernetes Pod YAML via <code class="inline-code">podman generate kube</code>.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: INTERACTIVE CONTAINER TERMINAL (PTY) -->
+            <section id="container-terminal" class="doc-section">
+                <h2 class="doc-h2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                    <span>Interactive Container Terminal (PTY Attached)</span>
+                </h2>
+                <p class="doc-p">ProCloud replaces primitive one-shot command runners with a host-native, bi-directional pseudo-terminal (PTY) session attached directly to container namespaces over WebSockets.</p>
+
+                <h3 class="doc-h3">Architecture: Host PTY to xterm.js</h3>
+                <div class="feature-card" style="margin-bottom:16px;">
+                    <div class="card-title">Full-Duplex Interactive Shell Engine</div>
+                    <div class="card-desc">
+                        When opening the Terminal tab in Container Details, the ProCloud API server upgrades the HTTP connection to a WebSocket (<code class="inline-code">/api/v1/containers/{id}/terminal?token=...</code>) and launches a dedicated host pseudo-terminal (<code class="inline-code">/dev/pts/*</code>) via <code class="inline-code">github.com/creack/pty</code> attached directly to <code class="inline-code">podman exec -it &lt;id&gt; &lt;shell&gt;</code>.
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="feature-card">
+                        <div class="card-title">Strict Per-Container Isolation</div>
+                        <div class="card-desc">Every container maintains an independent client-side terminal session, DOM viewport, and command history. Switching between containers seamlessly unmounts the previous container's terminal without screen bleeding or history overlap.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Curses &amp; Interactive Programs</div>
+                        <div class="card-desc">Run interactive console software including <code class="inline-code">top</code>, <code class="inline-code">htop</code>, <code class="inline-code">vi</code>, <code class="inline-code">nano</code>, <code class="inline-code">less</code>, Python REPL, and interactive bash/sh scripts with full cursor positioning and ANSI colors.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Dynamic Window Resizing</div>
+                        <div class="card-desc">Viewport dimensions calculated by <code class="inline-code">xterm-addon-fit</code> are automatically synchronized with the host PTY via <code class="inline-code">pty.Setsize</code>, guaranteeing accurate wrapping and column geometry.</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-title">Zero External CDN Overhead</div>
+                        <div class="card-desc">Production-grade <code class="inline-code">xterm.js</code> and <code class="inline-code">xterm-addon-fit.js</code> are embedded directly in the single ProCloud executable under <code class="inline-code">/vendor/xterm/</code> for 100% offline, zero-latency execution.</div>
                     </div>
                 </div>
             </section>
