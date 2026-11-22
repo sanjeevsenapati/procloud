@@ -17,11 +17,19 @@ import (
 func (r *Repository) CreateLoadBalancer(ctx context.Context, lb *protocol.LoadBalancer) error {
 	query := `
 		INSERT INTO loadbalancers (
-			id, tenant_id, vpc_id, name, description, type, public_ip, status, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			id, tenant_id, vpc_id, name, description, type, public_ip, status, ssl_cert_secret, ssl_cert_type, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
+	certType := lb.SSLCertType
+	if certType == "" {
+		if lb.SSLCertSecret != "" {
+			certType = "secret"
+		} else {
+			certType = "auto"
+		}
+	}
 	_, err := r.db.sqlDB.ExecContext(ctx, query,
-		lb.ID, lb.TenantID, lb.VPCID, lb.Name, lb.Description, lb.Type, lb.PublicIP, lb.Status, lb.CreatedAt, lb.UpdatedAt,
+		lb.ID, lb.TenantID, lb.VPCID, lb.Name, lb.Description, lb.Type, lb.PublicIP, lb.Status, lb.SSLCertSecret, certType, lb.CreatedAt, lb.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed inserting loadbalancer: %w", err)
@@ -31,14 +39,14 @@ func (r *Repository) CreateLoadBalancer(ctx context.Context, lb *protocol.LoadBa
 
 func (r *Repository) GetLoadBalancerByID(ctx context.Context, id string) (*protocol.LoadBalancer, error) {
 	query := `
-		SELECT id, tenant_id, vpc_id, name, description, type, public_ip, status, created_at, updated_at
+		SELECT id, tenant_id, vpc_id, name, description, type, public_ip, status, ssl_cert_secret, ssl_cert_type, created_at, updated_at
 		FROM loadbalancers
 		WHERE id = ?
 	`
 	row := r.db.sqlDB.QueryRowContext(ctx, query, id)
 	lb := &protocol.LoadBalancer{}
 	err := row.Scan(
-		&lb.ID, &lb.TenantID, &lb.VPCID, &lb.Name, &lb.Description, &lb.Type, &lb.PublicIP, &lb.Status, &lb.CreatedAt, &lb.UpdatedAt,
+		&lb.ID, &lb.TenantID, &lb.VPCID, &lb.Name, &lb.Description, &lb.Type, &lb.PublicIP, &lb.Status, &lb.SSLCertSecret, &lb.SSLCertType, &lb.CreatedAt, &lb.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -67,7 +75,7 @@ func (r *Repository) ListLoadBalancers(ctx context.Context, tenantID string) ([]
 	var args []interface{}
 	if tenantID != "" {
 		query = `
-			SELECT id, tenant_id, vpc_id, name, description, type, public_ip, status, created_at, updated_at
+			SELECT id, tenant_id, vpc_id, name, description, type, public_ip, status, ssl_cert_secret, ssl_cert_type, created_at, updated_at
 			FROM loadbalancers
 			WHERE tenant_id = ?
 			ORDER BY created_at DESC
@@ -75,7 +83,7 @@ func (r *Repository) ListLoadBalancers(ctx context.Context, tenantID string) ([]
 		args = append(args, tenantID)
 	} else {
 		query = `
-			SELECT id, tenant_id, vpc_id, name, description, type, public_ip, status, created_at, updated_at
+			SELECT id, tenant_id, vpc_id, name, description, type, public_ip, status, ssl_cert_secret, ssl_cert_type, created_at, updated_at
 			FROM loadbalancers
 			ORDER BY created_at DESC
 		`
@@ -91,7 +99,7 @@ func (r *Repository) ListLoadBalancers(ctx context.Context, tenantID string) ([]
 	for rows.Next() {
 		lb := &protocol.LoadBalancer{}
 		if err := rows.Scan(
-			&lb.ID, &lb.TenantID, &lb.VPCID, &lb.Name, &lb.Description, &lb.Type, &lb.PublicIP, &lb.Status, &lb.CreatedAt, &lb.UpdatedAt,
+			&lb.ID, &lb.TenantID, &lb.VPCID, &lb.Name, &lb.Description, &lb.Type, &lb.PublicIP, &lb.Status, &lb.SSLCertSecret, &lb.SSLCertType, &lb.CreatedAt, &lb.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -107,11 +115,19 @@ func (r *Repository) ListLoadBalancers(ctx context.Context, tenantID string) ([]
 func (r *Repository) UpdateLoadBalancer(ctx context.Context, lb *protocol.LoadBalancer) error {
 	query := `
 		UPDATE loadbalancers
-		SET name = ?, description = ?, type = ?, public_ip = ?, status = ?, updated_at = ?
+		SET name = ?, description = ?, type = ?, public_ip = ?, status = ?, ssl_cert_secret = ?, ssl_cert_type = ?, updated_at = ?
 		WHERE id = ?
 	`
+	certType := lb.SSLCertType
+	if certType == "" {
+		if lb.SSLCertSecret != "" {
+			certType = "secret"
+		} else {
+			certType = "auto"
+		}
+	}
 	_, err := r.db.sqlDB.ExecContext(ctx, query,
-		lb.Name, lb.Description, lb.Type, lb.PublicIP, lb.Status, time.Now(), lb.ID,
+		lb.Name, lb.Description, lb.Type, lb.PublicIP, lb.Status, lb.SSLCertSecret, certType, time.Now(), lb.ID,
 	)
 	return err
 }
@@ -198,6 +214,30 @@ func (r *Repository) ListListenersByLB(ctx context.Context, lbID string) ([]*pro
 		list = append(list, l)
 	}
 	return list, nil
+}
+
+func (r *Repository) UpdateListener(ctx context.Context, l *protocol.LBListener) error {
+	query := `
+		UPDATE lb_listeners
+		SET name = ?, port = ?, protocol = ?, ssl_cert_secret = ?, ssl_cert_type = ?, default_pool_id = ?, http_redirect = ?
+		WHERE id = ?
+	`
+	httpRedir := 0
+	if l.HTTPRedirect {
+		httpRedir = 1
+	}
+	certType := l.SSLCertType
+	if certType == "" {
+		if l.SSLCertSecret != "" {
+			certType = "secret"
+		} else {
+			certType = "auto"
+		}
+	}
+	_, err := r.db.sqlDB.ExecContext(ctx, query,
+		l.Name, l.Port, l.Protocol, l.SSLCertSecret, certType, l.DefaultPoolID, httpRedir, l.ID,
+	)
+	return err
 }
 
 func (r *Repository) DeleteListener(ctx context.Context, id string) error {

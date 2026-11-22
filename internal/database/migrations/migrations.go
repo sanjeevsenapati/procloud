@@ -343,4 +343,12 @@ CREATE INDEX IF NOT EXISTS idx_dns_records_lookup ON dns_records(zone_id, name, 
 ALTER TABLE lb_listeners ADD COLUMN ssl_cert_type TEXT NOT NULL DEFAULT 'auto';
 `,
 	},
+	{
+		Version:     7,
+		Description: "Add ssl_cert_secret and ssl_cert_type to loadbalancers for attached LB SSL secret",
+		SQL: `
+ALTER TABLE loadbalancers ADD COLUMN ssl_cert_secret TEXT NOT NULL DEFAULT '';
+ALTER TABLE loadbalancers ADD COLUMN ssl_cert_type TEXT NOT NULL DEFAULT 'auto';
+`,
+	},
 }

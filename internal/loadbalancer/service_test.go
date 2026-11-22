@@ -319,3 +319,90 @@ func TestLoadBalancer_SSLOptions(t *testing.T) {
 		t.Errorf("expected custom cert files to be deleted after DeleteListener")
 	}
 }
+
+func TestLoadBalancer_AttachSSLSecret(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	dbPath := filepath.Join(tmpDir, "test_lb_ssl.db")
+	db, err := sqlite.Open(sqlite.DefaultConfig(dbPath))
+	if err != nil {
+		t.Fatalf("failed opening sqlite db: %v", err)
+	}
+	defer db.Close()
+
+	repo := sqlite.NewRepository(db)
+	confDir := filepath.Join(tmpDir, "nginx_lb_ssl")
+	svc := NewService(repo, podman.NewMockRuntime(), confDir)
+
+	// Create Tenant
+	_ = repo.CreateTenant(ctx, &protocol.Tenant{
+		ID:        "tenant-ssl-test",
+		Name:      "SSL Test Corp",
+		Slug:      "ssl-test",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	// Create LB
+	lb, err := svc.CreateLoadBalancer(ctx, protocol.CreateLoadBalancerRequest{
+		TenantID: "tenant-ssl-test",
+		Name:     "gateway-lb",
+		Type:     "layer7",
+		PublicIP: "192.0.2.10",
+	})
+	if err != nil {
+		t.Fatalf("CreateLoadBalancer failed: %v", err)
+	}
+
+	// Add an HTTPS listener without explicit secret
+	lsn, err := svc.CreateListener(ctx, lb.ID, protocol.CreateListenerRequest{
+		Name:     "https-ingress",
+		Port:     443,
+		Protocol: "HTTPS",
+	})
+	if err != nil {
+		t.Fatalf("CreateListener failed: %v", err)
+	}
+
+	// Attach manual SSL secret to the Load Balancer
+	sampleCert := "-----BEGIN CERTIFICATE-----\nMIIC...ATTACHED...CERT\n-----END CERTIFICATE-----"
+	sampleKey := "-----BEGIN PRIVATE KEY-----\nMIIE...ATTACHED...KEY\n-----END PRIVATE KEY-----"
+	updatedLB, err := svc.AttachSSLSecret(ctx, lb.ID, protocol.AttachSSLSecretRequest{
+		SSLCertType:   "custom",
+		SSLCertSecret: "my-attached-edge-cert",
+		SSLCertData:   sampleCert,
+		SSLKeyData:    sampleKey,
+	})
+	if err != nil {
+		t.Fatalf("AttachSSLSecret failed: %v", err)
+	}
+
+	if updatedLB.SSLCertSecret != "my-attached-edge-cert" {
+		t.Errorf("expected SSLCertSecret=my-attached-edge-cert, got %s", updatedLB.SSLCertSecret)
+	}
+
+	// Verify staged certificate on disk in confDir/certs
+	stagedCert := filepath.Join(confDir, "certs", "secret-my-attached-edge-cert.crt")
+	if !fileExists(stagedCert) {
+		t.Errorf("expected staged cert %s to exist", stagedCert)
+	}
+
+	// Verify synthesized Nginx config references the attached secret
+	conf, err := svc.SynthesizeConfig(ctx, lb.ID)
+	if err != nil {
+		t.Fatalf("SynthesizeConfig failed: %v", err)
+	}
+	if !strings.Contains(conf, "my-attached-edge-cert") {
+		t.Errorf("expected synthesized config to reference attached secret, got:\n%s", conf)
+	}
+
+	// Verify listener inherited the secret
+	updatedLsn, err := repo.GetListenerByID(ctx, lsn.ID)
+	if err != nil {
+		t.Fatalf("GetListenerByID failed: %v", err)
+	}
+	if updatedLsn.SSLCertSecret != "my-attached-edge-cert" {
+		t.Errorf("expected listener to inherit secret my-attached-edge-cert, got %s", updatedLsn.SSLCertSecret)
+	}
+}

@@ -3557,6 +3557,8 @@
                                 <span>•</span>
                                 <span>Access URL: <a id="lbd-access-url-link" href="#" target="_blank" style="color:var(--pg-blue-600); text-decoration:none; font-weight:600;"><span id="lbd-access-url-text">-</span> ↗</a></span>
                                 <span>•</span>
+                                <span>Attached SSL: <span id="lbd-ssl-secret-badge" class="pill pill-emerald" style="font-size:11px;">Auto Sovereign CA</span></span>
+                                <span>•</span>
                                 <span>VPC: <span id="lbd-vpc-badge" class="pill pill-slate" style="font-size:10px;">podman</span></span>
                             </div>
                         </div>
@@ -3564,6 +3566,10 @@
                 </div>
 
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-outline-primary btn-sm rbac-write-only" onclick="openAttachSSLModal()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span>🔒 Attach / Change SSL Secret</span>
+                    </button>
                     <button class="btn btn-primary btn-sm rbac-write-only" onclick="openCreateListenerModal(currentDetailedLB?.id)">
                         <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         <span>+ Add Listener</span>
@@ -3601,7 +3607,7 @@
 
             <!-- SUB-TAB 1: Overview & Topology -->
             <div id="lbd-tab-overview" class="lbd-subcontent cd-subcontent active">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
                     <div class="pg-stat-card">
                         <div class="stat-label">Public Edge VIP</div>
                         <div class="stat-number" style="font-size: 16px; color: var(--pg-blue-600);" id="lbd-card-vip">-</div>
@@ -3611,6 +3617,11 @@
                         <div class="stat-label">Access Endpoint URL</div>
                         <div class="stat-number" style="font-size: 14px; color: var(--pg-purple); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="lbd-card-access">-</div>
                         <div class="stat-hint" id="lbd-card-access-sub">Primary ingress route</div>
+                    </div>
+                    <div class="pg-stat-card">
+                        <div class="stat-label">Attached SSL Secret</div>
+                        <div class="stat-number" style="font-size: 14px; color: var(--pg-emerald); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="lbd-card-ssl">Auto Sovereign CA</div>
+                        <div class="stat-hint" id="lbd-card-ssl-sub">Inherited by HTTPS listeners</div>
                     </div>
                     <div class="pg-stat-card">
                         <div class="stat-label">Ingress Listeners</div>
@@ -6036,6 +6047,10 @@ spec:
                         <!-- Sub-panel: Custom Upload -->
                         <div id="lb-ssl-sub-custom" style="display:none;">
                             <div class="form-group" style="margin-bottom:8px;">
+                                <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:2px;">Secret Name (Stored in Secrets Vault) <span style="color:var(--pg-rose)">*</span></label>
+                                <input type="text" id="new-lb-ssl-secret-name" class="form-input" placeholder="e.g. edge-wildcard-tls" style="font-size:12px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:8px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                                     <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">X.509 Certificate (PEM) <span style="color:var(--pg-rose)">*</span></label>
                                     <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
@@ -6054,6 +6069,9 @@ spec:
                                     </label>
                                 </div>
                                 <textarea id="new-lb-ssl-key-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvgIBADANBgkqhkiG9w0BAQEFAASC...&#10;-----END PRIVATE KEY-----"></textarea>
+                            </div>
+                            <div style="font-size:10.5px; color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:4px 8px; margin-top:4px;">
+                                🔒 This certificate and private key will be saved into the ProCloud Secrets Engine and attached to this Load Balancer.
                             </div>
                         </div>
 
@@ -6261,6 +6279,10 @@ spec:
                 <!-- Sub-panel: Custom Upload -->
                 <div id="listener-ssl-sub-custom" style="display:none;">
                     <div class="form-group" style="margin-bottom:8px;">
+                        <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:2px;">Secret Name (Stored in Secrets Vault) <span style="color:var(--pg-rose)">*</span></label>
+                        <input type="text" id="new-listener-ssl-secret-name" class="form-input" placeholder="e.g. listener-app-tls" style="font-size:12px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                             <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">X.509 Certificate (PEM) <span style="color:var(--pg-rose)">*</span></label>
                             <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
@@ -6279,6 +6301,9 @@ spec:
                             </label>
                         </div>
                         <textarea id="new-listener-ssl-key-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvgIBADANBgkqhkiG9w0BAQEFAASC...&#10;-----END PRIVATE KEY-----"></textarea>
+                    </div>
+                    <div style="font-size:10.5px; color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:4px 8px; margin-top:4px;">
+                        🔒 This certificate and private key will be saved into the ProCloud Secrets Engine and attached to this listener.
                     </div>
                 </div>
             </div>
@@ -6474,6 +6499,114 @@ spec:
                     <span>Copy Configuration</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-primary" onclick="closeModal('view-lb-config-modal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Attach SSL Secret to Load Balancer -->
+    <div id="attach-ssl-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 520px;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span>Attach SSL / TLS Certificate to Load Balancer</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('attach-ssl-modal')">&times;</div>
+            </div>
+            <input type="hidden" id="attach-ssl-lb-id">
+            <div style="background: #f8faff; border: 1px solid var(--pg-border-subtle); border-radius: 6px; padding: 8px 12px; font-size: 12px; color: var(--pg-blue-600); margin-bottom: 12px;">
+                Load Balancer: <strong id="attach-ssl-lb-name">-</strong>
+            </div>
+
+            <!-- 3-Way Option Selector -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                <!-- Option 1: Secrets Vault -->
+                <div id="attach-ssl-opt-secret" onclick="selectAttachSSLType('secret')" style="border: 2px solid var(--pg-blue-600); background:#eff6ff; border-radius:6px; padding:10px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                    <div style="font-size:11.5px; font-weight:700; color:#1e40af; display:flex; align-items:center; justify-content:center; gap:4px;">
+                        <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 7.65-7.65a1.5 1.5 0 0 1 2.12 0l1.41 1.41a1.5 1.5 0 0 1 0 2.12l-7.65 7.65"/><path d="m15.5 7.5 2 2"/></svg>
+                        <span>Secrets Vault</span>
+                    </div>
+                    <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:3px;">Select Stored Secret</div>
+                </div>
+
+                <!-- Option 2: Manually Add Certificate -->
+                <div id="attach-ssl-opt-custom" onclick="selectAttachSSLType('custom')" style="border: 1px solid var(--pg-border); background:#ffffff; border-radius:6px; padding:10px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                    <div style="font-size:11.5px; font-weight:700; color:var(--pg-text); display:flex; align-items:center; justify-content:center; gap:4px;">
+                        <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Add Manually</span>
+                    </div>
+                    <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:3px;">Saves to Secrets Vault</div>
+                </div>
+
+                <!-- Option 3: Auto Sovereign CA -->
+                <div id="attach-ssl-opt-auto" onclick="selectAttachSSLType('auto')" style="border: 1px solid var(--pg-border); background:#ffffff; border-radius:6px; padding:10px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                    <div style="font-size:11.5px; font-weight:700; color:var(--pg-text); display:flex; align-items:center; justify-content:center; gap:4px;">
+                        <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <span>Auto Sovereign</span>
+                    </div>
+                    <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:3px;">Self-Signed CA</div>
+                </div>
+            </div>
+            <input type="hidden" id="attach-ssl-type" value="secret">
+
+            <!-- Sub-panel 1: Secrets Vault -->
+            <div id="attach-ssl-sub-secret">
+                <label class="form-label" style="font-size:11px; font-weight:600;">Select TLS Secret from Vault <span style="color:var(--pg-rose)">*</span></label>
+                <div style="display:flex; gap:8px;">
+                    <select id="attach-ssl-secret-select" class="form-input" style="font-size:12px;">
+                        <option value="">-- Select TLS Secret --</option>
+                    </select>
+                    <button type="button" class="btn btn-sm" onclick="populateSecretsDropdown('attach-ssl-secret-select')" title="Refresh Secrets">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                    </button>
+                </div>
+                <div style="font-size:11px; color:var(--pg-text-muted); margin-top:6px;">
+                    Secrets stored under the <a href="javascript:void(0)" onclick="closeModal('attach-ssl-modal');switchTab('secrets')" style="color:var(--pg-blue-600); text-decoration:underline;">Secrets</a> tab. This secret will be automatically inherited by all HTTPS listeners.
+                </div>
+            </div>
+
+            <!-- Sub-panel 2: Custom / Add Manually -->
+            <div id="attach-ssl-sub-custom" style="display:none;">
+                <div class="form-group" style="margin-bottom:8px;">
+                    <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:2px;">Secret Name (Stored in Secrets Vault) <span style="color:var(--pg-rose)">*</span></label>
+                    <input type="text" id="attach-ssl-secret-name" class="form-input" placeholder="e.g. edge-tls-cert" style="font-size:12px;">
+                </div>
+                <div class="form-group" style="margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                        <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">X.509 Certificate (PEM) <span style="color:var(--pg-rose)">*</span></label>
+                        <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
+                            Upload .crt/.pem
+                            <input type="file" accept=".crt,.pem,.cer" style="display:none;" onchange="handleCertFileLoad(this, 'attach-ssl-cert-data')">
+                        </label>
+                    </div>
+                    <textarea id="attach-ssl-cert-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN CERTIFICATE-----&#10;MIIDBzCCAe+gAwIBAgIU...&#10;-----END CERTIFICATE-----"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                        <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">Private Key (PEM) <span style="color:var(--pg-rose)">*</span></label>
+                        <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
+                            Upload .key
+                            <input type="file" accept=".key,.pem" style="display:none;" onchange="handleCertFileLoad(this, 'attach-ssl-key-data')">
+                        </label>
+                    </div>
+                    <textarea id="attach-ssl-key-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvgIBADANBgkqhkiG9w0BAQEFAASC...&#10;-----END PRIVATE KEY-----"></textarea>
+                </div>
+                <div style="font-size:11px; color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:6px 10px; margin-top:6px;">
+                    🔒 <strong>Automatic Vault Storage:</strong> This certificate will be saved into the ProCloud Secrets Vault as a TLS secret and mounted to this Load Balancer and its HTTPS listeners.
+                </div>
+            </div>
+
+            <!-- Sub-panel 3: Auto Sovereign CA -->
+            <div id="attach-ssl-sub-auto" style="display:none; font-size:11px; color:#1e40af; background:#eff6ff; border:1px solid #dbeafe; border-radius:6px; padding:10px 12px; line-height:1.4;">
+                ✓ <strong>ProCloud Sovereign CA:</strong> Load balancer will use an automatic sovereign self-signed X.509 certificate for TLS termination across listeners.
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; border-top: 1px solid var(--pg-border-subtle); padding-top: 12px;">
+                <button type="button" class="btn" onclick="closeModal('attach-ssl-modal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAttachSSLSecret()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Attach SSL Secret</span>
+                </button>
             </div>
         </div>
     </div>
@@ -8710,10 +8843,31 @@ spec:
             const cardAccess = document.getElementById('lbd-card-access');
             const cardListeners = document.getElementById('lbd-card-listeners');
             const cardTargets = document.getElementById('lbd-card-targets');
+            const sslBadge = document.getElementById('lbd-ssl-secret-badge');
+            const cardSsl = document.getElementById('lbd-card-ssl');
+            const cardSslSub = document.getElementById('lbd-card-ssl-sub');
 
             if (cardVip) cardVip.innerText = lb.public_ip || 'Auto Host VIP';
             if (cardAccess) cardAccess.innerText = accessUrlStr;
             if (cardListeners) cardListeners.innerText = listeners.length;
+
+            let sslText = 'Auto Sovereign CA';
+            let sslTypeHint = 'Self-signed CA';
+            if (lb.ssl_cert_secret) {
+                sslText = lb.ssl_cert_secret;
+                sslTypeHint = 'Stored in Secrets Vault';
+            }
+            if (sslBadge) {
+                if (lb.ssl_cert_secret) {
+                    sslBadge.className = 'pill pill-emerald';
+                    sslBadge.innerHTML = `<svg class="icon-svg" style="width:10px; height:10px; margin-right:3px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 7.65-7.65a1.5 1.5 0 0 1 2.12 0l1.41 1.41a1.5 1.5 0 0 1 0 2.12l-7.65 7.65"/><path d="m15.5 7.5 2 2"/></svg>${escapeHtml(lb.ssl_cert_secret)}`;
+                } else {
+                    sslBadge.className = 'pill pill-blue';
+                    sslBadge.innerText = 'Auto Sovereign CA';
+                }
+            }
+            if (cardSsl) cardSsl.innerText = sslText;
+            if (cardSslSub) cardSslSub.innerText = sslTypeHint;
 
             let totalTargets = 0;
             (lb.pools || []).forEach(p => totalTargets += (p.members || []).length);
@@ -8798,7 +8952,7 @@ spec:
                                 ${l.protocol === 'HTTPS' ? `
                                     <span class="pill pill-emerald" style="font-size:11px; display:inline-flex; align-items:center; gap:4px;">
                                         <svg class="icon-svg" style="width:12px; height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                        ${l.ssl_cert_type === 'custom' ? 'Custom PEM SSL' : (l.ssl_cert_secret || l.ssl_secret_name ? `Vault Secret: ${escapeHtml(l.ssl_cert_secret || l.ssl_secret_name)}` : 'Auto Sovereign TLS')}
+                                        ${(l.ssl_cert_secret || l.ssl_secret_name) ? `Secret: ${escapeHtml(l.ssl_cert_secret || l.ssl_secret_name)}` : (lb.ssl_cert_secret ? `Inherited Secret: ${escapeHtml(lb.ssl_cert_secret)}` : (l.ssl_cert_type === 'custom' ? 'Custom PEM SSL' : 'Auto Sovereign TLS'))}
                                     </span>
                                 ` : ''}
                                 ${(l.http_redirect || l.redirect_to_https) ? '<span class="pill pill-purple" style="font-size:11px;">Auto Redirect HTTPS</span>' : ''}
@@ -8934,7 +9088,10 @@ spec:
 
             // SSL parameters
             const sslType = document.getElementById('new-lb-ssl-type')?.value || 'auto';
-            const sslSecret = (document.getElementById('new-lb-ssl-secret-select')?.value || '').trim();
+            let sslSecret = (document.getElementById('new-lb-ssl-secret-select')?.value || '').trim();
+            if (sslType === 'custom') {
+                sslSecret = (document.getElementById('new-lb-ssl-secret-name')?.value || '').trim() || `${name}-tls-secret`;
+            }
             const certData = (document.getElementById('new-lb-ssl-cert-data')?.value || '').trim();
             const keyData = (document.getElementById('new-lb-ssl-key-data')?.value || '').trim();
             const sslRedirect = document.getElementById('new-lb-ssl-redirect')?.checked || false;
@@ -8963,7 +9120,11 @@ spec:
                         description: desc,
                         type: type,
                         public_ip: vip,
-                        vpc_network: vpc
+                        vpc_network: vpc,
+                        ssl_cert_type: sslType,
+                        ssl_cert_secret: sslSecret,
+                        ssl_cert_data: certData,
+                        ssl_key_data: keyData
                     })
                 });
                 if (!res.ok) {
@@ -9086,7 +9247,10 @@ spec:
             const protocol = document.getElementById('new-listener-protocol')?.value || 'HTTPS';
             const poolId = document.getElementById('new-listener-pool')?.value || '';
             const sslType = document.getElementById('new-listener-ssl-type')?.value || 'auto';
-            const sslSecret = (document.getElementById('new-listener-ssl-secret-select')?.value || '').trim();
+            let sslSecret = (document.getElementById('new-listener-ssl-secret-select')?.value || '').trim();
+            if (sslType === 'custom') {
+                sslSecret = (document.getElementById('new-listener-ssl-secret-name')?.value || '').trim() || `${name}-tls-secret`;
+            }
             const certData = (document.getElementById('new-listener-ssl-cert-data')?.value || '').trim();
             const keyData = (document.getElementById('new-listener-ssl-key-data')?.value || '').trim();
             const redirect = document.getElementById('new-listener-redirect')?.checked || false;
@@ -9152,6 +9316,120 @@ spec:
                     fetchLoadBalancers();
                 }
             });
+        }
+
+        // ==========================================
+        // ATTACH SSL SECRET TO LOAD BALANCER
+        // ==========================================
+        function openAttachSSLModal() {
+            if (!currentDetailedLB) return;
+            const lbId = currentDetailedLB.id;
+            const lbName = currentDetailedLB.name;
+            const idInput = document.getElementById('attach-ssl-lb-id');
+            const nameEl = document.getElementById('attach-ssl-lb-name');
+            if (idInput) idInput.value = lbId;
+            if (nameEl) nameEl.innerText = `${lbName} (${currentDetailedLB.public_ip || 'Auto Host VIP'})`;
+
+            const secSelect = document.getElementById('attach-ssl-secret-select');
+            const secName = document.getElementById('attach-ssl-secret-name');
+            const certData = document.getElementById('attach-ssl-cert-data');
+            const keyData = document.getElementById('attach-ssl-key-data');
+            if (secName) secName.value = `${lbName}-tls-secret`;
+            if (certData) certData.value = '';
+            if (keyData) keyData.value = '';
+
+            const initType = currentDetailedLB.ssl_cert_secret ? 'secret' : (currentDetailedLB.ssl_cert_type || 'secret');
+            selectAttachSSLType(initType === 'custom' ? 'secret' : initType);
+            if (secSelect && currentDetailedLB.ssl_cert_secret) {
+                secSelect.value = currentDetailedLB.ssl_cert_secret;
+            }
+            openModal('attach-ssl-modal');
+        }
+
+        function selectAttachSSLType(type) {
+            const hidden = document.getElementById('attach-ssl-type');
+            if (hidden) hidden.value = type;
+
+            const optSecret = document.getElementById('attach-ssl-opt-secret');
+            const optCustom = document.getElementById('attach-ssl-opt-custom');
+            const optAuto = document.getElementById('attach-ssl-opt-auto');
+
+            const subSecret = document.getElementById('attach-ssl-sub-secret');
+            const subCustom = document.getElementById('attach-ssl-sub-custom');
+            const subAuto = document.getElementById('attach-ssl-sub-auto');
+
+            [
+                { el: optSecret, sub: subSecret, t: 'secret' },
+                { el: optCustom, sub: subCustom, t: 'custom' },
+                { el: optAuto, sub: subAuto, t: 'auto' }
+            ].forEach(item => {
+                if (!item.el) return;
+                if (item.t === type) {
+                    item.el.style.border = '2px solid var(--pg-blue-600)';
+                    item.el.style.background = '#eff6ff';
+                    const titleDiv = item.el.querySelector('div');
+                    if (titleDiv) titleDiv.style.color = '#1e40af';
+                    if (item.sub) item.sub.style.display = 'block';
+                } else {
+                    item.el.style.border = '1px solid var(--pg-border)';
+                    item.el.style.background = '#ffffff';
+                    const titleDiv = item.el.querySelector('div');
+                    if (titleDiv) titleDiv.style.color = 'var(--pg-text)';
+                    if (item.sub) item.sub.style.display = 'none';
+                }
+            });
+
+            if (type === 'secret') {
+                populateSecretsDropdown('attach-ssl-secret-select');
+            }
+        }
+
+        async function submitAttachSSLSecret() {
+            const lbId = document.getElementById('attach-ssl-lb-id')?.value;
+            if (!lbId) return;
+
+            const sslType = document.getElementById('attach-ssl-type')?.value || 'secret';
+            let sslSecret = (document.getElementById('attach-ssl-secret-select')?.value || '').trim();
+            const secName = (document.getElementById('attach-ssl-secret-name')?.value || '').trim();
+            const certData = (document.getElementById('attach-ssl-cert-data')?.value || '').trim();
+            const keyData = (document.getElementById('attach-ssl-key-data')?.value || '').trim();
+
+            if (sslType === 'secret' && !sslSecret) {
+                showToast('Please select a TLS Secret from the vault', 'error');
+                return;
+            }
+            if (sslType === 'custom') {
+                if (!certData) {
+                    showToast('Please provide an X.509 Certificate (PEM)', 'error');
+                    return;
+                }
+                sslSecret = secName || `${currentDetailedLB?.name || 'lb'}-tls-secret`;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lbId)}/ssl`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ssl_cert_type: sslType,
+                        ssl_cert_secret: sslSecret,
+                        ssl_cert_data: certData,
+                        ssl_key_data: keyData
+                    })
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'Failed attaching SSL secret');
+                }
+                const updatedLB = await res.json();
+                currentDetailedLB = updatedLB;
+                renderLBDetailsPage(updatedLB);
+                closeModal('attach-ssl-modal');
+                showToast(`SSL Certificate / Secret successfully attached to ${updatedLB.name}`, 'success');
+                refreshCurrentLBDetails();
+            } catch (err) {
+                showToast('Failed attaching SSL secret: ' + err.message, 'error');
+            }
         }
 
         function openCreatePoolModal(lbId) {

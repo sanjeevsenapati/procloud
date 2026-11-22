@@ -75,17 +75,39 @@ func (s *Service) CreateLoadBalancer(ctx context.Context, req protocol.CreateLoa
 		req.PublicIP = "0.0.0.0"
 	}
 
+	sslType := strings.ToLower(strings.TrimSpace(req.SSLCertType))
+	if sslType == "" {
+		if req.SSLCertSecret != "" || req.SSLCertData != "" {
+			sslType = "secret"
+		} else {
+			sslType = "auto"
+		}
+	}
+
+	lbID := fmt.Sprintf("lb-%d", time.Now().UnixNano())
+
+	// If manual certificate data was provided, store it into the Secrets Engine!
+	if req.SSLCertData != "" {
+		if req.SSLCertSecret == "" {
+			req.SSLCertSecret = fmt.Sprintf("%s-tls", req.Name)
+		}
+		sslType = "secret"
+		_ = s.storeSecretAndStage(ctx, req.TenantID, req.SSLCertSecret, req.SSLCertData, req.SSLKeyData, lbID)
+	}
+
 	lb := &protocol.LoadBalancer{
-		ID:          fmt.Sprintf("lb-%d", time.Now().UnixNano()),
-		TenantID:    req.TenantID,
-		VPCID:       req.VPCID,
-		Name:        req.Name,
-		Description: req.Description,
-		Type:        req.Type,
-		PublicIP:    req.PublicIP,
-		Status:      "active",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:            lbID,
+		TenantID:      req.TenantID,
+		VPCID:         req.VPCID,
+		Name:          req.Name,
+		Description:   req.Description,
+		Type:          req.Type,
+		PublicIP:      req.PublicIP,
+		Status:        "active",
+		SSLCertSecret: req.SSLCertSecret,
+		SSLCertType:   sslType,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	if err := s.repo.CreateLoadBalancer(ctx, lb); err != nil {
@@ -94,6 +116,58 @@ func (s *Service) CreateLoadBalancer(ctx context.Context, req protocol.CreateLoa
 
 	_, _ = s.SynthesizeConfig(ctx, lb.ID)
 	return lb, nil
+}
+
+func (s *Service) AttachSSLSecret(ctx context.Context, lbID string, req protocol.AttachSSLSecretRequest) (*protocol.LoadBalancer, error) {
+	lb, err := s.repo.GetLoadBalancerByID(ctx, lbID)
+	if err != nil {
+		return nil, fmt.Errorf("loadbalancer %s not found: %w", lbID, err)
+	}
+
+	sslType := strings.ToLower(strings.TrimSpace(req.SSLCertType))
+	if sslType == "" {
+		if req.SSLCertSecret != "" || req.SSLCertData != "" {
+			sslType = "secret"
+		} else {
+			sslType = "auto"
+		}
+	}
+
+	// If manual certificate is provided, store it into Secrets Engine
+	if req.SSLCertData != "" {
+		if req.SSLCertSecret == "" {
+			req.SSLCertSecret = fmt.Sprintf("%s-tls-%d", lb.Name, time.Now().Unix()%10000)
+		}
+		sslType = "secret"
+		_ = s.storeSecretAndStage(ctx, lb.TenantID, req.SSLCertSecret, req.SSLCertData, req.SSLKeyData, lb.ID)
+	} else if sslType == "secret" && req.SSLCertSecret != "" && s.runtime != nil {
+		// Stage secret locally if it exists in runtime
+		if sec, err := s.runtime.InspectSecret(ctx, req.SSLCertSecret, true); err == nil && sec != nil && sec.SecretData != "" {
+			_ = s.storeSecretAndStage(ctx, lb.TenantID, req.SSLCertSecret, sec.SecretData, sec.SecretData, lb.ID)
+		}
+	}
+
+	lb.SSLCertSecret = req.SSLCertSecret
+	lb.SSLCertType = sslType
+
+	if err := s.repo.UpdateLoadBalancer(ctx, lb); err != nil {
+		return nil, fmt.Errorf("failed updating loadbalancer: %w", err)
+	}
+
+	// Update existing HTTPS listeners on this LB to use this secret
+	listeners, err := s.repo.ListListenersByLB(ctx, lb.ID)
+	if err == nil {
+		for _, l := range listeners {
+			if l.Protocol == "HTTPS" {
+				l.SSLCertSecret = lb.SSLCertSecret
+				l.SSLCertType = lb.SSLCertType
+				_ = s.repo.UpdateListener(ctx, l)
+			}
+		}
+	}
+
+	_, _ = s.SynthesizeConfig(ctx, lb.ID)
+	return s.repo.GetLoadBalancerByID(ctx, lb.ID)
 }
 
 func (s *Service) GetLoadBalancer(ctx context.Context, id string) (*protocol.LoadBalancer, error) {
@@ -157,42 +231,45 @@ func (s *Service) CreateListener(ctx context.Context, lbID string, req protocol.
 		} else if req.SSLCertData != "" {
 			sslType = "custom"
 		} else if req.Protocol == "HTTPS" {
-			sslType = "auto"
+			// Check if parent load balancer has an attached SSL secret
+			if lb, err := s.repo.GetLoadBalancerByID(ctx, lbID); err == nil && lb != nil && lb.SSLCertSecret != "" {
+				req.SSLCertSecret = lb.SSLCertSecret
+				sslType = lb.SSLCertType
+			} else {
+				sslType = "auto"
+			}
 		}
 	}
 
 	listenerID := fmt.Sprintf("lsn-%d", time.Now().UnixNano())
 
-	// If custom SSL certificate data is provided, save it to disk
-	if (sslType == "custom" || req.SSLCertData != "") && req.SSLCertData != "" {
-		sslType = "custom"
+	// If manual certificate data is provided, store it into the Secrets Engine and stage files
+	if req.SSLCertData != "" {
+		if req.SSLCertSecret == "" {
+			req.SSLCertSecret = fmt.Sprintf("tls-%s-%d", req.Name, time.Now().Unix()%10000)
+		}
+		lb, _ := s.repo.GetLoadBalancerByID(ctx, lbID)
+		tenantID := "tnt-default"
+		if lb != nil && lb.TenantID != "" {
+			tenantID = lb.TenantID
+		}
+		_ = s.storeSecretAndStage(ctx, tenantID, req.SSLCertSecret, req.SSLCertData, req.SSLKeyData, lbID)
+
+		// Stage custom cert files directly for custom type
 		certsDir := filepath.Join(s.confDir, "certs")
 		_ = os.MkdirAll(certsDir, 0755)
-		certPath := filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", listenerID))
-		keyPath := filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", listenerID))
-		if err := os.WriteFile(certPath, []byte(strings.TrimSpace(req.SSLCertData)+"\n"), 0644); err != nil {
-			return nil, fmt.Errorf("failed writing custom certificate: %w", err)
-		}
+		_ = os.WriteFile(filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", listenerID)), []byte(strings.TrimSpace(req.SSLCertData)+"\n"), 0644)
 		if req.SSLKeyData != "" {
-			if err := os.WriteFile(keyPath, []byte(strings.TrimSpace(req.SSLKeyData)+"\n"), 0600); err != nil {
-				return nil, fmt.Errorf("failed writing custom private key: %w", err)
-			}
+			_ = os.WriteFile(filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", listenerID)), []byte(strings.TrimSpace(req.SSLKeyData)+"\n"), 0600)
 		}
-	}
-
-	// If secret SSL is selected and Secret exists in Podman Secrets, cache cert if needed
-	if sslType == "secret" && req.SSLCertSecret != "" && s.runtime != nil {
+	} else if sslType == "secret" && req.SSLCertSecret != "" && s.runtime != nil {
 		if sec, err := s.runtime.InspectSecret(ctx, req.SSLCertSecret, true); err == nil && sec != nil && sec.SecretData != "" {
-			certsDir := filepath.Join(s.confDir, "certs")
-			_ = os.MkdirAll(certsDir, 0755)
-			if strings.Contains(sec.SecretData, "BEGIN CERTIFICATE") {
-				secCertPath := filepath.Join(certsDir, fmt.Sprintf("secret-%s.crt", req.SSLCertSecret))
-				_ = os.WriteFile(secCertPath, []byte(sec.SecretData), 0644)
+			lb, _ := s.repo.GetLoadBalancerByID(ctx, lbID)
+			tenantID := "tnt-default"
+			if lb != nil && lb.TenantID != "" {
+				tenantID = lb.TenantID
 			}
-			if strings.Contains(sec.SecretData, "PRIVATE KEY") {
-				secKeyPath := filepath.Join(certsDir, fmt.Sprintf("secret-%s.key", req.SSLCertSecret))
-				_ = os.WriteFile(secKeyPath, []byte(sec.SecretData), 0600)
-			}
+			_ = s.storeSecretAndStage(ctx, tenantID, req.SSLCertSecret, sec.SecretData, sec.SecretData, lbID)
 		}
 	}
 
@@ -517,7 +594,7 @@ func (s *Service) SynthesizeConfig(ctx context.Context, lbID string) (string, er
 			if l.Protocol == "HTTPS" {
 				sb.WriteString(fmt.Sprintf("    listen %s ssl http2;\n", listenAddr))
 				// TLS Certificate setup
-				certPath, keyPath := s.getCertificatePaths(lb.TenantID, l)
+				certPath, keyPath := s.getCertificatePaths(lb, l)
 				sb.WriteString(fmt.Sprintf("    ssl_certificate %s;\n", certPath))
 				sb.WriteString(fmt.Sprintf("    ssl_certificate_key %s;\n", keyPath))
 				sb.WriteString("    ssl_protocols TLSv1.2 TLSv1.3;\n")
@@ -668,12 +745,66 @@ func (s *Service) CheckMemberHealth(ctx context.Context, m *protocol.LBMember, p
 // TLS / SSL Certificate Management (Auto, Secret, Custom)
 // -------------------------------------------------------------
 
-func (s *Service) getCertificatePaths(tenantID string, l *protocol.LBListener) (string, string) {
+func (s *Service) storeSecretAndStage(ctx context.Context, tenantID, secretName, certData, keyData, lbID string) error {
+	if secretName == "" {
+		return fmt.Errorf("secret name is required")
+	}
 	certsDir := filepath.Join(s.confDir, "certs")
 	_ = os.MkdirAll(certsDir, 0755)
 
+	certPath := filepath.Join(certsDir, fmt.Sprintf("secret-%s.crt", secretName))
+	keyPath := filepath.Join(certsDir, fmt.Sprintf("secret-%s.key", secretName))
+
+	if certData != "" {
+		_ = os.WriteFile(certPath, []byte(strings.TrimSpace(certData)+"\n"), 0644)
+	}
+	if keyData != "" {
+		_ = os.WriteFile(keyPath, []byte(strings.TrimSpace(keyData)+"\n"), 0600)
+	}
+
+	// Also stage in /var/lib/procloud/secrets/{tenant}/{secret}/
+	tenantSecDir := fmt.Sprintf("/var/lib/procloud/secrets/%s/%s", tenantID, secretName)
+	if err := os.MkdirAll(tenantSecDir, 0755); err == nil {
+		if certData != "" {
+			_ = os.WriteFile(filepath.Join(tenantSecDir, "tls.crt"), []byte(strings.TrimSpace(certData)+"\n"), 0644)
+		}
+		if keyData != "" {
+			_ = os.WriteFile(filepath.Join(tenantSecDir, "tls.key"), []byte(strings.TrimSpace(keyData)+"\n"), 0600)
+		}
+	}
+
+	// Store in Podman Secrets engine
+	if s.runtime != nil && (certData != "" || keyData != "") {
+		combined := strings.TrimSpace(certData) + "\n" + strings.TrimSpace(keyData)
+		_, _ = s.runtime.CreateSecret(ctx, podman.SecretCreateOptions{
+			Name: secretName,
+			Data: combined,
+			Labels: map[string]string{
+				"type":            "tls",
+				"service":         "loadbalancer",
+				"loadbalancer_id": lbID,
+			},
+		})
+	}
+	return nil
+}
+
+func (s *Service) getCertificatePaths(lb *protocol.LoadBalancer, l *protocol.LBListener) (string, string) {
+	certsDir := filepath.Join(s.confDir, "certs")
+	_ = os.MkdirAll(certsDir, 0755)
+
+	tenantID := lb.TenantID
+	certSecret := l.SSLCertSecret
+	certType := l.SSLCertType
+
+	// Inherit from Load Balancer if not specified on listener (and listener is not explicitly auto or custom)
+	if certSecret == "" && certType != "auto" && certType != "custom" && lb.SSLCertSecret != "" {
+		certSecret = lb.SSLCertSecret
+		certType = lb.SSLCertType
+	}
+
 	// 1. Custom Certificate Upload
-	if l.SSLCertType == "custom" {
+	if certType == "custom" {
 		customCert := filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", l.ID))
 		customKey := filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", l.ID))
 		if fileExists(customCert) && fileExists(customKey) {
@@ -682,20 +813,20 @@ func (s *Service) getCertificatePaths(tenantID string, l *protocol.LBListener) (
 	}
 
 	// 2. Secret Reference
-	if l.SSLCertSecret != "" {
-		secCert := fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.crt", tenantID, l.SSLCertSecret)
-		secKey := fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.key", tenantID, l.SSLCertSecret)
+	if certSecret != "" {
+		secCert := fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.crt", tenantID, certSecret)
+		secKey := fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.key", tenantID, certSecret)
 		if fileExists(secCert) && fileExists(secKey) {
 			return secCert, secKey
 		}
 
-		vaultCert := filepath.Join(certsDir, fmt.Sprintf("secret-%s.crt", l.SSLCertSecret))
-		vaultKey := filepath.Join(certsDir, fmt.Sprintf("secret-%s.key", l.SSLCertSecret))
+		vaultCert := filepath.Join(certsDir, fmt.Sprintf("secret-%s.crt", certSecret))
+		vaultKey := filepath.Join(certsDir, fmt.Sprintf("secret-%s.key", certSecret))
 		if fileExists(vaultCert) && fileExists(vaultKey) {
 			return vaultCert, vaultKey
 		}
 
-		if l.SSLCertType == "secret" || l.SSLCertType == "" {
+		if certType == "secret" || certType == "" {
 			return secCert, secKey
 		}
 	}

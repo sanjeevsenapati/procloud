@@ -405,6 +405,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/loadbalancers", s.writeRequired(s.handleCreateLoadBalancer))
 	s.mux.HandleFunc("GET /api/v1/loadbalancers/{id}", s.authRequired(s.handleGetLoadBalancer))
 	s.mux.HandleFunc("PUT /api/v1/loadbalancers/{id}", s.writeRequired(s.handleUpdateLoadBalancer))
+	s.mux.HandleFunc("PUT /api/v1/loadbalancers/{id}/ssl", s.writeRequired(s.handleAttachLBSSLSecret))
 	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}", s.writeRequired(s.handleDeleteLoadBalancer))
 	s.mux.HandleFunc("POST /api/v1/loadbalancers/{id}/listeners", s.writeRequired(s.handleCreateLBListener))
 	s.mux.HandleFunc("DELETE /api/v1/loadbalancers/{id}/listeners/{lid}", s.writeRequired(s.handleDeleteLBListener))
@@ -2322,6 +2323,35 @@ func (s *Server) handleUpdateLoadBalancer(w http.ResponseWriter, r *http.Request
 		return
 	}
 	_, _ = s.lbSvc.SynthesizeConfig(r.Context(), lb.ID)
+	respondJSON(w, http.StatusOK, lb)
+}
+
+func (s *Server) handleAttachLBSSLSecret(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "missing loadbalancer id", http.StatusBadRequest)
+		return
+	}
+
+	var req protocol.AttachSSLSecretRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	lb, err := s.lbSvc.AttachSSLSecret(r.Context(), id, req)
+	if err != nil {
+		http.Error(w, "failed attaching SSL secret: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	claims := getClaims(r)
+	actor := "system"
+	if claims != nil && claims.Username != "" {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "LB_SSL_ATTACH", "loadbalancer", id, r.RemoteAddr, fmt.Sprintf("attached ssl_cert_secret=%s, type=%s", lb.SSLCertSecret, lb.SSLCertType))
+
 	respondJSON(w, http.StatusOK, lb)
 }
 

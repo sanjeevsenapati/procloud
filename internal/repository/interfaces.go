@@ -112,6 +112,7 @@ type LoadBalancerRepository interface {
 	CreateListener(ctx context.Context, listener *protocol.LBListener) error
 	GetListenerByID(ctx context.Context, id string) (*protocol.LBListener, error)
 	ListListenersByLB(ctx context.Context, lbID string) ([]*protocol.LBListener, error)
+	UpdateListener(ctx context.Context, listener *protocol.LBListener) error
 	DeleteListener(ctx context.Context, id string) error
 
 	CreatePool(ctx context.Context, pool *protocol.LBPool) error

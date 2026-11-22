@@ -244,18 +244,20 @@ type WorkflowRunRequest struct {
 
 // LoadBalancer represents an LBaaS instance managing L4/L7 ingress traffic.
 type LoadBalancer struct {
-	ID          string        `json:"id"`
-	TenantID    string        `json:"tenant_id"`
-	VPCID       string        `json:"vpc_id,omitempty"`
-	Name        string        `json:"name"`
-	Description string        `json:"description,omitempty"`
-	Type        string        `json:"type"`      // "l4", "l7", "hybrid"
-	PublicIP    string        `json:"public_ip"` // Bound Floating IP / VIP
-	Status      string        `json:"status"`    // "active", "provisioning", "error", "disabled"
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
-	Listeners   []*LBListener `json:"listeners,omitempty"`
-	Pools       []*LBPool     `json:"pools,omitempty"`
+	ID            string        `json:"id"`
+	TenantID      string        `json:"tenant_id"`
+	VPCID         string        `json:"vpc_id,omitempty"`
+	Name          string        `json:"name"`
+	Description   string        `json:"description,omitempty"`
+	Type          string        `json:"type"`      // "l4", "l7", "hybrid"
+	PublicIP      string        `json:"public_ip"` // Bound Floating IP / VIP
+	Status        string        `json:"status"`    // "active", "provisioning", "error", "disabled"
+	SSLCertSecret string        `json:"ssl_cert_secret,omitempty"`
+	SSLCertType   string        `json:"ssl_cert_type,omitempty"` // "auto", "secret", "custom"
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
+	Listeners     []*LBListener `json:"listeners,omitempty"`
+	Pools         []*LBPool     `json:"pools,omitempty"`
 }
 
 // LBListener represents a frontend listening port and protocol on the Load Balancer.
@@ -316,12 +318,23 @@ type LBL7Policy struct {
 
 // LBaaS Request DTOs
 type CreateLoadBalancerRequest struct {
-	TenantID    string `json:"tenant_id"`
-	VPCID       string `json:"vpc_id,omitempty"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Type        string `json:"type"`      // "l4", "l7", "hybrid"
-	PublicIP    string `json:"public_ip"` // VIP
+	TenantID      string `json:"tenant_id"`
+	VPCID         string `json:"vpc_id,omitempty"`
+	Name          string `json:"name"`
+	Description   string `json:"description,omitempty"`
+	Type          string `json:"type"`      // "l4", "l7", "hybrid"
+	PublicIP      string `json:"public_ip"` // VIP
+	SSLCertSecret string `json:"ssl_cert_secret,omitempty"`
+	SSLCertType   string `json:"ssl_cert_type,omitempty"`
+	SSLCertData   string `json:"ssl_cert_data,omitempty"`
+	SSLKeyData    string `json:"ssl_key_data,omitempty"`
+}
+
+type AttachSSLSecretRequest struct {
+	SSLCertType   string `json:"ssl_cert_type"`             // "secret", "custom", "auto"
+	SSLCertSecret string `json:"ssl_cert_secret,omitempty"` // Name of secret in vault
+	SSLCertData   string `json:"ssl_cert_data,omitempty"`   // PEM Certificate if manually adding
+	SSLKeyData    string `json:"ssl_key_data,omitempty"`    // PEM Private Key if manually adding
 }
 
 type CreateListenerRequest struct {
