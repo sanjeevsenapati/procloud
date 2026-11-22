@@ -15,6 +15,22 @@ ProCloud is designed around the core principle of **Sovereign Single-Node Simpli
 
 ---
 
+## 📸 Screenshots & Web Console
+
+### 1. Overview Dashboard & Telemetry
+![ProCloud Overview Dashboard](docs/images/procloud-overview-dashboard.png)
+
+### 2. Real Interactive Container Terminal (Host-Native PTY via WebSockets)
+![ProCloud Interactive Container Terminal](docs/images/procloud-container-terminal.png)
+
+### 3. Container Workloads & Podman Management
+![ProCloud Container Workloads](docs/images/procloud-containers-list.png)
+
+### 4. Cron Scheduler & Autonomous Background Jobs
+![ProCloud Cron Scheduler](docs/images/procloud-cron-schedules.png)
+
+---
+
 ## 🚀 Key Enhancements Added
 
 ### 1. Hybrid Dual-Mode Runtime Engine

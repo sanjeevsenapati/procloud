@@ -72,6 +72,8 @@ Rather than running an active daemon watching containers (which creates a single
 - **Strict Per-Container Isolation**: Each container runs an independent `Terminal` instance and DOM viewport; terminal history, screen buffers, and prompts never bleed across containers.
 - **Offline-First Zero CDN Dependency**: Embedded `xterm.js` and `xterm-addon-fit.js` inside `web/static/vendor/xterm/`.
 
+![ProCloud Interactive Container Terminal](images/procloud-container-terminal.png)
+
 ### Enhancement 8: Autonomous RFC 1035 UDP DNSaaS & Service Discovery
 - Built-in authoritative DNS server listening on UDP port 1053 (`internal/dns/service.go`).
 - Provides automated DNS resolution for internal workloads (`<container>.internal`, `<service>.internal`) with round-robin multi-record distribution.
