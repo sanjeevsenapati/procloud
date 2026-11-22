@@ -60,5 +60,36 @@ Rather than running an active daemon watching containers (which creates a single
 - Extracts commit SHA and triggers automated background build and deployment.
 
 ### Enhancement 6: Embedded Zero-Dependency Web Console
-- Modern dark-themed sovereign console embedded in `web/static/index.html` via `embed.FS`.
+- Modern ProGit White & Light Blue sovereign console embedded in `web/static/index.html` via `embed.FS`.
 - Live telemetry, workload table, volume list, job queue monitor, and 1-click Milestone orchestrator.
+
+### Enhancement 7: Real Interactive Container Terminal (PTY Attached via WebSockets)
+- Implemented in `cmd/api/terminal_ws.go` and `web/static/index.html`.
+- **Host-Native PTY Session**: Allocates a true Unix pseudo-terminal (`/dev/pts/*`) via `github.com/creack/pty` directly attached to `podman exec -it <containerID> <shell>` (or `podman attach`).
+- **Full Bi-Directional Streaming**: Streams raw keystrokes from the browser terminal to the container PTY, and streams stdout/stderr back over WebSockets (`/api/v1/containers/{id}/terminal?token=...`).
+- **Interactive Shell Features**: Full support for curses applications (`vi`, `nano`, `top`, `htop`), signal interrupts (`Ctrl+C` / SIGINT), EOF (`Ctrl+D`), and Tab filename auto-completion.
+- **Dynamic PTY Window Resizing**: Client viewport dimension changes trigger `{"type":"resize","cols":...,"rows":...}` messages that dynamically invoke `pty.Setsize` on the container TTY.
+- **Strict Per-Container Isolation**: Each container runs an independent `Terminal` instance and DOM viewport; terminal history, screen buffers, and prompts never bleed across containers.
+- **Offline-First Zero CDN Dependency**: Embedded `xterm.js` and `xterm-addon-fit.js` inside `web/static/vendor/xterm/`.
+
+### Enhancement 8: Autonomous RFC 1035 UDP DNSaaS & Service Discovery
+- Built-in authoritative DNS server listening on UDP port 1053 (`internal/dns/service.go`).
+- Provides automated DNS resolution for internal workloads (`<container>.internal`, `<service>.internal`) with round-robin multi-record distribution.
+- Full BIND zone export (`GET /api/v1/dns/zones/{id}/export`) and REST CRUD API.
+
+### Enhancement 9: Integrated Distributed Job Scheduler (Cron & Maintenance Engine)
+- Background job scheduler in `internal/scheduler/` evaluating standard 5-field cron syntax (`min hour day month weekday`).
+- Handles periodic maintenance routines:
+  - Daily database snapshots (`system_backup_daily`)
+  - Container health inspection loop (`container_health_check`)
+  - Dangling container image pruning (`dangling_images_cleanup`)
+  - Hourly SQLite WAL truncation (`wal_checkpoint_hourly`)
+
+### Enhancement 10: Cross-Platform Release Packaging for macOS and Linux
+- Pure Go cross-compilation produces statically linked, standalone binaries with `CGO_ENABLED=0`.
+- Supports 4 major deployment targets:
+  - macOS Apple Silicon (`darwin/arm64` — M1/M2/M3/M4)
+  - macOS Intel (`darwin/amd64`)
+  - Linux x86_64 (`linux/amd64`)
+  - Linux ARM64 (`linux/arm64` — aarch64)
+- Automated GitHub Actions release pipeline (`.github/workflows/release.yml`) builds, packages `.tar.gz` and `.zip` archives with documentation, computes SHA-256 checksums, and publishes releases on GitHub tags (`v*`).

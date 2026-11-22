@@ -49,6 +49,20 @@ ProCloud is designed around the core principle of **Sovereign Single-Node Simpli
 - Built-in single-page web console embedded directly into the single `procloud` binary using Go's `embed.FS`.
 - Real-time telemetry, node resource allocation, workload list, persistent volume table, job queue status, and 1-click Milestone runner.
 
+### 7. Real Interactive Container Terminal (PTY via WebSockets)
+- **Host-Native PTY Allocation**: Spawns an actual Linux/macOS pseudo-terminal (`/dev/pts/*`) via `creack/pty` attached directly to the container (`podman exec -it <id> <shell>` or `podman attach`).
+- **Bi-Directional Streaming**: Full bi-directional I/O over WebSocket (`/api/v1/containers/{id}/terminal?token=...`) supporting curses apps (`top`, `htop`, `vi`, `nano`), raw signal interrupts (`Ctrl+C` / SIGINT), EOF, and Tab auto-completion.
+- **Strict Per-Container Isolation**: Each container runs an isolated terminal instance and DOM viewport; terminal history and output never bleed across containers.
+- **Embedded xterm.js**: Bundled with self-hosted `xterm.js` and `xterm-addon-fit.js` with ANSI colors and dynamic window resizing.
+
+### 8. Multi-Platform Releases (macOS & Linux)
+- Pure Go cross-compilation (`CGO_ENABLED=0`) produces standalone, static executables for:
+  - **macOS Apple Silicon** (`darwin/arm64` — M1/M2/M3/M4)
+  - **macOS Intel** (`darwin/amd64`)
+  - **Linux x86_64** (`linux/amd64`)
+  - **Linux ARM64** (`linux/arm64` — aarch64)
+- Automated GitHub Actions release pipeline (`.github/workflows/release.yml`) and local builder (`make release` / `scripts/build-release.sh`).
+
 ---
 
 ## 📁 Project Structure
@@ -111,9 +125,21 @@ go test -v ./tests/...
 ```bash
 ./bin/procloud -port 8080 -db procloud.db
 ```
-Then open **http://localhost:8080** in your browser to view the Sovereign Cloud Web Console.
+CLI Flags:
+- `-port <int>`: HTTP server listening port (default: `8080`)
+- `-db <string>`: SQLite database path (default: `procloud.db`)
+- `-mock`: Run with hermetic in-memory mock container runtime
+- `-version`: Print ProCloud version, git commit SHA, and build date
 
-### 4. Trigger Milestone 1 (16 Steps)
+### 4. Cross-Platform Release Packaging
+Package standalone binaries for macOS (arm64, amd64) and Linux (amd64, arm64) with SHA-256 checksums:
+```bash
+make release
+# Or specify a version tag:
+./scripts/build-release.sh v1.0.0
+```
+
+### 5. Trigger Milestone 1 (16 Steps)
 Click the **"▶ Run First Milestone (16 Steps)"** button on the web console, or invoke via curl:
 ```bash
 curl -X POST http://localhost:8080/api/v1/milestone/run
