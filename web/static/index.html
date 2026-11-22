@@ -6710,10 +6710,55 @@ spec:
         }
 
         function filterTables(query) {
-            query = query.toLowerCase();
+            const q = (query || '').trim();
+
+            if (currentTab === 'containers') {
+                const ctrInput = document.getElementById('ctr-search-input');
+                if (ctrInput) ctrInput.value = q;
+                filterAndRenderContainers();
+                return;
+            } else if (currentTab === 'pods') {
+                const podInput = document.getElementById('pod-search-input');
+                if (podInput) podInput.value = q;
+                filterAndRenderPods();
+                return;
+            } else if (currentTab === 'images') {
+                const imgInput = document.getElementById('img-search-input');
+                if (imgInput) imgInput.value = q;
+                filterAndRenderImages();
+                return;
+            } else if (currentTab === 'volumes') {
+                const volInput = document.getElementById('vol-search-input');
+                if (volInput) volInput.value = q;
+                filterAndRenderVolumes();
+                return;
+            } else if (currentTab === 'networks') {
+                const netInput = document.getElementById('net-search-input');
+                if (netInput) netInput.value = q;
+                filterAndRenderNetworks();
+                return;
+            } else if (currentTab === 'loadbalancers') {
+                const lbInput = document.getElementById('lb-search-input');
+                if (lbInput) lbInput.value = q;
+                filterAndRenderLoadBalancers();
+                return;
+            } else if (currentTab === 'dns') {
+                const dnsInput = document.getElementById('dns-search-input');
+                if (dnsInput) dnsInput.value = q;
+                filterAndRenderDNSZones();
+                return;
+            } else if (currentTab === 'workflow') {
+                const wfInput = document.getElementById('wf-search-input');
+                if (wfInput) wfInput.value = q;
+                filterWfTable(q);
+                return;
+            }
+
+            // Fallback for static tables
+            const lowerQ = q.toLowerCase();
             document.querySelectorAll('tbody tr').forEach(row => {
                 const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(query) ? '' : 'none';
+                row.style.display = text.includes(lowerQ) ? '' : 'none';
             });
         }
 
@@ -8474,36 +8519,6 @@ spec:
                                                     <td>${pol.priority}</td>
                                                     <td style="text-align:right;">
                                                         <button class="btn btn-sm btn-outline-rose rbac-write-only" style="padding: 2px 6px; font-size: 10px;" onclick="deletePolicy('${escapeHtml(lb.id)}', '${escapeHtml(pol.id)}')">Remove</button>
-                                                    </td>
-                                                </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
-                            `}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderLBDPoolsList(lb) {
-            const poolCont = document.getElementById('lbd-pools-list');
-            if (!poolCont) return;
-
-            const pools = lb.pools || [];
-            if (pools.length === 0) {
-                poolCont.innerHTML = '<div style="text-align:center; padding:24px; color:var(--pg-text-muted); font-size:12px;">No backend pools configured. Click "+ Add Backend Pool" above.</div>';
-                return;
-            }
-
-            poolCont.innerHTML = pools.map(p => {
-                const members = p.members || [];
-                return `
-                    <div style="border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 14px; margin-bottom: 14px; background: #ffffff;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap:wrap;">
-                                <span class="pill pill-purple" style="font-weight: 700;">${escapeHtml(p.protocol)}</span>
                                 <strong style="font-size: 13px;">${escapeHtml(p.name)}</strong>
                                 <span class="pill pill-slate" style="font-size: 11px;">Algorithm: ${escapeHtml(p.algorithm)}</span>
                                 <span style="font-size: 11px; color: var(--pg-text-secondary);">Health: <code>${escapeHtml(p.health_check_path || '/')}</code> (${p.health_interval_sec || 10}s)</span>
@@ -12482,24 +12497,49 @@ spec:
         }
 
         function navigateToWorkload(targetType, targetName) {
+            if (!targetName) return;
+
+            // Normalize target name (strip leading slash or whitespace)
+            const cleanName = targetName.trim().replace(/^\/+/, '');
+
             if (targetType === 'pod') {
+                // Pre-populate pod search input and reset status filter so target pod is not filtered out
+                const podSearch = document.getElementById('pod-search-input');
+                if (podSearch) podSearch.value = cleanName;
+                const podStatus = document.getElementById('pod-status-filter');
+                if (podStatus) podStatus.value = '';
+
+                const globalInput = document.getElementById('global-search');
+                if (globalInput) globalInput.value = cleanName;
+
                 switchTab('pods');
+
                 setTimeout(() => {
-                    const podInput = document.getElementById('global-search');
-                    if (podInput) {
-                        podInput.value = targetName;
-                        filterTables(targetName);
+                    const pi = document.getElementById('pod-search-input');
+                    if (pi) {
+                        pi.value = cleanName;
+                        filterAndRenderPods();
                     }
-                }, 300);
+                }, 100);
             } else {
+                // Pre-populate container search input and reset state filter so target container is not filtered out
+                const ctrSearch = document.getElementById('ctr-search-input');
+                if (ctrSearch) ctrSearch.value = cleanName;
+                const ctrState = document.getElementById('ctr-state-filter');
+                if (ctrState) ctrState.value = '';
+
+                const globalInput = document.getElementById('global-search');
+                if (globalInput) globalInput.value = cleanName;
+
                 switchTab('containers');
+
                 setTimeout(() => {
-                    const ctrInput = document.getElementById('global-search');
-                    if (ctrInput) {
-                        ctrInput.value = targetName;
-                        filterTables(targetName);
+                    const ci = document.getElementById('ctr-search-input');
+                    if (ci) {
+                        ci.value = cleanName;
+                        filterAndRenderContainers();
                     }
-                }, 300);
+                }, 100);
             }
         }
 
