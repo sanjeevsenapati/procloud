@@ -5958,7 +5958,7 @@ spec:
                         </div>
                         <div class="form-group">
                             <label class="form-label">Listener Protocol</label>
-                            <select id="new-lb-initial-protocol" class="form-input">
+                            <select id="new-lb-initial-protocol" class="form-input" onchange="onLBInitialProtocolChange()">
                                 <option value="HTTP" selected>HTTP (Layer 7 Plain)</option>
                                 <option value="HTTPS">HTTPS (Layer 7 SSL/TLS)</option>
                             </select>
@@ -5971,6 +5971,99 @@ spec:
                             <option value="least_conn">Least Connections (Adaptive load)</option>
                             <option value="ip_hash">Client IP Hash (Sticky sessions)</option>
                         </select>
+                    </div>
+
+                    <!-- SSL / TLS Configuration Section (Visible when Protocol is HTTPS) -->
+                    <div id="new-lb-ssl-group" style="display:none; background:#f8faff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-top:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <label class="form-label" style="font-weight:700; margin-bottom:0; display:flex; align-items:center; gap:6px; color:#1e40af;">
+                                <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <span>SSL / TLS Certificate Configuration</span>
+                            </label>
+                            <span class="pill pill-blue" style="font-size:10px;">HTTPS Ingress</span>
+                        </div>
+
+                        <!-- 3-Way Option Selector -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                            <!-- Option 1: Auto Self-Signed -->
+                            <div id="lb-ssl-opt-auto" onclick="selectLBSSLType('auto')" style="border: 2px solid var(--pg-blue-600); background:#eff6ff; border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                                <div style="font-size:11px; font-weight:700; color:#1e40af; display:flex; align-items:center; justify-content:center; gap:4px;">
+                                    <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                    <span>Auto Sovereign</span>
+                                </div>
+                                <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:2px;">Default Managed CA</div>
+                            </div>
+
+                            <!-- Option 2: Secrets Vault -->
+                            <div id="lb-ssl-opt-secret" onclick="selectLBSSLType('secret')" style="border: 1px solid var(--pg-border); background:#ffffff; border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                                <div style="font-size:11px; font-weight:700; color:var(--pg-text); display:flex; align-items:center; justify-content:center; gap:4px;">
+                                    <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 7.65-7.65a1.5 1.5 0 0 1 2.12 0l1.41 1.41a1.5 1.5 0 0 1 0 2.12l-7.65 7.65"/><path d="m15.5 7.5 2 2"/></svg>
+                                    <span>Secrets Vault</span>
+                                </div>
+                                <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:2px;">Stored TLS Secret</div>
+                            </div>
+
+                            <!-- Option 3: Custom Upload -->
+                            <div id="lb-ssl-opt-custom" onclick="selectLBSSLType('custom')" style="border: 1px solid var(--pg-border); background:#ffffff; border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                                <div style="font-size:11px; font-weight:700; color:var(--pg-text); display:flex; align-items:center; justify-content:center; gap:4px;">
+                                    <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    <span>Custom Upload</span>
+                                </div>
+                                <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:2px;">CRT + Private Key</div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="new-lb-ssl-type" value="auto">
+
+                        <!-- Sub-panel: Auto -->
+                        <div id="lb-ssl-sub-auto" style="font-size:11px; color:#1e40af; background:#eff6ff; border:1px solid #dbeafe; border-radius:6px; padding:8px 10px; line-height:1.4;">
+                            ✓ <strong>ProCloud Sovereign CA:</strong> Automatic self-signed X.509 certificate with TLSv1.2/1.3 and modern cipher suites will be mounted instantly. Zero configuration required.
+                        </div>
+
+                        <!-- Sub-panel: Secret Vault -->
+                        <div id="lb-ssl-sub-secret" style="display:none;">
+                            <label class="form-label" style="font-size:11px; font-weight:600;">Select TLS Secret from Vault</label>
+                            <div style="display:flex; gap:8px;">
+                                <select id="new-lb-ssl-secret-select" class="form-input" style="font-size:12px;">
+                                    <option value="">-- Select TLS Secret --</option>
+                                </select>
+                                <button type="button" class="btn btn-sm" onclick="populateSecretsDropdown('new-lb-ssl-secret-select')" title="Refresh Secrets">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                                </button>
+                            </div>
+                            <div style="font-size:10.5px; color:var(--pg-text-muted); margin-top:4px;">Secrets can be managed under the <a href="javascript:void(0)" onclick="closeModal('create-lb-modal');switchTab('secrets')" style="color:var(--pg-blue-600); text-decoration:underline;">Secrets</a> tab.</div>
+                        </div>
+
+                        <!-- Sub-panel: Custom Upload -->
+                        <div id="lb-ssl-sub-custom" style="display:none;">
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">X.509 Certificate (PEM) <span style="color:var(--pg-rose)">*</span></label>
+                                    <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
+                                        Upload .crt/.pem
+                                        <input type="file" accept=".crt,.pem,.cer" style="display:none;" onchange="handleCertFileLoad(this, 'new-lb-ssl-cert-data')">
+                                    </label>
+                                </div>
+                                <textarea id="new-lb-ssl-cert-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN CERTIFICATE-----&#10;MIIDBzCCAe+gAwIBAgIU...&#10;-----END CERTIFICATE-----"></textarea>
+                            </div>
+                            <div class="form-group" style="margin-bottom:4px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">Private Key (PEM) <span style="color:var(--pg-rose)">*</span></label>
+                                    <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
+                                        Upload .key
+                                        <input type="file" accept=".key,.pem" style="display:none;" onchange="handleCertFileLoad(this, 'new-lb-ssl-key-data')">
+                                    </label>
+                                </div>
+                                <textarea id="new-lb-ssl-key-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvgIBADANBgkqhkiG9w0BAQEFAASC...&#10;-----END PRIVATE KEY-----"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Auto-Redirect Checkbox -->
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:8px; border-top:1px dashed #bfdbfe;">
+                            <input type="checkbox" id="new-lb-ssl-redirect" checked style="width:15px; height:15px; cursor:pointer;">
+                            <label for="new-lb-ssl-redirect" style="font-size:11.5px; font-weight:600; color:var(--pg-text); margin-bottom:0; cursor:pointer;">
+                                Automatic HTTP (Port 80) -> HTTPS (Port 443) 301 Redirect
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -6090,7 +6183,7 @@ spec:
                 </div>
                 <div class="form-group">
                     <label class="form-label">Protocol</label>
-                    <select id="new-listener-protocol" class="form-input">
+                    <select id="new-listener-protocol" class="form-input" onchange="onListenerProtocolChange()">
                         <option value="HTTPS" selected>HTTPS (L7 SSL/TLS)</option>
                         <option value="HTTP">HTTP (L7 Plain)</option>
                         <option value="TCP">TCP Stream (L4)</option>
@@ -6104,11 +6197,92 @@ spec:
                     <!-- Populated dynamically -->
                 </select>
             </div>
-            <div class="form-group">
-                <label class="form-label">SSL Certificate Secret (Optional)</label>
-                <input type="text" id="new-listener-ssl-secret" class="form-input" placeholder="e.g. wild-card-cert-secret">
-                <div style="font-size: 11px; color: var(--pg-text-muted); margin-top: 3px;">Mounted from ProCloud Secrets engine for automatic TLS termination.</div>
+
+            <!-- SSL / TLS Configuration Section (Visible when Protocol is HTTPS) -->
+            <div id="new-listener-ssl-group" style="background:#f8faff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-top:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label class="form-label" style="font-weight:700; margin-bottom:0; display:flex; align-items:center; gap:6px; color:#1e40af;">
+                        <svg class="icon-svg" style="width:16px; height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <span>SSL / TLS Certificate Configuration</span>
+                    </label>
+                    <span class="pill pill-blue" style="font-size:10px;">HTTPS Ingress</span>
+                </div>
+
+                <!-- 3-Way Option Selector -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                    <!-- Option 1: Auto Self-Signed -->
+                    <div id="listener-ssl-opt-auto" onclick="selectListenerSSLType('auto')" style="border: 2px solid var(--pg-blue-600); background:#eff6ff; border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                        <div style="font-size:11px; font-weight:700; color:#1e40af; display:flex; align-items:center; justify-content:center; gap:4px;">
+                            <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <span>Auto Sovereign</span>
+                        </div>
+                        <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:2px;">Default Managed CA</div>
+                    </div>
+
+                    <!-- Option 2: Secrets Vault -->
+                    <div id="listener-ssl-opt-secret" onclick="selectListenerSSLType('secret')" style="border: 1px solid var(--pg-border); background:#ffffff; border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                        <div style="font-size:11px; font-weight:700; color:var(--pg-text); display:flex; align-items:center; justify-content:center; gap:4px;">
+                            <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 7.65-7.65a1.5 1.5 0 0 1 2.12 0l1.41 1.41a1.5 1.5 0 0 1 0 2.12l-7.65 7.65"/><path d="m15.5 7.5 2 2"/></svg>
+                            <span>Secrets Vault</span>
+                        </div>
+                        <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:2px;">Stored TLS Secret</div>
+                    </div>
+
+                    <!-- Option 3: Custom Upload -->
+                    <div id="listener-ssl-opt-custom" onclick="selectListenerSSLType('custom')" style="border: 1px solid var(--pg-border); background:#ffffff; border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.15s ease;">
+                        <div style="font-size:11px; font-weight:700; color:var(--pg-text); display:flex; align-items:center; justify-content:center; gap:4px;">
+                            <svg class="icon-svg" style="width:13px; height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span>Custom Upload</span>
+                        </div>
+                        <div style="font-size:9.5px; color:var(--pg-text-secondary); margin-top:2px;">CRT + Private Key</div>
+                    </div>
+                </div>
+                <input type="hidden" id="new-listener-ssl-type" value="auto">
+
+                <!-- Sub-panel: Auto -->
+                <div id="listener-ssl-sub-auto" style="font-size:11px; color:#1e40af; background:#eff6ff; border:1px solid #dbeafe; border-radius:6px; padding:8px 10px; line-height:1.4;">
+                    ✓ <strong>ProCloud Sovereign CA:</strong> Automatic self-signed X.509 certificate with TLSv1.2/1.3 and modern cipher suites will be mounted instantly. Zero configuration required.
+                </div>
+
+                <!-- Sub-panel: Secret Vault -->
+                <div id="listener-ssl-sub-secret" style="display:none;">
+                    <label class="form-label" style="font-size:11px; font-weight:600;">Select TLS Secret from Vault</label>
+                    <div style="display:flex; gap:8px;">
+                        <select id="new-listener-ssl-secret-select" class="form-input" style="font-size:12px;">
+                            <option value="">-- Select TLS Secret --</option>
+                        </select>
+                        <button type="button" class="btn btn-sm" onclick="populateSecretsDropdown('new-listener-ssl-secret-select')" title="Refresh Secrets">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                        </button>
+                    </div>
+                    <div style="font-size:10.5px; color:var(--pg-text-muted); margin-top:4px;">Secrets can be managed under the <a href="javascript:void(0)" onclick="closeModal('create-listener-modal');switchTab('secrets')" style="color:var(--pg-blue-600); text-decoration:underline;">Secrets</a> tab.</div>
+                </div>
+
+                <!-- Sub-panel: Custom Upload -->
+                <div id="listener-ssl-sub-custom" style="display:none;">
+                    <div class="form-group" style="margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                            <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">X.509 Certificate (PEM) <span style="color:var(--pg-rose)">*</span></label>
+                            <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
+                                Upload .crt/.pem
+                                <input type="file" accept=".crt,.pem,.cer" style="display:none;" onchange="handleCertFileLoad(this, 'new-listener-ssl-cert-data')">
+                            </label>
+                        </div>
+                        <textarea id="new-listener-ssl-cert-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN CERTIFICATE-----&#10;MIIDBzCCAe+gAwIBAgIU...&#10;-----END CERTIFICATE-----"></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom:4px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                            <label class="form-label" style="font-size:11px; font-weight:600; margin-bottom:0;">Private Key (PEM) <span style="color:var(--pg-rose)">*</span></label>
+                            <label class="btn btn-xs" style="cursor:pointer; padding:2px 6px; font-size:10px;">
+                                Upload .key
+                                <input type="file" accept=".key,.pem" style="display:none;" onchange="handleCertFileLoad(this, 'new-listener-ssl-key-data')">
+                            </label>
+                        </div>
+                        <textarea id="new-listener-ssl-key-data" class="form-input" rows="3" style="font-family:monospace; font-size:10.5px; resize:vertical;" placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvgIBADANBgkqhkiG9w0BAQEFAASC...&#10;-----END PRIVATE KEY-----"></textarea>
+                    </div>
+                </div>
             </div>
+
             <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 10px;">
                 <input type="checkbox" id="new-listener-redirect" style="width: 16px; height: 16px; cursor: pointer;">
                 <label for="new-listener-redirect" class="form-label" style="margin-bottom: 0; cursor: pointer;">Redirect HTTP requests to HTTPS automatically (301)</label>
@@ -8111,6 +8285,148 @@ spec:
                 }
                 if (portInput) portInput.value = '8080';
             }
+            onLBInitialProtocolChange();
+        }
+
+        function onLBInitialProtocolChange() {
+            const proto = document.getElementById('new-lb-initial-protocol')?.value || 'HTTP';
+            const portInput = document.getElementById('new-lb-initial-port');
+            const sslGroup = document.getElementById('new-lb-ssl-group');
+            if (proto === 'HTTPS') {
+                if (portInput && portInput.value === '80') portInput.value = '443';
+                if (sslGroup) sslGroup.style.display = 'block';
+                populateSecretsDropdown('new-lb-ssl-secret-select');
+            } else {
+                if (portInput && portInput.value === '443') portInput.value = '80';
+                if (sslGroup) sslGroup.style.display = 'none';
+            }
+        }
+
+        function selectLBSSLType(type) {
+            const hidden = document.getElementById('new-lb-ssl-type');
+            if (hidden) hidden.value = type;
+
+            const optAuto = document.getElementById('lb-ssl-opt-auto');
+            const optSecret = document.getElementById('lb-ssl-opt-secret');
+            const optCustom = document.getElementById('lb-ssl-opt-custom');
+
+            const subAuto = document.getElementById('lb-ssl-sub-auto');
+            const subSecret = document.getElementById('lb-ssl-sub-secret');
+            const subCustom = document.getElementById('lb-ssl-sub-custom');
+
+            [
+                { el: optAuto, sub: subAuto, t: 'auto' },
+                { el: optSecret, sub: subSecret, t: 'secret' },
+                { el: optCustom, sub: subCustom, t: 'custom' }
+            ].forEach(item => {
+                if (!item.el) return;
+                if (item.t === type) {
+                    item.el.style.border = '2px solid var(--pg-blue-600)';
+                    item.el.style.background = '#eff6ff';
+                    const titleDiv = item.el.querySelector('div');
+                    if (titleDiv) titleDiv.style.color = '#1e40af';
+                    if (item.sub) item.sub.style.display = 'block';
+                } else {
+                    item.el.style.border = '1px solid var(--pg-border)';
+                    item.el.style.background = '#ffffff';
+                    const titleDiv = item.el.querySelector('div');
+                    if (titleDiv) titleDiv.style.color = 'var(--pg-text)';
+                    if (item.sub) item.sub.style.display = 'none';
+                }
+            });
+
+            if (type === 'secret') {
+                populateSecretsDropdown('new-lb-ssl-secret-select');
+            }
+        }
+
+        function onListenerProtocolChange() {
+            const proto = document.getElementById('new-listener-protocol')?.value || 'HTTPS';
+            const portInput = document.getElementById('new-listener-port');
+            const sslGroup = document.getElementById('new-listener-ssl-group');
+            if (proto === 'HTTPS') {
+                if (portInput && portInput.value === '80') portInput.value = '443';
+                if (sslGroup) sslGroup.style.display = 'block';
+                populateSecretsDropdown('new-listener-ssl-secret-select');
+            } else {
+                if (portInput && portInput.value === '443') portInput.value = '80';
+                if (sslGroup) sslGroup.style.display = 'none';
+            }
+        }
+
+        function selectListenerSSLType(type) {
+            const hidden = document.getElementById('new-listener-ssl-type');
+            if (hidden) hidden.value = type;
+
+            const optAuto = document.getElementById('listener-ssl-opt-auto');
+            const optSecret = document.getElementById('listener-ssl-opt-secret');
+            const optCustom = document.getElementById('listener-ssl-opt-custom');
+
+            const subAuto = document.getElementById('listener-ssl-sub-auto');
+            const subSecret = document.getElementById('listener-ssl-sub-secret');
+            const subCustom = document.getElementById('listener-ssl-sub-custom');
+
+            [
+                { el: optAuto, sub: subAuto, t: 'auto' },
+                { el: optSecret, sub: subSecret, t: 'secret' },
+                { el: optCustom, sub: subCustom, t: 'custom' }
+            ].forEach(item => {
+                if (!item.el) return;
+                if (item.t === type) {
+                    item.el.style.border = '2px solid var(--pg-blue-600)';
+                    item.el.style.background = '#eff6ff';
+                    const titleDiv = item.el.querySelector('div');
+                    if (titleDiv) titleDiv.style.color = '#1e40af';
+                    if (item.sub) item.sub.style.display = 'block';
+                } else {
+                    item.el.style.border = '1px solid var(--pg-border)';
+                    item.el.style.background = '#ffffff';
+                    const titleDiv = item.el.querySelector('div');
+                    if (titleDiv) titleDiv.style.color = 'var(--pg-text)';
+                    if (item.sub) item.sub.style.display = 'none';
+                }
+            });
+
+            if (type === 'secret') {
+                populateSecretsDropdown('new-listener-ssl-secret-select');
+            }
+        }
+
+        async function populateSecretsDropdown(selectId) {
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) return;
+
+            if (!allSecretsCache || allSecretsCache.length === 0) {
+                try {
+                    const res = await authFetch('/api/v1/podman/secrets');
+                    if (res.ok) {
+                        allSecretsCache = await res.json() || [];
+                    }
+                } catch (_) {}
+            }
+
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = '<option value="">-- Select TLS Secret --</option>' + (allSecretsCache || []).map(s => `
+                <option value="${escapeHtml(s.name)}" ${s.name === currentVal ? 'selected' : ''}>${escapeHtml(s.name)} (ID: ${escapeHtml((s.id || '').substring(0, 10))})</option>
+            `).join('');
+            if (!allSecretsCache || allSecretsCache.length === 0) {
+                selectEl.innerHTML = '<option value="">-- No Secrets Found in Vault --</option>';
+            }
+        }
+
+        function handleCertFileLoad(fileInput, targetTextareaId) {
+            if (!fileInput.files || fileInput.files.length === 0) return;
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const ta = document.getElementById(targetTextareaId);
+                if (ta) ta.value = e.target.result;
+                showToast(`Loaded ${file.name} (${file.size} bytes)`, 'success');
+            };
+            reader.onerror = () => {
+                showToast(`Failed reading ${file.name}`, 'error');
+            };
+            reader.readAsText(file);
         }
 
         function sortLoadBalancers(key) {
@@ -8479,8 +8795,13 @@ spec:
                                 <span class="pill pill-blue" style="font-weight: 700;">${escapeHtml(l.protocol)} : ${l.port}</span>
                                 <strong style="font-size: 13px;">${escapeHtml(l.name)}</strong>
                                 <span style="font-size: 12px; color: var(--pg-text-secondary);">Default Target Pool: <strong>${escapeHtml(poolName)}</strong></span>
-                                ${l.ssl_secret_name ? `<span class="pill pill-emerald" style="font-size:11px;">SSL Secret: ${escapeHtml(l.ssl_secret_name)}</span>` : ''}
-                                ${l.redirect_to_https ? '<span class="pill pill-purple" style="font-size:11px;">Auto Redirect HTTPS</span>' : ''}
+                                ${l.protocol === 'HTTPS' ? `
+                                    <span class="pill pill-emerald" style="font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                                        <svg class="icon-svg" style="width:12px; height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                        ${l.ssl_cert_type === 'custom' ? 'Custom PEM SSL' : (l.ssl_cert_secret || l.ssl_secret_name ? `Vault Secret: ${escapeHtml(l.ssl_cert_secret || l.ssl_secret_name)}` : 'Auto Sovereign TLS')}
+                                    </span>
+                                ` : ''}
+                                ${(l.http_redirect || l.redirect_to_https) ? '<span class="pill pill-purple" style="font-size:11px;">Auto Redirect HTTPS</span>' : ''}
                             </div>
                             <div style="display: flex; gap: 6px;">
                                 <button class="btn btn-sm btn-outline-primary rbac-write-only" onclick="openCreatePolicyModal('${escapeHtml(lb.id)}', '${escapeHtml(l.id)}')">
@@ -8519,6 +8840,36 @@ spec:
                                                     <td>${pol.priority}</td>
                                                     <td style="text-align:right;">
                                                         <button class="btn btn-sm btn-outline-rose rbac-write-only" style="padding: 2px 6px; font-size: 10px;" onclick="deletePolicy('${escapeHtml(lb.id)}', '${escapeHtml(pol.id)}')">Remove</button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderLBDPoolsList(lb) {
+            const listCont = document.getElementById('lbd-pools-list');
+            if (!listCont) return;
+
+            const pools = lb.pools || [];
+            if (pools.length === 0) {
+                listCont.innerHTML = '<div style="text-align:center; padding:24px; color:var(--pg-text-muted); font-size:12px;">No upstream pools configured. Click "+ Add Pool" above to create a backend target group.</div>';
+                return;
+            }
+
+            listCont.innerHTML = pools.map(p => {
+                const members = p.members || [];
+                return `
+                    <div style="border: 1px solid var(--pg-border-subtle); border-radius: 8px; padding: 14px; margin-bottom: 14px; background: #ffffff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap:wrap;">
+                                <span class="pill pill-purple" style="font-weight: 700;">${escapeHtml(p.protocol)}</span>
                                 <strong style="font-size: 13px;">${escapeHtml(p.name)}</strong>
                                 <span class="pill pill-slate" style="font-size: 11px;">Algorithm: ${escapeHtml(p.algorithm)}</span>
                                 <span style="font-size: 11px; color: var(--pg-text-secondary);">Health: <code>${escapeHtml(p.health_check_path || '/')}</code> (${p.health_interval_sec || 10}s)</span>
@@ -8581,8 +8932,24 @@ spec:
             const protocol = document.getElementById('new-lb-initial-protocol')?.value || (type === 'layer4' ? 'TCP' : 'HTTP');
             const algo = document.getElementById('new-lb-initial-algo')?.value || 'round_robin';
 
+            // SSL parameters
+            const sslType = document.getElementById('new-lb-ssl-type')?.value || 'auto';
+            const sslSecret = (document.getElementById('new-lb-ssl-secret-select')?.value || '').trim();
+            const certData = (document.getElementById('new-lb-ssl-cert-data')?.value || '').trim();
+            const keyData = (document.getElementById('new-lb-ssl-key-data')?.value || '').trim();
+            const sslRedirect = document.getElementById('new-lb-ssl-redirect')?.checked || false;
+
             if (!name) {
                 showToast('Please specify a Load Balancer name', 'error');
+                return;
+            }
+
+            if (protocol === 'HTTPS' && sslType === 'custom' && !certData) {
+                showToast('Please provide an X.509 Certificate (PEM) for custom SSL', 'error');
+                return;
+            }
+            if (protocol === 'HTTPS' && sslType === 'secret' && !sslSecret) {
+                showToast('Please select a TLS Secret from the vault', 'error');
                 return;
             }
 
@@ -8636,10 +9003,34 @@ spec:
                             port: port,
                             protocol: protocol,
                             default_pool_id: defaultPoolId,
+                            ssl_cert_type: sslType,
+                            ssl_cert_secret: sslSecret,
+                            ssl_secret_name: sslSecret,
+                            ssl_cert_data: certData,
+                            ssl_key_data: keyData,
+                            http_redirect: false,
                             redirect_to_https: false
                         })
                     });
                 } catch (_) {}
+
+                // 4. Auto-Redirect HTTP (80) -> HTTPS (443) if requested
+                if (protocol === 'HTTPS' && sslRedirect && port !== 80) {
+                    try {
+                        await authFetch(`/api/v1/loadbalancers/${encodeURIComponent(lb.id)}/listeners`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: `${name}-http-redirect-80`,
+                                port: 80,
+                                protocol: 'HTTP',
+                                default_pool_id: defaultPoolId,
+                                http_redirect: true,
+                                redirect_to_https: true
+                            })
+                        });
+                    } catch (_) {}
+                }
 
                 closeModal('create-lb-modal');
                 // Clear input
@@ -8683,20 +9074,34 @@ spec:
                     <option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${p.protocol} - ${p.algorithm})</option>
                 `).join('');
             }
+            selectListenerSSLType('auto');
+            onListenerProtocolChange();
             openModal('create-listener-modal');
         }
 
         async function submitCreateListener() {
             const lbId = document.getElementById('listener-lb-id')?.value;
             const name = (document.getElementById('new-listener-name')?.value || '').trim();
-            const port = parseInt(document.getElementById('new-listener-port')?.value || '80', 10);
-            const protocol = document.getElementById('new-listener-protocol')?.value || 'HTTP';
+            const port = parseInt(document.getElementById('new-listener-port')?.value || '443', 10);
+            const protocol = document.getElementById('new-listener-protocol')?.value || 'HTTPS';
             const poolId = document.getElementById('new-listener-pool')?.value || '';
-            const sslSecret = (document.getElementById('new-listener-ssl-secret')?.value || '').trim();
+            const sslType = document.getElementById('new-listener-ssl-type')?.value || 'auto';
+            const sslSecret = (document.getElementById('new-listener-ssl-secret-select')?.value || '').trim();
+            const certData = (document.getElementById('new-listener-ssl-cert-data')?.value || '').trim();
+            const keyData = (document.getElementById('new-listener-ssl-key-data')?.value || '').trim();
             const redirect = document.getElementById('new-listener-redirect')?.checked || false;
 
             if (!name || isNaN(port)) {
                 showToast('Please specify a valid name and port number', 'error');
+                return;
+            }
+
+            if (protocol === 'HTTPS' && sslType === 'custom' && !certData) {
+                showToast('Please provide an X.509 Certificate (PEM) for custom SSL', 'error');
+                return;
+            }
+            if (protocol === 'HTTPS' && sslType === 'secret' && !sslSecret) {
+                showToast('Please select a TLS Secret from the vault', 'error');
                 return;
             }
 
@@ -8709,7 +9114,12 @@ spec:
                         port: port,
                         protocol: protocol,
                         default_pool_id: poolId,
+                        ssl_cert_type: sslType,
+                        ssl_cert_secret: sslSecret,
                         ssl_secret_name: sslSecret,
+                        ssl_cert_data: certData,
+                        ssl_key_data: keyData,
+                        http_redirect: redirect,
                         redirect_to_https: redirect
                     })
                 });

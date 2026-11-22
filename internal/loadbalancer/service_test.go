@@ -207,3 +207,115 @@ func TestLoadBalancerService_EndToEnd(t *testing.T) {
 		t.Errorf("expected config file to be removed from disk on delete")
 	}
 }
+
+func TestLoadBalancer_SSLOptions(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	dbPath := filepath.Join(tmpDir, "test.db")
+	db, err := sqlite.Open(sqlite.DefaultConfig(dbPath))
+	if err != nil {
+		t.Fatalf("failed initializing db: %v", err)
+	}
+	defer db.Close()
+	repo := sqlite.NewRepository(db)
+	mockRuntime := podman.NewMockRuntime()
+
+	confDir := filepath.Join(tmpDir, "nginx-conf")
+	svc := NewService(repo, mockRuntime, confDir)
+
+	_ = repo.CreateTenant(ctx, &protocol.Tenant{
+		ID:        "tnt-test",
+		Name:      "Test Tenant",
+		Slug:      "test",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	lb, err := svc.CreateLoadBalancer(ctx, protocol.CreateLoadBalancerRequest{
+		TenantID: "tnt-test",
+		Name:     "ssl-test-lb",
+		Type:     "layer7",
+		PublicIP: "198.51.100.50",
+	})
+	if err != nil {
+		t.Fatalf("CreateLoadBalancer failed: %v", err)
+	}
+
+	// 1. Test Option 1: Auto-generated self-signed SSL
+	autoLsn, err := svc.CreateListener(ctx, lb.ID, protocol.CreateListenerRequest{
+		Name:        "https-auto",
+		Port:        8443,
+		Protocol:    "HTTPS",
+		SSLCertType: "auto",
+	})
+	if err != nil {
+		t.Fatalf("CreateListener auto failed: %v", err)
+	}
+	if autoLsn.SSLCertType != "auto" {
+		t.Errorf("expected SSLCertType to be auto, got %s", autoLsn.SSLCertType)
+	}
+
+	// 2. Test Option 2: Secret Reference
+	secLsn, err := svc.CreateListener(ctx, lb.ID, protocol.CreateListenerRequest{
+		Name:          "https-secret",
+		Port:          9443,
+		Protocol:      "HTTPS",
+		SSLCertType:   "secret",
+		SSLCertSecret: "my-vault-tls",
+	})
+	if err != nil {
+		t.Fatalf("CreateListener secret failed: %v", err)
+	}
+	if secLsn.SSLCertType != "secret" || secLsn.SSLCertSecret != "my-vault-tls" {
+		t.Errorf("expected SSLCertType=secret, SSLCertSecret=my-vault-tls, got %s, %s", secLsn.SSLCertType, secLsn.SSLCertSecret)
+	}
+
+	// 3. Test Option 3: Custom Certificate Upload
+	sampleCert := "-----BEGIN CERTIFICATE-----\nMIIBojCCAUqgAwIBAgIU\n-----END CERTIFICATE-----"
+	sampleKey := "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEI\n-----END EC PRIVATE KEY-----"
+	customLsn, err := svc.CreateListener(ctx, lb.ID, protocol.CreateListenerRequest{
+		Name:        "https-custom",
+		Port:        10443,
+		Protocol:    "HTTPS",
+		SSLCertType: "custom",
+		SSLCertData: sampleCert,
+		SSLKeyData:  sampleKey,
+	})
+	if err != nil {
+		t.Fatalf("CreateListener custom failed: %v", err)
+	}
+	if customLsn.SSLCertType != "custom" {
+		t.Errorf("expected SSLCertType=custom, got %s", customLsn.SSLCertType)
+	}
+
+	// Verify custom cert files written to disk
+	customCertPath := filepath.Join(confDir, "certs", fmt.Sprintf("custom-%s.crt", customLsn.ID))
+	customKeyPath := filepath.Join(confDir, "certs", fmt.Sprintf("custom-%s.key", customLsn.ID))
+	if !fileExists(customCertPath) || !fileExists(customKeyPath) {
+		t.Errorf("custom cert/key files were not created on disk")
+	}
+
+	// Verify SynthesizeConfig includes custom cert path
+	conf, err := svc.SynthesizeConfig(ctx, lb.ID)
+	if err != nil {
+		t.Fatalf("SynthesizeConfig failed: %v", err)
+	}
+	if !strings.Contains(conf, customCertPath) {
+		t.Errorf("expected synthesized config to contain custom cert path %s", customCertPath)
+	}
+	if !strings.Contains(conf, "my-vault-tls") {
+		t.Errorf("expected synthesized config to reference secret my-vault-tls")
+	}
+	if !strings.Contains(conf, "procloud-default.crt") {
+		t.Errorf("expected synthesized config to reference default auto cert")
+	}
+
+	// Delete custom listener and verify cleanup
+	if err := svc.DeleteListener(ctx, lb.ID, customLsn.ID); err != nil {
+		t.Fatalf("DeleteListener failed: %v", err)
+	}
+	if fileExists(customCertPath) || fileExists(customKeyPath) {
+		t.Errorf("expected custom cert files to be deleted after DeleteListener")
+	}
+}

@@ -129,22 +129,30 @@ func (r *Repository) DeleteLoadBalancer(ctx context.Context, id string) error {
 func (r *Repository) CreateListener(ctx context.Context, l *protocol.LBListener) error {
 	query := `
 		INSERT INTO lb_listeners (
-			id, loadbalancer_id, name, port, protocol, ssl_cert_secret, default_pool_id, http_redirect, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			id, loadbalancer_id, name, port, protocol, ssl_cert_secret, ssl_cert_type, default_pool_id, http_redirect, created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	httpRedir := 0
 	if l.HTTPRedirect {
 		httpRedir = 1
 	}
+	certType := l.SSLCertType
+	if certType == "" {
+		if l.SSLCertSecret != "" {
+			certType = "secret"
+		} else {
+			certType = "auto"
+		}
+	}
 	_, err := r.db.sqlDB.ExecContext(ctx, query,
-		l.ID, l.LoadBalancerID, l.Name, l.Port, l.Protocol, l.SSLCertSecret, l.DefaultPoolID, httpRedir, l.CreatedAt,
+		l.ID, l.LoadBalancerID, l.Name, l.Port, l.Protocol, l.SSLCertSecret, certType, l.DefaultPoolID, httpRedir, l.CreatedAt,
 	)
 	return err
 }
 
 func (r *Repository) GetListenerByID(ctx context.Context, id string) (*protocol.LBListener, error) {
 	query := `
-		SELECT id, loadbalancer_id, name, port, protocol, ssl_cert_secret, default_pool_id, http_redirect, created_at
+		SELECT id, loadbalancer_id, name, port, protocol, ssl_cert_secret, ssl_cert_type, default_pool_id, http_redirect, created_at
 		FROM lb_listeners
 		WHERE id = ?
 	`
@@ -152,7 +160,7 @@ func (r *Repository) GetListenerByID(ctx context.Context, id string) (*protocol.
 	l := &protocol.LBListener{}
 	var httpRedir int
 	if err := row.Scan(
-		&l.ID, &l.LoadBalancerID, &l.Name, &l.Port, &l.Protocol, &l.SSLCertSecret, &l.DefaultPoolID, &httpRedir, &l.CreatedAt,
+		&l.ID, &l.LoadBalancerID, &l.Name, &l.Port, &l.Protocol, &l.SSLCertSecret, &l.SSLCertType, &l.DefaultPoolID, &httpRedir, &l.CreatedAt,
 	); err != nil {
 		return nil, err
 	}
@@ -164,7 +172,7 @@ func (r *Repository) GetListenerByID(ctx context.Context, id string) (*protocol.
 
 func (r *Repository) ListListenersByLB(ctx context.Context, lbID string) ([]*protocol.LBListener, error) {
 	query := `
-		SELECT id, loadbalancer_id, name, port, protocol, ssl_cert_secret, default_pool_id, http_redirect, created_at
+		SELECT id, loadbalancer_id, name, port, protocol, ssl_cert_secret, ssl_cert_type, default_pool_id, http_redirect, created_at
 		FROM lb_listeners
 		WHERE loadbalancer_id = ?
 		ORDER BY port ASC
@@ -180,7 +188,7 @@ func (r *Repository) ListListenersByLB(ctx context.Context, lbID string) ([]*pro
 		l := &protocol.LBListener{}
 		var httpRedir int
 		if err := rows.Scan(
-			&l.ID, &l.LoadBalancerID, &l.Name, &l.Port, &l.Protocol, &l.SSLCertSecret, &l.DefaultPoolID, &httpRedir, &l.CreatedAt,
+			&l.ID, &l.LoadBalancerID, &l.Name, &l.Port, &l.Protocol, &l.SSLCertSecret, &l.SSLCertType, &l.DefaultPoolID, &httpRedir, &l.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

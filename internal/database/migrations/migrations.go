@@ -336,4 +336,11 @@ CREATE INDEX IF NOT EXISTS idx_dns_records_zone ON dns_records(zone_id);
 CREATE INDEX IF NOT EXISTS idx_dns_records_lookup ON dns_records(zone_id, name, type);
 `,
 	},
+	{
+		Version:     6,
+		Description: "Add ssl_cert_type to lb_listeners for LBaaS SSL options",
+		SQL: `
+ALTER TABLE lb_listeners ADD COLUMN ssl_cert_type TEXT NOT NULL DEFAULT 'auto';
+`,
+	},
 }

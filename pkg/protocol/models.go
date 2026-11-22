@@ -266,6 +266,7 @@ type LBListener struct {
 	Port           int           `json:"port"`
 	Protocol       string        `json:"protocol"` // "HTTP", "HTTPS", "TCP", "UDP"
 	SSLCertSecret  string        `json:"ssl_cert_secret,omitempty"`
+	SSLCertType    string        `json:"ssl_cert_type,omitempty"` // "auto", "secret", "custom"
 	DefaultPoolID  string        `json:"default_pool_id,omitempty"`
 	HTTPRedirect   bool          `json:"http_redirect"`
 	CreatedAt      time.Time     `json:"created_at"`
@@ -324,12 +325,17 @@ type CreateLoadBalancerRequest struct {
 }
 
 type CreateListenerRequest struct {
-	Name          string `json:"name"`
-	Port          int    `json:"port"`
-	Protocol      string `json:"protocol"` // "HTTP", "HTTPS", "TCP", "UDP"
-	SSLCertSecret string `json:"ssl_cert_secret,omitempty"`
-	DefaultPoolID string `json:"default_pool_id,omitempty"`
-	HTTPRedirect  bool   `json:"http_redirect"`
+	Name            string `json:"name"`
+	Port            int    `json:"port"`
+	Protocol        string `json:"protocol"` // "HTTP", "HTTPS", "TCP", "UDP"
+	SSLCertSecret   string `json:"ssl_cert_secret,omitempty"`
+	SSLSecretName   string `json:"ssl_secret_name,omitempty"` // Alias for UI compatibility
+	SSLCertType     string `json:"ssl_cert_type,omitempty"`   // "auto", "secret", "custom"
+	SSLCertData     string `json:"ssl_cert_data,omitempty"`   // PEM Certificate for custom
+	SSLKeyData      string `json:"ssl_key_data,omitempty"`    // PEM Private Key for custom
+	DefaultPoolID   string `json:"default_pool_id,omitempty"`
+	HTTPRedirect    bool   `json:"http_redirect"`
+	RedirectToHTTPS bool   `json:"redirect_to_https"` // Alias for UI compatibility
 }
 
 type CreatePoolRequest struct {

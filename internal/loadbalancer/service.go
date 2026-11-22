@@ -2,7 +2,14 @@ package loadbalancer
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -41,11 +48,13 @@ func NewService(
 		_ = os.MkdirAll(confDir, 0755)
 	}
 
-	return &Service{
+	svc := &Service{
 		repo:    repo,
 		runtime: runtime,
 		confDir: confDir,
 	}
+	_ = svc.ensureDefaultCertificate()
+	return svc
 }
 
 // -------------------------------------------------------------
@@ -133,13 +142,68 @@ func (s *Service) CreateListener(ctx context.Context, lbID string, req protocol.
 		req.Name = fmt.Sprintf("%s-%d", strings.ToLower(req.Protocol), req.Port)
 	}
 
+	// Normalise alias fields
+	if req.SSLCertSecret == "" && req.SSLSecretName != "" {
+		req.SSLCertSecret = req.SSLSecretName
+	}
+	if !req.HTTPRedirect && req.RedirectToHTTPS {
+		req.HTTPRedirect = true
+	}
+
+	sslType := strings.ToLower(strings.TrimSpace(req.SSLCertType))
+	if sslType == "" {
+		if req.SSLCertSecret != "" {
+			sslType = "secret"
+		} else if req.SSLCertData != "" {
+			sslType = "custom"
+		} else if req.Protocol == "HTTPS" {
+			sslType = "auto"
+		}
+	}
+
+	listenerID := fmt.Sprintf("lsn-%d", time.Now().UnixNano())
+
+	// If custom SSL certificate data is provided, save it to disk
+	if (sslType == "custom" || req.SSLCertData != "") && req.SSLCertData != "" {
+		sslType = "custom"
+		certsDir := filepath.Join(s.confDir, "certs")
+		_ = os.MkdirAll(certsDir, 0755)
+		certPath := filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", listenerID))
+		keyPath := filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", listenerID))
+		if err := os.WriteFile(certPath, []byte(strings.TrimSpace(req.SSLCertData)+"\n"), 0644); err != nil {
+			return nil, fmt.Errorf("failed writing custom certificate: %w", err)
+		}
+		if req.SSLKeyData != "" {
+			if err := os.WriteFile(keyPath, []byte(strings.TrimSpace(req.SSLKeyData)+"\n"), 0600); err != nil {
+				return nil, fmt.Errorf("failed writing custom private key: %w", err)
+			}
+		}
+	}
+
+	// If secret SSL is selected and Secret exists in Podman Secrets, cache cert if needed
+	if sslType == "secret" && req.SSLCertSecret != "" && s.runtime != nil {
+		if sec, err := s.runtime.InspectSecret(ctx, req.SSLCertSecret, true); err == nil && sec != nil && sec.SecretData != "" {
+			certsDir := filepath.Join(s.confDir, "certs")
+			_ = os.MkdirAll(certsDir, 0755)
+			if strings.Contains(sec.SecretData, "BEGIN CERTIFICATE") {
+				secCertPath := filepath.Join(certsDir, fmt.Sprintf("secret-%s.crt", req.SSLCertSecret))
+				_ = os.WriteFile(secCertPath, []byte(sec.SecretData), 0644)
+			}
+			if strings.Contains(sec.SecretData, "PRIVATE KEY") {
+				secKeyPath := filepath.Join(certsDir, fmt.Sprintf("secret-%s.key", req.SSLCertSecret))
+				_ = os.WriteFile(secKeyPath, []byte(sec.SecretData), 0600)
+			}
+		}
+	}
+
 	listener := &protocol.LBListener{
-		ID:             fmt.Sprintf("lsn-%d", time.Now().UnixNano()),
+		ID:             listenerID,
 		LoadBalancerID: lbID,
 		Name:           req.Name,
 		Port:           req.Port,
 		Protocol:       req.Protocol,
 		SSLCertSecret:  req.SSLCertSecret,
+		SSLCertType:    sslType,
 		DefaultPoolID:  req.DefaultPoolID,
 		HTTPRedirect:   req.HTTPRedirect,
 		CreatedAt:      time.Now(),
@@ -157,6 +221,12 @@ func (s *Service) DeleteListener(ctx context.Context, lbID, listenerID string) e
 	if err := s.repo.DeleteListener(ctx, listenerID); err != nil {
 		return err
 	}
+
+	// Clean up custom certificate files if present
+	certsDir := filepath.Join(s.confDir, "certs")
+	_ = os.Remove(filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", listenerID)))
+	_ = os.Remove(filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", listenerID)))
+
 	_, _ = s.SynthesizeConfig(ctx, lbID)
 	return nil
 }
@@ -447,12 +517,7 @@ func (s *Service) SynthesizeConfig(ctx context.Context, lbID string) (string, er
 			if l.Protocol == "HTTPS" {
 				sb.WriteString(fmt.Sprintf("    listen %s ssl http2;\n", listenAddr))
 				// TLS Certificate setup
-				certPath := "/etc/ssl/certs/procloud-default.crt"
-				keyPath := "/etc/ssl/private/procloud-default.key"
-				if l.SSLCertSecret != "" {
-					certPath = fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.crt", lb.TenantID, l.SSLCertSecret)
-					keyPath = fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.key", lb.TenantID, l.SSLCertSecret)
-				}
+				certPath, keyPath := s.getCertificatePaths(lb.TenantID, l)
 				sb.WriteString(fmt.Sprintf("    ssl_certificate %s;\n", certPath))
 				sb.WriteString(fmt.Sprintf("    ssl_certificate_key %s;\n", keyPath))
 				sb.WriteString("    ssl_protocols TLSv1.2 TLSv1.3;\n")
@@ -597,4 +662,126 @@ func (s *Service) CheckMemberHealth(ctx context.Context, m *protocol.LBMember, p
 	}
 	defer resp.Body.Close()
 	return resp.StatusCode >= 200 && resp.StatusCode < 400
+}
+
+// -------------------------------------------------------------
+// TLS / SSL Certificate Management (Auto, Secret, Custom)
+// -------------------------------------------------------------
+
+func (s *Service) getCertificatePaths(tenantID string, l *protocol.LBListener) (string, string) {
+	certsDir := filepath.Join(s.confDir, "certs")
+	_ = os.MkdirAll(certsDir, 0755)
+
+	// 1. Custom Certificate Upload
+	if l.SSLCertType == "custom" {
+		customCert := filepath.Join(certsDir, fmt.Sprintf("custom-%s.crt", l.ID))
+		customKey := filepath.Join(certsDir, fmt.Sprintf("custom-%s.key", l.ID))
+		if fileExists(customCert) && fileExists(customKey) {
+			return customCert, customKey
+		}
+	}
+
+	// 2. Secret Reference
+	if l.SSLCertSecret != "" {
+		secCert := fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.crt", tenantID, l.SSLCertSecret)
+		secKey := fmt.Sprintf("/var/lib/procloud/secrets/%s/%s/tls.key", tenantID, l.SSLCertSecret)
+		if fileExists(secCert) && fileExists(secKey) {
+			return secCert, secKey
+		}
+
+		vaultCert := filepath.Join(certsDir, fmt.Sprintf("secret-%s.crt", l.SSLCertSecret))
+		vaultKey := filepath.Join(certsDir, fmt.Sprintf("secret-%s.key", l.SSLCertSecret))
+		if fileExists(vaultCert) && fileExists(vaultKey) {
+			return vaultCert, vaultKey
+		}
+
+		if l.SSLCertType == "secret" || l.SSLCertType == "" {
+			return secCert, secKey
+		}
+	}
+
+	// 3. Auto-Generated ProCloud Default TLS
+	defaultCert := filepath.Join(certsDir, "procloud-default.crt")
+	defaultKey := filepath.Join(certsDir, "procloud-default.key")
+	if fileExists(defaultCert) && fileExists(defaultKey) {
+		return defaultCert, defaultKey
+	}
+	if fileExists("/etc/ssl/certs/procloud-default.crt") && fileExists("/etc/ssl/private/procloud-default.key") {
+		return "/etc/ssl/certs/procloud-default.crt", "/etc/ssl/private/procloud-default.key"
+	}
+
+	_ = s.ensureDefaultCertificate()
+	return defaultCert, defaultKey
+}
+
+func (s *Service) ensureDefaultCertificate() error {
+	certsDir := filepath.Join(s.confDir, "certs")
+	if err := os.MkdirAll(certsDir, 0755); err != nil {
+		return err
+	}
+	certPath := filepath.Join(certsDir, "procloud-default.crt")
+	keyPath := filepath.Join(certsDir, "procloud-default.key")
+
+	if fileExists(certPath) && fileExists(keyPath) {
+		return nil
+	}
+
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return fmt.Errorf("failed generating ecdsa key: %w", err)
+	}
+
+	notBefore := time.Now().Add(-1 * time.Hour)
+	notAfter := notBefore.Add(10 * 365 * 24 * time.Hour)
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return fmt.Errorf("failed generating serial number: %w", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"ProCloud Sovereign Infrastructure"},
+			CommonName:   "procloud.local",
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost", "*.internal", "*.procloud.local", "procloud"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("0.0.0.0"), net.ParseIP("198.51.100.25")},
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return fmt.Errorf("failed creating certificate: %w", err)
+	}
+
+	certOut, err := os.Create(certPath)
+	if err != nil {
+		return err
+	}
+	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	_ = certOut.Close()
+
+	keyBytes, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return err
+	}
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	_ = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyBytes})
+	_ = keyOut.Close()
+
+	return nil
+}
+
+func fileExists(p string) bool {
+	info, err := os.Stat(p)
+	return err == nil && !info.IsDir()
 }
