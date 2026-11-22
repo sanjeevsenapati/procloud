@@ -4915,7 +4915,7 @@ spec:
 
     <!-- MODAL: Organization / Tenant Management -->
     <div id="org-modal" class="modal-overlay">
-        <div class="modal-dialog" style="max-width: 600px;">
+        <div class="modal-dialog" style="max-width: 620px;">
             <div class="modal-dialog-header">
                 <div class="modal-dialog-title">
                     <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
@@ -4924,16 +4924,13 @@ spec:
                 <div class="modal-dialog-close" onclick="closeModal('org-modal')">&times;</div>
             </div>
             <input type="hidden" id="org-modal-id">
-            <div class="form-group">
-                <label class="form-label">Organization Name *</label>
-                <input type="text" id="org-modal-name" class="form-input" placeholder="e.g. Acme Innovations">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Description / Purpose</label>
-                <input type="text" id="org-modal-desc" class="form-input" placeholder="e.g. Core product engineering and edge workloads">
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
-                <div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Organization Name <span style="color:var(--pg-rose);">*</span></label>
+                    <input type="text" id="org-modal-name" class="form-input" placeholder="e.g. Acme Innovations">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Subscription Tier / Plan</label>
                     <select id="org-modal-plan" class="form-input">
                         <option value="enterprise">Enterprise (High capacity)</option>
@@ -4942,7 +4939,14 @@ spec:
                         <option value="free">Free (Evaluation tier)</option>
                     </select>
                 </div>
-                <div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Description / Purpose</label>
+                    <input type="text" id="org-modal-desc" class="form-input" placeholder="e.g. Core product engineering and edge workloads">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Tenant Status</label>
                     <select id="org-modal-status" class="form-input">
                         <option value="active" selected>Active</option>
@@ -4950,67 +4954,77 @@ spec:
                     </select>
                 </div>
             </div>
-            <div style="background:#f8faff; border:1px solid #dbeafe; border-radius:8px; padding:12px 14px; margin-bottom:16px;">
-                <div style="font-size:11px; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    <span>Resource Quota Limits</span>
+
+            <!-- Resource Quotas Section Card -->
+            <div style="background: var(--pg-card); border: 1px solid var(--pg-border); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--pg-blue-700); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        <span>Resource Quota Limits</span>
+                    </div>
+                    <span class="pill pill-blue" style="font-size:10px; padding:2px 8px;">Multi-Tenant Fair Sharing</span>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Max Workloads</label>
-                        <input type="number" id="org-modal-containers" class="form-input" value="50" min="1">
+                <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px; margin-bottom:4px;">Workloads</label>
+                        <input type="number" id="org-modal-containers" class="form-input" value="50" min="1" style="padding:7px 10px; font-size:12px;">
                     </div>
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Max Pods</label>
-                        <input type="number" id="org-modal-pods" class="form-input" value="25" min="1">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px; margin-bottom:4px;">Pods</label>
+                        <input type="number" id="org-modal-pods" class="form-input" value="25" min="1" style="padding:7px 10px; font-size:12px;">
                     </div>
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Max CPU (Cores)</label>
-                        <input type="number" id="org-modal-cpu" class="form-input" value="8" step="1" min="1">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px; margin-bottom:4px;">CPU (Cores)</label>
+                        <input type="number" id="org-modal-cpu" class="form-input" value="8" step="1" min="1" style="padding:7px 10px; font-size:12px;">
                     </div>
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Max RAM (MB)</label>
-                        <input type="number" id="org-modal-memory" class="form-input" value="16384" step="512" min="256">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px; margin-bottom:4px;">RAM (MB)</label>
+                        <input type="number" id="org-modal-memory" class="form-input" value="16384" step="512" min="256" style="padding:7px 10px; font-size:12px;">
                     </div>
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Max Disk (GB)</label>
-                        <input type="number" id="org-modal-storage" class="form-input" value="100" min="1">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px; margin-bottom:4px;">Disk (GB)</label>
+                        <input type="number" id="org-modal-storage" class="form-input" value="100" min="1" style="padding:7px 10px; font-size:12px;">
                     </div>
                 </div>
             </div>
+
             <!-- Initial Org Admin Provisioning (Super Admin Only) -->
-            <div id="org-modal-admin-section" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px 14px; margin-bottom:16px;">
-                <div style="font-size:11px; font-weight:700; color:#166534; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <span>Provision Initial Organization Admin (Optional)</span>
+            <div id="org-modal-admin-section" style="background: var(--pg-card); border: 1px solid var(--pg-border); border-left: 3px solid var(--pg-emerald); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--pg-emerald); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span>Provision Initial Organization Admin (Optional)</span>
+                    </div>
+                    <span class="pill pill-emerald" style="font-size:10px; padding:2px 8px;">Super Admin Only</span>
                 </div>
-                <div style="font-size:11px; color:#15803d; margin-bottom:10px; line-height:1.4;">
+                <div style="font-size: 11px; color: var(--pg-text-secondary); margin-bottom: 12px; line-height: 1.4;">
                     Super Admin can provision the primary Org Admin account directly for this organization upon creation.
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Admin Username</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px;">Admin Username</label>
                         <input type="text" id="org-modal-admin-username" class="form-input" placeholder="e.g. acme.admin">
                     </div>
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Admin Display Name</label>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px;">Admin Display Name</label>
                         <input type="text" id="org-modal-admin-name" class="form-input" placeholder="e.g. Acme Administrator">
                     </div>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Admin Email</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px;">Admin Email</label>
                         <input type="email" id="org-modal-admin-email" class="form-input" placeholder="e.g. admin@acme.io">
                     </div>
-                    <div>
-                        <label class="form-label" style="font-size:10px;">Admin Temporary Password</label>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" style="font-size:11px;">Admin Temporary Password</label>
                         <input type="password" id="org-modal-admin-password" class="form-input" placeholder="Min 6 characters">
                     </div>
                 </div>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:8px;">
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:1px solid var(--pg-border-subtle);">
                 <button type="button" class="btn" onclick="closeModal('org-modal')">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitOrgForm()">
+                <button type="button" class="btn btn-primary" style="padding: 9px 20px; font-weight: 600;" onclick="submitOrgForm()">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                     <span id="org-modal-submit-label">Save Organization</span>
                 </button>
@@ -5029,31 +5043,38 @@ spec:
                 <div class="modal-dialog-close" onclick="closeModal('user-modal')">&times;</div>
             </div>
             <input type="hidden" id="user-modal-id">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <div>
-                    <label class="form-label">Username *</label>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Username <span style="color:var(--pg-rose);">*</span></label>
                     <input type="text" id="user-modal-username" class="form-input" placeholder="e.g. j.doe">
                 </div>
-                <div>
-                    <label class="form-label">Full / Display Name *</label>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Full / Display Name <span style="color:var(--pg-rose);">*</span></label>
                     <input type="text" id="user-modal-display-name" class="form-input" placeholder="e.g. John Doe">
                 </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Email Address *</label>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label">Email Address <span style="color:var(--pg-rose);">*</span></label>
                 <input type="email" id="user-modal-email" class="form-input" placeholder="e.g. j.doe@example.com">
             </div>
-            <div class="form-group" id="user-modal-password-group">
-                <label class="form-label">Password *</label>
-                <input type="password" id="user-modal-password" class="form-input" placeholder="Enter secure password">
-                <div style="font-size:10px; color:var(--pg-text-muted); margin-top:3px;">Minimum 6 characters. Can be reset anytime by Support Admin.</div>
+
+            <div class="form-group" id="user-modal-password-group" style="margin-bottom: 14px;">
+                <label class="form-label">Password <span style="color:var(--pg-rose);">*</span></label>
+                <input type="password" id="user-modal-password" class="form-input" placeholder="Enter secure password (min 6 characters)">
+                <div style="font-size:11px; color:var(--pg-text-muted); margin-top:5px; display:flex; align-items:center; gap:5px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Minimum 6 characters. Can be reset anytime by Support Admin.</span>
+                </div>
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <div>
-                    <label class="form-label">Assigned Organization *</label>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Assigned Organization <span style="color:var(--pg-rose);">*</span></label>
                     <select id="user-modal-org" class="form-input"></select>
                 </div>
-                <div>
+                <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">Account Status</label>
                     <select id="user-modal-status" class="form-input">
                         <option value="active" selected>Active</option>
@@ -5061,18 +5082,26 @@ spec:
                     </select>
                 </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">RBAC Authorization Role *</label>
-                <select id="user-modal-role" class="form-input">
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label">RBAC Authorization Role <span style="color:var(--pg-rose);">*</span></label>
+                <select id="user-modal-role" class="form-input" onchange="updateUserRoleDescription(this.value)">
                     <option value="admin">Super Admin / Support Admin — Unrestricted Platform Authority</option>
                     <option value="org_admin">Organization Admin — Tenant Workloads, Quotas &amp; Team Management</option>
                     <option value="developer" selected>Developer / Operator — Deploy, Shell Exec &amp; Workload Management</option>
                     <option value="viewer">Auditor / Viewer — Strictly Read-Only Observability &amp; Logs</option>
                 </select>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+
+            <!-- Role Permissions Hint Box -->
+            <div id="user-role-hint-box" style="background: var(--pg-card); border: 1px solid var(--pg-border); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 11px; color: var(--pg-text-secondary); display: flex; align-items: center; gap: 10px;">
+                <span id="user-role-badge" class="pill pill-emerald" style="flex-shrink:0;">Developer</span>
+                <span id="user-role-desc" style="line-height: 1.4;">Can deploy workloads, run container shells, trigger builds, and manage services within the assigned organization.</span>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:1px solid var(--pg-border-subtle);">
                 <button type="button" class="btn" onclick="closeModal('user-modal')">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitUserForm()">
+                <button type="button" class="btn btn-primary" style="padding: 9px 20px; font-weight: 600;" onclick="submitUserForm()">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                     <span id="user-modal-submit-label">Create User</span>
                 </button>
@@ -5082,7 +5111,7 @@ spec:
 
     <!-- MODAL: Reset Password -->
     <div id="user-password-modal" class="modal-overlay">
-        <div class="modal-dialog" style="max-width: 440px;">
+        <div class="modal-dialog" style="max-width: 460px;">
             <div class="modal-dialog-header">
                 <div class="modal-dialog-title">
                     <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -5091,20 +5120,34 @@ spec:
                 <div class="modal-dialog-close" onclick="closeModal('user-password-modal')">&times;</div>
             </div>
             <input type="hidden" id="user-password-modal-id">
-            <p style="font-size:12px; color:var(--pg-text-secondary); margin-bottom:12px;">
-                Reset credentials for user <strong id="user-password-modal-username" style="color:var(--pg-primary);"></strong>. The new password will take effect immediately.
-            </p>
-            <div class="form-group">
-                <label class="form-label">New Password *</label>
-                <input type="password" id="user-password-modal-new" class="form-input" placeholder="Enter new password">
+
+            <!-- Target User Card -->
+            <div style="background: var(--pg-card); border: 1px solid var(--pg-border); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                <div id="user-password-avatar" style="width: 36px; height: 36px; border-radius: 50%; background: #eff6ff; border: 1px solid #bfdbfe; color: var(--pg-blue-600); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;">
+                    @
+                </div>
+                <div>
+                    <div style="font-size: 13px; font-weight: 700; color: var(--pg-text);">
+                        Reset credentials for <span id="user-password-modal-username" style="color: var(--pg-blue-600); font-family: 'JetBrains Mono', monospace;"></span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--pg-text-secondary); margin-top: 2px;">
+                        The new password will take effect immediately across all active sessions.
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Confirm New Password *</label>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label class="form-label">New Password <span style="color:var(--pg-rose);">*</span></label>
+                <input type="password" id="user-password-modal-new" class="form-input" placeholder="Enter new password (min 6 characters)">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">Confirm New Password <span style="color:var(--pg-rose);">*</span></label>
                 <input type="password" id="user-password-modal-confirm" class="form-input" placeholder="Repeat new password">
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:1px solid var(--pg-border-subtle);">
                 <button type="button" class="btn" onclick="closeModal('user-password-modal')">Cancel</button>
-                <button type="button" class="btn btn-rose" onclick="submitResetPassword()">
+                <button type="button" class="btn btn-primary" style="padding: 9px 20px; font-weight: 600;" onclick="submitResetPassword()">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     <span>Update Password</span>
                 </button>
@@ -5114,7 +5157,7 @@ spec:
 
     <!-- MODAL: RBAC Role & Permission Authority Matrix -->
     <div id="rbac-matrix-modal" class="modal-overlay">
-        <div class="modal-dialog" style="max-width: 780px;">
+        <div class="modal-dialog" style="max-width: 820px;">
             <div class="modal-dialog-header">
                 <div class="modal-dialog-title">
                     <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -5122,68 +5165,74 @@ spec:
                 </div>
                 <div class="modal-dialog-close" onclick="closeModal('rbac-matrix-modal')">&times;</div>
             </div>
-            <p style="font-size:12px; color:var(--pg-text-secondary); margin-bottom:16px;">
-                ProCloud enforces strict multi-tenant Role-Based Access Control (RBAC) across compute, networking, builds, telemetry, and organization boundaries.
-            </p>
-            <div style="overflow-x:auto;">
-                <table class="pg-table" style="font-size:12px;">
-                    <thead>
+
+            <div style="background: var(--pg-card); border: 1px solid var(--pg-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <div style="font-size: 12px; color: var(--pg-text-secondary); line-height: 1.5;">
+                    ProCloud enforces strict multi-tenant Role-Based Access Control (RBAC) across compute, networking, builds, telemetry, and tenant boundaries.
+                </div>
+                <span class="pill pill-purple" style="flex-shrink:0;">Least-Privilege Model</span>
+            </div>
+
+            <div style="overflow-x:auto; border: 1px solid var(--pg-border); border-radius: 8px; margin-bottom: 16px;">
+                <table class="pg-table" style="font-size: 12px; margin-bottom: 0;">
+                    <thead style="background: #f8faff;">
                         <tr>
-                            <th>Platform Capability / Operation</th>
-                            <th style="text-align:center;"><span class="pill pill-purple">Super Admin</span></th>
-                            <th style="text-align:center;"><span class="pill pill-blue">Org Admin</span></th>
-                            <th style="text-align:center;"><span class="pill pill-emerald">Developer</span></th>
-                            <th style="text-align:center;"><span class="pill pill-slate">Viewer</span></th>
+                            <th style="padding: 10px 14px;">Platform Capability / Operation</th>
+                            <th style="text-align:center; padding: 10px 12px;"><span class="pill pill-purple">Super Admin</span></th>
+                            <th style="text-align:center; padding: 10px 12px;"><span class="pill pill-blue">Org Admin</span></th>
+                            <th style="text-align:center; padding: 10px 12px;"><span class="pill pill-emerald">Developer</span></th>
+                            <th style="text-align:center; padding: 10px 12px;"><span class="pill pill-slate">Viewer</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>Manage Organizations &amp; Quotas</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Create, edit, suspend, allocate cluster limits</span></td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
-                            <td style="text-align:center; color:#64748b;">Read Quotas</td>
-                            <td style="text-align:center; color:#94a3b8;">None</td>
-                            <td style="text-align:center; color:#94a3b8;">None</td>
+                            <td style="padding: 11px 14px;"><strong>Manage Organizations &amp; Quotas</strong><br><span style="font-size:11px; color:var(--pg-text-muted);">Create, edit, suspend, allocate cluster limits</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Full Access</span></td>
+                            <td style="text-align:center;"><span class="pill pill-blue" style="font-size:11px;">Read Quotas</span></td>
+                            <td style="text-align:center;"><span class="pill pill-slate" style="font-size:11px;">None</span></td>
+                            <td style="text-align:center;"><span class="pill pill-slate" style="font-size:11px;">None</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Platform User Management</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Provision users, change roles, reset passwords</span></td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">All Tenants</td>
-                            <td style="text-align:center; color:#2563eb; font-weight:600;">Tenant Team</td>
-                            <td style="text-align:center; color:#94a3b8;">None</td>
-                            <td style="text-align:center; color:#94a3b8;">None</td>
+                            <td style="padding: 11px 14px;"><strong>Platform User Management</strong><br><span style="font-size:11px; color:var(--pg-text-muted);">Provision users, change roles, reset passwords</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">All Tenants</span></td>
+                            <td style="text-align:center;"><span class="pill pill-blue" style="font-size:11px;">Tenant Team</span></td>
+                            <td style="text-align:center;"><span class="pill pill-slate" style="font-size:11px;">None</span></td>
+                            <td style="text-align:center;"><span class="pill pill-slate" style="font-size:11px;">None</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Deploy &amp; Run Workloads</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Launch containers, create pods, stop/delete</span></td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Cluster-wide</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Within Tenant</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Within Tenant</td>
-                            <td style="text-align:center; color:#dc2626;">Read-Only</td>
+                            <td style="padding: 11px 14px;"><strong>Deploy &amp; Run Workloads</strong><br><span style="font-size:11px; color:var(--pg-text-muted);">Launch containers, create pods, stop/delete</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Cluster-wide</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Within Tenant</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Within Tenant</span></td>
+                            <td style="text-align:center;"><span class="pill pill-rose" style="font-size:11px;">Read-Only</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Interactive Container Shell / Exec</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Direct PTY console, command execution</span></td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Allowed</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Allowed</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Allowed</td>
-                            <td style="text-align:center; color:#dc2626; font-weight:600;">Blocked</td>
+                            <td style="padding: 11px 14px;"><strong>Interactive Container Shell / Exec</strong><br><span style="font-size:11px; color:var(--pg-text-muted);">Direct PTY console, command execution</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Allowed</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Allowed</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Allowed</span></td>
+                            <td style="text-align:center;"><span class="pill pill-rose" style="font-size:11px;">Blocked</span></td>
                         </tr>
                         <tr>
-                            <td><strong>CI/CD Pipelines (Build &amp; Deploy)</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Containerfile, Deploy.yaml synthesis, build execution</span></td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
-                            <td style="text-align:center; color:#dc2626;">Read-Only</td>
+                            <td style="padding: 11px 14px;"><strong>CI/CD Pipelines (Build &amp; Deploy)</strong><br><span style="font-size:11px; color:var(--pg-text-muted);">Containerfile, Deploy.yaml synthesis, build execution</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Full Access</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Full Access</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Full Access</span></td>
+                            <td style="text-align:center;"><span class="pill pill-rose" style="font-size:11px;">Read-Only</span></td>
                         </tr>
                         <tr>
-                            <td><strong>Observability, Metrics &amp; Live Logs</strong><br><span style="font-size:10px; color:var(--pg-text-muted);">Telemetry, top processes, container log streaming</span></td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Full Access</td>
-                            <td style="text-align:center; color:#16a34a; font-weight:700;">Audit Logs</td>
+                            <td style="padding: 11px 14px;"><strong>Observability, Metrics &amp; Live Logs</strong><br><span style="font-size:11px; color:var(--pg-text-muted);">Telemetry, top processes, container log streaming</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Full Access</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Full Access</span></td>
+                            <td style="text-align:center;"><span class="pill pill-emerald" style="font-size:11px;">Full Access</span></td>
+                            <td style="text-align:center;"><span class="pill pill-blue" style="font-size:11px;">Audit Logs</span></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-                <button type="button" class="btn btn-primary" onclick="closeModal('rbac-matrix-modal')">Close Matrix</button>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:1px solid var(--pg-border-subtle);">
+                <button type="button" class="btn btn-primary" style="padding: 8px 20px; font-weight: 600;" onclick="closeModal('rbac-matrix-modal')">Close Matrix</button>
             </div>
         </div>
     </div>
@@ -10236,25 +10285,30 @@ spec:
                 showToast('The primary default organization cannot be deleted', 'error');
                 return;
             }
-            if (!confirm(`Are you sure you want to delete organization "${name}"?\nAll associated quotas and configurations will be permanently removed.`)) {
-                return;
-            }
-
-            try {
-                const res = await authFetch(`/api/v1/organizations/${encodeURIComponent(id)}`, {
-                    method: 'DELETE'
-                });
-                if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(errText || 'Failed deleting organization');
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'ORGANIZATION',
+                name: name,
+                id: id,
+                warning: 'All associated tenant workloads, projects, quotas, and configurations will be permanently removed.',
+                onConfirm: async () => {
+                    try {
+                        const res = await authFetch(`/api/v1/organizations/${encodeURIComponent(id)}`, {
+                            method: 'DELETE'
+                        });
+                        if (!res.ok) {
+                            const errText = await res.text();
+                            throw new Error(errText || 'Failed deleting organization');
+                        }
+                        showToast(`Organization "${name}" deleted successfully`, 'success');
+                        await fetchOrganizations();
+                        await fetchUsers();
+                    } catch (err) {
+                        console.error('deleteOrg error:', err);
+                        showToast('Error deleting organization: ' + err.message, 'error');
+                    }
                 }
-                showToast(`Organization "${name}" deleted successfully`, 'success');
-                await fetchOrganizations();
-                await fetchUsers();
-            } catch (err) {
-                console.error('deleteOrg error:', err);
-                showToast('Error deleting organization: ' + err.message, 'error');
-            }
+            });
         }
 
         // ==========================================
@@ -10432,6 +10486,29 @@ spec:
             }).join('');
         }
 
+        function updateUserRoleDescription(role) {
+            const badge = document.getElementById('user-role-badge');
+            const desc = document.getElementById('user-role-desc');
+            if (!badge || !desc) return;
+            if (role === 'admin' || role === 'superadmin') {
+                badge.className = 'pill pill-purple';
+                badge.innerText = 'Super Admin';
+                desc.innerText = 'Unrestricted root-level authority across all organizations, host compute nodes, and user directory.';
+            } else if (role === 'org_admin') {
+                badge.className = 'pill pill-blue';
+                badge.innerText = 'Org Admin';
+                desc.innerText = 'Manage organization workloads, resource quotas, and team user provisioning within the tenant boundary.';
+            } else if (role === 'viewer') {
+                badge.className = 'pill pill-slate';
+                badge.innerText = 'Viewer';
+                desc.innerText = 'Strictly read-only observability. Can view containers, pods, metrics, and audit logs without modification rights.';
+            } else {
+                badge.className = 'pill pill-emerald';
+                badge.innerText = 'Developer';
+                desc.innerText = 'Can deploy workloads, run container shells, trigger builds, and manage services within the assigned organization.';
+            }
+        }
+
         function renderUserRoleOptions(targetRole) {
             const roleSelect = document.getElementById('user-modal-role');
             if (!roleSelect) return;
@@ -10449,9 +10526,9 @@ spec:
                     <option value="viewer">Auditor / Viewer — Strictly Read-Only Observability &amp; Logs</option>
                 `;
             }
-            if (targetRole) {
-                roleSelect.value = targetRole;
-            }
+            const activeRole = targetRole || 'developer';
+            roleSelect.value = activeRole;
+            updateUserRoleDescription(activeRole);
         }
 
         function openCreateUserModal() {
@@ -10578,6 +10655,10 @@ spec:
         function openResetPasswordModal(id, username) {
             document.getElementById('user-password-modal-id').value = id;
             document.getElementById('user-password-modal-username').innerText = `@${username}`;
+            const avatar = document.getElementById('user-password-avatar');
+            if (avatar) {
+                avatar.innerText = (username && username[0]) ? username[0].toUpperCase() : '@';
+            }
             document.getElementById('user-password-modal-new').value = '';
             document.getElementById('user-password-modal-confirm').value = '';
             openModal('user-password-modal');
@@ -10624,25 +10705,30 @@ spec:
                 showToast('Cannot delete default platform administrator', 'error');
                 return;
             }
-            if (!confirm(`Are you sure you want to permanently delete user account "@${username}"?`)) {
-                return;
-            }
-
-            try {
-                const res = await authFetch(`/api/v1/users/${encodeURIComponent(id)}`, {
-                    method: 'DELETE'
-                });
-                if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(errText || 'Failed deleting user');
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'USER ACCOUNT',
+                name: '@' + username,
+                id: id,
+                warning: 'The user will immediately lose all access and their active sessions will be terminated.',
+                onConfirm: async () => {
+                    try {
+                        const res = await authFetch(`/api/v1/users/${encodeURIComponent(id)}`, {
+                            method: 'DELETE'
+                        });
+                        if (!res.ok) {
+                            const errText = await res.text();
+                            throw new Error(errText || 'Failed deleting user');
+                        }
+                        showToast(`User "@${username}" deleted successfully`, 'success');
+                        await fetchUsers();
+                        await fetchOrganizations();
+                    } catch (err) {
+                        console.error('deleteUser error:', err);
+                        showToast('Error deleting user: ' + err.message, 'error');
+                    }
                 }
-                showToast(`User "@${username}" deleted successfully`, 'success');
-                await fetchUsers();
-                await fetchOrganizations();
-            } catch (err) {
-                console.error('deleteUser error:', err);
-                showToast('Error deleting user: ' + err.message, 'error');
-            }
+            });
         }
 
         function openRbacMatrixModal() {
