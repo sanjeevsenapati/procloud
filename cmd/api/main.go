@@ -77,6 +77,11 @@ func main() {
 	}
 	defer server.jobEngine.Stop()
 
+	if err := server.cronSvc.Start(ctx); err != nil {
+		log.Printf("[Cron Service] Warning: failed starting scheduler: %v", err)
+	}
+	defer server.cronSvc.Stop()
+
 	// 5. Start HTTP server
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf(":%d", *port),

@@ -54,6 +54,8 @@ type Server struct {
 	dnsSvc        *dns.Service
 	deployEngine  *deployment.Engine
 	jobEngine     *job.Engine
+	cronSvc       *scheduler.CronService
+	jobRepo       repository.JobRepository
 	monitoringSvc *monitoring.Service
 	auditSvc      *audit.Service
 	runtime       podman.ContainerRuntime
@@ -80,6 +82,10 @@ func NewServer(
 	deployEngine := deployment.NewEngine(repo, repo, builder, runtime, sched, storageSvc, ingressCtrl)
 
 	jobEngine := job.NewEngine(repo, "api-worker-1")
+	jobEngine.RegisterOutputHandler("container_run", scheduler.ContainerJobHandler)
+	jobEngine.RegisterOutputHandler("http_webhook", scheduler.HTTPWebhookJobHandler)
+	cronSvc := scheduler.NewCronService(repo, repo, jobEngine)
+
 	monitoringSvc := monitoring.NewService(db)
 	auditSvc := audit.NewService(repo)
 	authSvc := auth.NewService(repo, "procloud-jwt-secret-key-32bytes!")
@@ -96,6 +102,7 @@ func NewServer(
 		nodeRepo:      repo,
 		wlRepo:        repo,
 		depRepo:       repo,
+		jobRepo:       repo,
 		authSvc:       authSvc,
 		computeSvc:    computeSvc,
 		tenantSvc:     tenantSvc,
@@ -106,6 +113,7 @@ func NewServer(
 		dnsSvc:        dnsSvc,
 		deployEngine:  deployEngine,
 		jobEngine:     jobEngine,
+		cronSvc:       cronSvc,
 		monitoringSvc: monitoringSvc,
 		auditSvc:      auditSvc,
 		runtime:       runtime,
@@ -430,7 +438,19 @@ func (s *Server) registerRoutes() {
 
 	// Background Jobs & Audit (Protected)
 	s.mux.HandleFunc("GET /api/v1/jobs", s.authRequired(s.handleListJobs))
+	s.mux.HandleFunc("GET /api/v1/jobs/{id}/logs", s.authRequired(s.handleGetJobLogs))
 	s.mux.HandleFunc("GET /api/v1/audit", s.authRequired(s.handleListAudit))
+
+	// Scheduled Cron Jobs as a Service (Protected)
+	s.mux.HandleFunc("GET /api/v1/schedules", s.authRequired(s.handleListSchedules))
+	s.mux.HandleFunc("POST /api/v1/schedules", s.writeRequired(s.handleCreateSchedule))
+	s.mux.HandleFunc("GET /api/v1/schedules/{id}", s.authRequired(s.handleGetSchedule))
+	s.mux.HandleFunc("PUT /api/v1/schedules/{id}", s.writeRequired(s.handleUpdateSchedule))
+	s.mux.HandleFunc("DELETE /api/v1/schedules/{id}", s.writeRequired(s.handleDeleteSchedule))
+	s.mux.HandleFunc("POST /api/v1/schedules/{id}/pause", s.writeRequired(s.handlePauseSchedule))
+	s.mux.HandleFunc("POST /api/v1/schedules/{id}/resume", s.writeRequired(s.handleResumeSchedule))
+	s.mux.HandleFunc("POST /api/v1/schedules/{id}/run", s.writeRequired(s.handleRunScheduleNow))
+	s.mux.HandleFunc("GET /api/v1/schedules/{id}/runs", s.authRequired(s.handleListScheduleRuns))
 
 	// Build & Deploy Workflow Engine (Protected)
 	s.mux.HandleFunc("POST /api/v1/workflows/run", s.writeRequired(s.handleRunWorkflow))
@@ -2103,12 +2123,186 @@ func (s *Server) handleDBBackup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
-	jobs, err := s.jobEngine.ListRecentJobs(r.Context(), 50)
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 {
+			limit = val
+		}
+	}
+	schedID := r.URL.Query().Get("schedule_id")
+	if schedID != "" {
+		jobs, err := s.cronSvc.ListScheduleRuns(r.Context(), schedID, limit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		respondJSON(w, http.StatusOK, jobs)
+		return
+	}
+	jobs, err := s.jobEngine.ListRecentJobs(r.Context(), limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	respondJSON(w, http.StatusOK, jobs)
+}
+
+func (s *Server) handleGetJobLogs(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	job, err := s.jobRepo.GetJobByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "job not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]any{
+		"id":            job.ID,
+		"type":          job.Type,
+		"status":        job.Status,
+		"logs":          job.Logs,
+		"exit_code":     job.ExitCode,
+		"schedule_id":   job.ScheduleID,
+		"trigger_type":  job.TriggerType,
+		"started_at":    job.StartedAt,
+		"completed_at":  job.CompletedAt,
+		"error_details": job.ErrorDetails,
+	})
+}
+
+func (s *Server) handleListSchedules(w http.ResponseWriter, r *http.Request) {
+	tenantID := ""
+	if claims := getClaims(r); claims != nil && claims.Role != protocol.RoleSuperAdmin {
+		tenantID = claims.TenantID
+	}
+	list, err := s.cronSvc.ListSchedules(r.Context(), tenantID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if list == nil {
+		list = []*protocol.Schedule{}
+	}
+	respondJSON(w, http.StatusOK, list)
+}
+
+func (s *Server) handleCreateSchedule(w http.ResponseWriter, r *http.Request) {
+	var req protocol.CreateScheduleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if claims := getClaims(r); claims != nil {
+		if req.TenantID == "" || claims.Role != protocol.RoleSuperAdmin {
+			req.TenantID = claims.TenantID
+		}
+	}
+	sched, err := s.cronSvc.CreateSchedule(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	actor := "admin"
+	if claims := getClaims(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "SCHEDULE_CREATE", "Schedule", sched.ID, r.RemoteAddr,
+		fmt.Sprintf("Created scheduled job '%s' (%s) with cron '%s'", sched.Name, sched.JobType, sched.CronExpression))
+	respondJSON(w, http.StatusCreated, sched)
+}
+
+func (s *Server) handleGetSchedule(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	sched, err := s.cronSvc.GetSchedule(r.Context(), id)
+	if err != nil {
+		http.Error(w, "schedule not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, sched)
+}
+
+func (s *Server) handleUpdateSchedule(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req protocol.UpdateScheduleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	sched, err := s.cronSvc.UpdateSchedule(r.Context(), id, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	respondJSON(w, http.StatusOK, sched)
+}
+
+func (s *Server) handleDeleteSchedule(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.cronSvc.DeleteSchedule(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	actor := "admin"
+	if claims := getClaims(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "SCHEDULE_DELETE", "Schedule", id, r.RemoteAddr, "Deleted scheduled job")
+	respondJSON(w, http.StatusOK, map[string]string{"message": "schedule deleted", "id": id})
+}
+
+func (s *Server) handlePauseSchedule(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.cronSvc.PauseSchedule(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "schedule paused", "id": id, "status": "paused"})
+}
+
+func (s *Server) handleResumeSchedule(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := s.cronSvc.ResumeSchedule(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "schedule resumed", "id": id, "status": "active"})
+}
+
+func (s *Server) handleRunScheduleNow(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	job, err := s.cronSvc.TriggerManualRun(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	actor := "admin"
+	if claims := getClaims(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "SCHEDULE_MANUAL_RUN", "Schedule", id, r.RemoteAddr,
+		fmt.Sprintf("Manually triggered run of scheduled job -> Job ID: %s", job.ID))
+	respondJSON(w, http.StatusAccepted, map[string]any{
+		"message": "job enqueued successfully",
+		"job_id":  job.ID,
+		"status":  job.Status,
+	})
+}
+
+func (s *Server) handleListScheduleRuns(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 {
+			limit = val
+		}
+	}
+	runs, err := s.cronSvc.ListScheduleRuns(r.Context(), id, limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if runs == nil {
+		runs = []*protocol.Job{}
+	}
+	respondJSON(w, http.StatusOK, runs)
 }
 
 func (s *Server) handleListAudit(w http.ResponseWriter, r *http.Request) {

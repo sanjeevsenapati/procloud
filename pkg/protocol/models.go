@@ -158,7 +158,7 @@ type Deployment struct {
 // Job represents a background durable task backed by SQLite.
 type Job struct {
 	ID             string     `json:"id"`
-	Type           string     `json:"type"` // build_and_deploy, rollback, volume_backup, wal_checkpoint
+	Type           string     `json:"type"` // build_and_deploy, rollback, volume_backup, wal_checkpoint, container_run, workflow_run, http_webhook
 	Status         string     `json:"status"` // QUEUED, RUNNING, COMPLETED, FAILED, RETRYING
 	PayloadJSON    string     `json:"payload_json"`
 	IdempotencyKey string     `json:"idempotency_key,omitempty"`
@@ -166,10 +166,82 @@ type Job struct {
 	MaxRetries     int        `json:"max_retries"`
 	WorkerID       string     `json:"worker_id,omitempty"`
 	ErrorDetails   string     `json:"error_details,omitempty"`
+	Logs           string     `json:"logs,omitempty"`
+	ScheduleID     string     `json:"schedule_id,omitempty"`
+	TriggerType    string     `json:"trigger_type,omitempty"` // cron, manual, webhook
+	ExitCode       int        `json:"exit_code"`
 	ScheduledAt    time.Time  `json:"scheduled_at"`
 	StartedAt      *time.Time `json:"started_at,omitempty"`
 	CompletedAt    *time.Time `json:"completed_at,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
+}
+
+// Schedule represents a user-configured scheduled cron job.
+type Schedule struct {
+	ID                string     `json:"id"`
+	TenantID          string     `json:"tenant_id"`
+	Name              string     `json:"name"`
+	Description       string     `json:"description,omitempty"`
+	CronExpression    string     `json:"cron_expression"`
+	HumanSchedule     string     `json:"human_schedule,omitempty"`
+	JobType           string     `json:"job_type"` // container, workflow, http
+	TargetSpecJSON    string     `json:"target_spec_json"`
+	TargetSpec        *ScheduleTargetSpec `json:"target_spec,omitempty"`
+	ConcurrencyPolicy string     `json:"concurrency_policy"` // Forbid, Allow
+	MaxRetries        int        `json:"max_retries"`
+	TimeoutSeconds    int        `json:"timeout_seconds"`
+	Status            string     `json:"status"` // active, paused
+	LastRunAt         *time.Time `json:"last_run_at,omitempty"`
+	LastRunStatus     string     `json:"last_run_status,omitempty"` // SUCCESS, FAILED, RUNNING
+	NextRunAt         time.Time  `json:"next_run_at"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+// ScheduleTargetSpec describes the workload payload for scheduled executions.
+type ScheduleTargetSpec struct {
+	// Container execution
+	Image       string            `json:"image,omitempty"`
+	Command     string            `json:"command,omitempty"`
+	Args        []string          `json:"args,omitempty"`
+	Env         map[string]string `json:"env,omitempty"`
+	Volumes     []string          `json:"volumes,omitempty"`
+	CPURequest  string            `json:"cpu_request,omitempty"`
+	MemRequest  string            `json:"mem_request,omitempty"`
+
+	// Workflow execution
+	WorkflowName string           `json:"workflow_name,omitempty"`
+
+	// HTTP webhook execution
+	HTTPURL     string            `json:"http_url,omitempty"`
+	HTTPMethod  string            `json:"http_method,omitempty"`
+	HTTPHeaders map[string]string `json:"http_headers,omitempty"`
+	HTTPBody    string            `json:"http_body,omitempty"`
+}
+
+// CreateScheduleRequest represents payload to create a new scheduled job.
+type CreateScheduleRequest struct {
+	TenantID          string              `json:"tenant_id,omitempty"`
+	Name              string              `json:"name"`
+	Description       string              `json:"description,omitempty"`
+	CronExpression    string              `json:"cron_expression"`
+	JobType           string              `json:"job_type"` // container, workflow, http
+	TargetSpec        ScheduleTargetSpec  `json:"target_spec"`
+	ConcurrencyPolicy string              `json:"concurrency_policy,omitempty"` // Forbid, Allow
+	MaxRetries        int                 `json:"max_retries,omitempty"`
+	TimeoutSeconds    int                 `json:"timeout_seconds,omitempty"`
+}
+
+// UpdateScheduleRequest represents payload to modify an existing scheduled job.
+type UpdateScheduleRequest struct {
+	Name              string              `json:"name,omitempty"`
+	Description       string              `json:"description,omitempty"`
+	CronExpression    string              `json:"cron_expression,omitempty"`
+	JobType           string              `json:"job_type,omitempty"`
+	TargetSpec        *ScheduleTargetSpec `json:"target_spec,omitempty"`
+	ConcurrencyPolicy string              `json:"concurrency_policy,omitempty"`
+	MaxRetries        *int                `json:"max_retries,omitempty"`
+	TimeoutSeconds    *int                `json:"timeout_seconds,omitempty"`
 }
 
 // AuditEvent represents an immutable audit log entry.

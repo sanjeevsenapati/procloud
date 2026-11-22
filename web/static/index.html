@@ -2011,6 +2011,11 @@
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                     <span class="sidebar-label">Deployments &amp; Quadlet</span>
                 </a>
+                <a class="sidebar-item" onclick="switchTab('schedules')" data-tab="schedules" data-tooltip="Cron & Schedules">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="sidebar-label">Cron &amp; Schedules</span>
+                    <span class="sidebar-badge pill-purple" id="tab-badge-schedules">0</span>
+                </a>
                 <a class="sidebar-item" onclick="switchTab('telemetry')" data-tab="telemetry" data-tooltip="SQLite WAL & Jobs">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span class="sidebar-label">SQLite WAL &amp; Jobs</span>
@@ -4142,6 +4147,144 @@ spec:
                         </thead>
                         <tbody id="workloads-list-table">
                             <tr><td colspan="5" style="text-align:center;">No workloads deployed yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. CRON & SCHEDULES TAB -->
+        <div id="tab-schedules" class="tab-content">
+            <div class="pg-box" style="margin-bottom: 20px;">
+                <div class="pg-box-header" style="background: linear-gradient(180deg, rgba(243, 232, 255, 0.5) 0%, rgba(255, 255, 255, 1) 100%);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 40px; height: 40px; border-radius: 8px; background: #f3e8ff; color: #7e22ce; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div>
+                            <div class="wf-hero-title">Cron Schedules &amp; Background Jobs</div>
+                            <div class="wf-hero-subtitle">Automate recurring scheduled container workloads, batch pipelines, and durable background job queueing backed by SQLite WAL</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary rbac-write-only" onclick="openModal('create-schedule-modal')">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                            <span>+ Create Scheduled Job</span>
+                        </button>
+                        <button class="btn" onclick="fetchSchedules()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid-12" style="margin-bottom: 20px;">
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" style="color: var(--pg-purple);" id="stat-sched-total">0</div>
+                    <div class="stat-label">Total Schedules</div>
+                    <div class="stat-sub">Configured Cron Jobs</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" style="color: var(--pg-emerald);" id="stat-sched-active">0</div>
+                    <div class="stat-label">Active Schedules</div>
+                    <div class="stat-sub">Live on Ticker Evaluator</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-sched-runs">0</div>
+                    <div class="stat-label">Historical Executions</div>
+                    <div class="stat-sub">Durable SQLite Job Runs</div>
+                </div>
+                <div class="pg-stat-card col-3">
+                    <div class="stat-number" style="font-size: 14px; color: var(--pg-text-primary); padding-top: 6px; font-weight:600;" id="stat-sched-next">--</div>
+                    <div class="stat-label">Next Scheduled Trigger</div>
+                    <div class="stat-sub">Upcoming due execution</div>
+                </div>
+            </div>
+
+            <!-- Sub Navigation Tabs -->
+            <div style="display:flex; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--pg-border); padding-bottom:8px;">
+                <button id="sched-tab-btn-schedules" class="btn btn-sm btn-primary" onclick="switchScheduleSubTab('schedules')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Scheduled Jobs</span>
+                </button>
+                <button id="sched-tab-btn-runs" class="btn btn-sm" onclick="switchScheduleSubTab('runs')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    <span>Execution History (Job Runs)</span>
+                </button>
+            </div>
+
+            <!-- Sub Tab 1: Scheduled Jobs -->
+            <div id="sched-subview-schedules" class="pg-box">
+                <div class="pg-box-header">
+                    <div class="pg-box-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>Configured Schedules</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <input type="text" id="sched-search-input" class="form-input form-input-sm" style="width:180px;" placeholder="Filter schedules..." oninput="filterAndRenderSchedules()">
+                        <select id="sched-type-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderSchedules()">
+                            <option value="">All Types</option>
+                            <option value="container">Container</option>
+                            <option value="workflow">Workflow</option>
+                            <option value="http">HTTP Webhook</option>
+                        </select>
+                        <select id="sched-status-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderSchedules()">
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="paused">Paused</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="overflow-x:hidden; width:100%;">
+                    <table class="pg-table" style="table-layout: fixed; width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="width: 24%;">Schedule Name</th>
+                                <th style="width: 22%;">Cron Schedule</th>
+                                <th style="width: 20%;">Target / Action</th>
+                                <th style="width: 14%;">Next Run</th>
+                                <th style="width: 8%;">Status</th>
+                                <th style="width: 12%; text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedules-table-body">
+                            <tr><td colspan="6" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">Loading schedules...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sub Tab 2: Execution History -->
+            <div id="sched-subview-runs" class="pg-box" style="display:none;">
+                <div class="pg-box-header">
+                    <div class="pg-box-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <span>Durable Job Execution History</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn btn-sm" onclick="fetchScheduleRuns()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh Runs</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="overflow-x:hidden; width:100%;">
+                    <table class="pg-table" style="table-layout: fixed; width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="width: 16%;">Job ID</th>
+                                <th style="width: 22%;">Job Type / Name</th>
+                                <th style="width: 12%;">Trigger</th>
+                                <th style="width: 20%;">Execution Time</th>
+                                <th style="width: 10%;">Exit Code</th>
+                                <th style="width: 10%;">Status</th>
+                                <th style="width: 10%; text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sched-runs-table-body">
+                            <tr><td colspan="7" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">Loading runs...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -6652,6 +6795,336 @@ spec:
             </div>
         </div>
     </div>
+    <!-- MODAL: Create Schedule -->
+    <div id="create-schedule-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 680px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Create Scheduled Job (CronJob)</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('create-schedule-modal')">&times;</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Job Name <span style="color:var(--pg-danger);">*</span></label>
+                    <input type="text" id="new-sched-name" class="form-input" placeholder="nightly-cleanup" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Execution Type</label>
+                    <select id="new-sched-target-type" class="form-input" onchange="onScheduleTargetTypeChange('new')">
+                        <option value="container" selected>Container (Ephemeral Podman Job)</option>
+                        <option value="workflow">Workflow (DAG Engine)</option>
+                        <option value="http">HTTP Webhook (Outbound Request)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <input type="text" id="new-sched-desc" class="form-input" placeholder="Runs recurring cleanup and maintenance tasks">
+            </div>
+
+            <!-- Cron Configuration Section -->
+            <div style="background: var(--pg-bg-subtle, #f8fafc); border: 1px solid var(--pg-border); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; font-size: 13px; color: var(--pg-text-primary);">Schedule &amp; Frequency</span>
+                    <span style="font-size: 11px; color: var(--pg-text-muted);">Standard 5-part cron or macro</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px;">
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label">Frequency Presets</label>
+                        <select id="new-sched-preset" class="form-input" onchange="onSchedulePresetChange('new')">
+                            <option value="custom">Custom Cron Expression</option>
+                            <option value="*/5 * * * *">Every 5 minutes</option>
+                            <option value="*/15 * * * *" selected>Every 15 minutes</option>
+                            <option value="0 * * * *">Hourly (at minute 0)</option>
+                            <option value="0 0 * * *">Daily at Midnight (00:00)</option>
+                            <option value="0 2 * * *">Daily at 02:00 AM</option>
+                            <option value="0 0 * * 0">Weekly (Sunday at midnight)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label">Cron Expression <span style="color:var(--pg-danger);">*</span></label>
+                        <input type="text" id="new-sched-cron" class="form-input font-mono" placeholder="*/15 * * * *" value="*/15 * * * *" oninput="updateCronHumanPreview('new')">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 12px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--pg-text-muted);">Evaluates to:</span>
+                        <span id="new-sched-cron-preview" class="pill pill-purple" style="font-size: 11px;">Every 15 minutes</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label class="form-label" style="margin: 0; font-size: 11px;">Timezone:</label>
+                        <input type="text" id="new-sched-timezone" class="form-input form-input-sm" style="width: 80px; padding: 2px 6px; font-size: 11px;" value="UTC">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Target Specifications -->
+            <!-- Container Target Fields -->
+            <div id="new-sched-panel-container">
+                <div class="form-group">
+                    <label class="form-label">Container Image <span style="color:var(--pg-danger);">*</span></label>
+                    <input type="text" id="new-sched-img" class="form-input font-mono" placeholder="docker.io/library/alpine:latest" value="docker.io/library/alpine:latest">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Command</label>
+                    <input type="text" id="new-sched-cmd" class="form-input font-mono" placeholder="sh -c 'echo Running maintenance task && date'">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Environment Variables (KEY=VAL, comma separated)</label>
+                    <input type="text" id="new-sched-env" class="form-input font-mono" placeholder="ENV=production,BATCH_SIZE=100">
+                </div>
+            </div>
+
+            <!-- Workflow Target Fields -->
+            <div id="new-sched-panel-workflow" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">Workflow ID or Name <span style="color:var(--pg-danger);">*</span></label>
+                    <input type="text" id="new-sched-wfid" class="form-input font-mono" placeholder="daily-etl-pipeline">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Workflow Input Payload (JSON)</label>
+                    <textarea id="new-sched-wfpayload" class="form-input font-mono" rows="2" placeholder='{"batch_size": 500, "notify": true}'></textarea>
+                </div>
+            </div>
+
+            <!-- HTTP Target Fields -->
+            <div id="new-sched-panel-http" style="display:none;">
+                <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label class="form-label">Method</label>
+                        <select id="new-sched-http-method" class="form-input">
+                            <option value="POST" selected>POST</option>
+                            <option value="GET">GET</option>
+                            <option value="PUT">PUT</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Webhook URL <span style="color:var(--pg-danger);">*</span></label>
+                        <input type="url" id="new-sched-http-url" class="form-input font-mono" placeholder="https://api.example.com/v1/jobs/trigger">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Request Body (JSON)</label>
+                    <textarea id="new-sched-http-body" class="form-input font-mono" rows="2" placeholder='{"source": "procloud-cron"}'></textarea>
+                </div>
+            </div>
+
+            <!-- Execution Policies & Guardrails -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <div class="form-group">
+                    <label class="form-label">Concurrency Policy</label>
+                    <select id="new-sched-concurrency" class="form-input">
+                        <option value="Forbid" selected>Forbid (Skip if active)</option>
+                        <option value="Allow">Allow (Concurrent)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Retries</label>
+                    <input type="number" id="new-sched-retries" class="form-input" min="0" max="10" value="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Timeout (seconds)</label>
+                    <input type="number" id="new-sched-timeout" class="form-input" min="10" max="86400" value="300">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--pg-border); padding-top: 14px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" id="new-sched-active" checked>
+                    <span>Enable Schedule Immediately</span>
+                </label>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn" onclick="closeModal('create-schedule-modal')">Cancel</button>
+                    <button class="btn btn-primary" onclick="submitCreateSchedule()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Save Schedule</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit Schedule -->
+    <div id="edit-schedule-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 680px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Edit Scheduled Job</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('edit-schedule-modal')">&times;</div>
+            </div>
+            
+            <input type="hidden" id="edit-sched-id">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Job Name <span style="color:var(--pg-danger);">*</span></label>
+                    <input type="text" id="edit-sched-name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Execution Type</label>
+                    <select id="edit-sched-target-type" class="form-input" onchange="onScheduleTargetTypeChange('edit')">
+                        <option value="container">Container (Ephemeral Podman Job)</option>
+                        <option value="workflow">Workflow (DAG Engine)</option>
+                        <option value="http">HTTP Webhook (Outbound Request)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <input type="text" id="edit-sched-desc" class="form-input">
+            </div>
+
+            <!-- Cron Configuration Section -->
+            <div style="background: var(--pg-bg-subtle, #f8fafc); border: 1px solid var(--pg-border); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; font-size: 13px; color: var(--pg-text-primary);">Schedule &amp; Frequency</span>
+                    <span style="font-size: 11px; color: var(--pg-text-muted);">Standard 5-part cron or macro</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px;">
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label">Frequency Presets</label>
+                        <select id="edit-sched-preset" class="form-input" onchange="onSchedulePresetChange('edit')">
+                            <option value="custom">Custom Cron Expression</option>
+                            <option value="*/5 * * * *">Every 5 minutes</option>
+                            <option value="*/15 * * * *">Every 15 minutes</option>
+                            <option value="0 * * * *">Hourly (at minute 0)</option>
+                            <option value="0 0 * * *">Daily at Midnight (00:00)</option>
+                            <option value="0 2 * * *">Daily at 02:00 AM</option>
+                            <option value="0 0 * * 0">Weekly (Sunday at midnight)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label">Cron Expression <span style="color:var(--pg-danger);">*</span></label>
+                        <input type="text" id="edit-sched-cron" class="form-input font-mono" placeholder="*/15 * * * *" oninput="updateCronHumanPreview('edit')">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 12px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--pg-text-muted);">Evaluates to:</span>
+                        <span id="edit-sched-cron-preview" class="pill pill-purple" style="font-size: 11px;">Every 15 minutes</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label class="form-label" style="margin: 0; font-size: 11px;">Timezone:</label>
+                        <input type="text" id="edit-sched-timezone" class="form-input form-input-sm" style="width: 80px; padding: 2px 6px; font-size: 11px;" value="UTC">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Target Specifications -->
+            <div id="edit-sched-panel-container">
+                <div class="form-group">
+                    <label class="form-label">Container Image <span style="color:var(--pg-danger);">*</span></label>
+                    <input type="text" id="edit-sched-img" class="form-input font-mono">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Command</label>
+                    <input type="text" id="edit-sched-cmd" class="form-input font-mono">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Environment Variables (KEY=VAL, comma separated)</label>
+                    <input type="text" id="edit-sched-env" class="form-input font-mono">
+                </div>
+            </div>
+
+            <div id="edit-sched-panel-workflow" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">Workflow ID or Name <span style="color:var(--pg-danger);">*</span></label>
+                    <input type="text" id="edit-sched-wfid" class="form-input font-mono">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Workflow Input Payload (JSON)</label>
+                    <textarea id="edit-sched-wfpayload" class="form-input font-mono" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div id="edit-sched-panel-http" style="display:none;">
+                <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label class="form-label">Method</label>
+                        <select id="edit-sched-http-method" class="form-input">
+                            <option value="POST">POST</option>
+                            <option value="GET">GET</option>
+                            <option value="PUT">PUT</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Webhook URL <span style="color:var(--pg-danger);">*</span></label>
+                        <input type="url" id="edit-sched-http-url" class="form-input font-mono">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Request Body (JSON)</label>
+                    <textarea id="edit-sched-http-body" class="form-input font-mono" rows="2"></textarea>
+                </div>
+            </div>
+
+            <!-- Execution Policies & Guardrails -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <div class="form-group">
+                    <label class="form-label">Concurrency Policy</label>
+                    <select id="edit-sched-concurrency" class="form-input">
+                        <option value="Forbid">Forbid (Skip if active)</option>
+                        <option value="Allow">Allow (Concurrent)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Retries</label>
+                    <input type="number" id="edit-sched-retries" class="form-input" min="0" max="10">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Timeout (seconds)</label>
+                    <input type="number" id="edit-sched-timeout" class="form-input" min="10" max="86400">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; border-top: 1px solid var(--pg-border); padding-top: 14px;">
+                <button class="btn" onclick="closeModal('edit-schedule-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitEditSchedule()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Update Schedule</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Job Output & Execution Logs -->
+    <div id="job-logs-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 840px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span id="job-logs-modal-title">Job Execution Output</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn" style="padding: 3px 8px; font-size: 11px;" onclick="copyJobLogs()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy Output</span>
+                    </button>
+                    <div class="modal-dialog-close" onclick="closeModal('job-logs-modal')">&times;</div>
+                </div>
+            </div>
+
+            <!-- Job Run Metadata Bar -->
+            <div id="job-logs-meta-bar" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding: 8px 12px; background: var(--pg-card); border: 1px solid var(--pg-border); border-radius: 8px; font-size: 12px;">
+                <div><span style="color:var(--pg-text-secondary);">Job ID:</span> <strong id="job-log-id" class="font-mono">--</strong></div>
+                <div><span style="color:var(--pg-text-secondary);">Trigger:</span> <span id="job-log-trigger" class="pill pill-purple">CRON</span></div>
+                <div><span style="color:var(--pg-text-secondary);">Status:</span> <span id="job-log-status" class="pill pill-healthy">COMPLETED</span></div>
+                <div><span style="color:var(--pg-text-secondary);">Exit Code:</span> <span id="job-log-exit" class="font-mono" style="font-weight:700;">0</span></div>
+            </div>
+
+            <pre class="code-view" id="job-logs-content" style="max-height: 420px; height: 380px; font-size: 11px; overflow-y: auto; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace;">Fetching execution output...</pre>
+        </div>
+    </div>
     </div> <!-- /#app-screen -->
 
     <script>
@@ -6837,6 +7310,7 @@ spec:
                 case 'dns': fetchDNSZones(); break;
                 case 'secrets': fetchSecrets(); break;
                 case 'deployments': fetchDeployments(); break;
+                case 'schedules': fetchSchedules(); break;
                 case 'telemetry': fetchTelemetry(); break;
                 case 'organizations': fetchOrganizations(); break;
                 case 'users': fetchUsers(); break;
@@ -11179,7 +11653,7 @@ spec:
                 'create-secret-modal', 'play-kube-modal', 'build-image-modal',
                 'run-workflow-modal', 'actual-shell-modal', 'create-lb-modal',
                 'create-listener-modal', 'create-pool-modal', 'attach-member-modal',
-                'create-policy-modal', 'create-dns-zone-modal', 'create-dns-record-modal'
+                'create-policy-modal', 'create-dns-zone-modal', 'create-dns-record-modal', 'create-schedule-modal', 'edit-schedule-modal'
             ];
             if (writeModals.includes(id) && !canWrite()) {
                 showToast('Read-only role: action not permitted', 'error');
@@ -14386,6 +14860,632 @@ spec:
 
         // Start session check immediately
         checkSession();
+    
+        // ==========================================
+        // SCHEDULES & DURABLE BACKGROUND JOBS ENGINE
+        // ==========================================
+        let schedulesData = [];
+        let scheduleRunsData = [];
+        let currentScheduleSubTab = 'schedules';
+
+        async function fetchSchedules() {
+            try {
+                const res = await authFetch('/api/v1/schedules');
+                if (!res.ok) {
+                    showToast('Failed to load schedules', 'error');
+                    return;
+                }
+                const data = await res.json() || [];
+                schedulesData = Array.isArray(data) ? data : [];
+                
+                // Update stats
+                const total = schedulesData.length;
+                const active = schedulesData.filter(s => s.status === 'active' || s.is_active).length;
+                
+                const totalEl = document.getElementById('stat-sched-total');
+                const activeEl = document.getElementById('stat-sched-active');
+                const badgeEl = document.getElementById('tab-badge-schedules');
+                if (totalEl) totalEl.innerText = total;
+                if (activeEl) activeEl.innerText = active;
+                if (badgeEl) badgeEl.innerText = total;
+
+                // Determine next scheduled trigger
+                let nextTime = null;
+                for (const s of schedulesData) {
+                    if ((s.status === 'active' || s.is_active) && s.next_run_at) {
+                        const t = new Date(s.next_run_at);
+                        if (!isNaN(t.getTime())) {
+                            if (!nextTime || t < nextTime) nextTime = t;
+                        }
+                    }
+                }
+                const nextEl = document.getElementById('stat-sched-next');
+                if (nextEl) {
+                    if (nextTime) {
+                        nextEl.innerText = formatRelativeTimeOrDate(nextTime);
+                        nextEl.title = nextTime.toLocaleString();
+                    } else {
+                        nextEl.innerText = 'None pending';
+                    }
+                }
+
+                filterAndRenderSchedules();
+                // Also asynchronously fetch runs count
+                fetchScheduleRunsQuiet();
+            } catch (err) {
+                console.error('fetchSchedules error:', err);
+                const tbody = document.getElementById('schedules-table-body');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--pg-danger);">Error loading schedules</td></tr>';
+            }
+        }
+
+        async function fetchScheduleRunsQuiet() {
+            try {
+                const res = await authFetch('/api/v1/jobs');
+                if (res.ok) {
+                    const runs = await res.json() || [];
+                    scheduleRunsData = Array.isArray(runs) ? runs : [];
+                    const runsEl = document.getElementById('stat-sched-runs');
+                    if (runsEl) runsEl.innerText = scheduleRunsData.length;
+                    if (currentScheduleSubTab === 'runs') {
+                        renderScheduleRuns();
+                    }
+                }
+            } catch (_) {}
+        }
+
+        function formatRelativeTimeOrDate(targetDate) {
+            const now = new Date();
+            const diffMs = targetDate.getTime() - now.getTime();
+            if (diffMs <= 0) return 'Due now';
+            const diffSec = Math.floor(diffMs / 1000);
+            if (diffSec < 60) return `in ${diffSec}s`;
+            const diffMin = Math.floor(diffSec / 60);
+            if (diffMin < 60) return `in ${diffMin}m`;
+            const diffHr = Math.floor(diffMin / 60);
+            if (diffHr < 24) return `in ${diffHr}h ${diffMin % 60}m`;
+            return targetDate.toLocaleDateString() + ' ' + targetDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function filterAndRenderSchedules() {
+            const searchInput = (document.getElementById('sched-search-input')?.value || '').trim().toLowerCase();
+            const typeFilter = document.getElementById('sched-type-filter')?.value || '';
+            const statusFilter = document.getElementById('sched-status-filter')?.value || '';
+
+            let filtered = schedulesData.filter(s => {
+                if (searchInput && !(s.name?.toLowerCase().includes(searchInput) || (s.description && s.description.toLowerCase().includes(searchInput)))) {
+                    return false;
+                }
+                const jType = s.job_type || s.target_type;
+                if (typeFilter && jType !== typeFilter) return false;
+                const isActive = (s.status === 'active' || s.is_active);
+                if (statusFilter === 'active' && !isActive) return false;
+                if (statusFilter === 'paused' && isActive) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('schedules-table-body');
+            if (!tbody) return;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 32px; color:var(--pg-text-muted);">
+                    ${schedulesData.length === 0 ? 'No cron schedules configured yet. Click "+ Create Scheduled Job" above.' : 'No schedules match your filters.'}
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(s => {
+                const targetSpec = s.target_spec || {};
+                let targetDisplay = '';
+                const jType = s.job_type || s.target_type;
+                const imgName = targetSpec.image || targetSpec.container_image || '';
+                if (jType === 'container') {
+                    targetDisplay = `<span class="font-mono" style="font-size:11px;" title="${escapeHtml(imgName)}">${escapeHtml(imgName.split('/').pop())}</span>`;
+                    if (targetSpec.command) {
+                        targetDisplay += `<div class="font-mono text-muted" style="font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;" title="${escapeHtml(targetSpec.command)}">${escapeHtml(targetSpec.command)}</div>`;
+                    }
+                } else if (jType === 'workflow') {
+                    targetDisplay = `<span class="pill pill-blue">Workflow</span> <span class="font-mono" style="font-size:11px;">${escapeHtml(targetSpec.workflow_name || targetSpec.workflow_id || '')}</span>`;
+                } else if (jType === 'http') {
+                    targetDisplay = `<span class="pill pill-purple">${escapeHtml(targetSpec.http_method || 'POST')}</span> <span class="font-mono" style="font-size:10px;" title="${escapeHtml(targetSpec.http_url || '')}">${escapeHtml(targetSpec.http_url || '')}</span>`;
+                } else {
+                    targetDisplay = `<span class="font-mono" style="font-size:11px;">${escapeHtml(jType || 'container')}</span>`;
+                }
+
+                let nextRunDisplay = '--';
+                if ((s.status === 'active' || s.is_active) && s.next_run_at) {
+                    const dt = new Date(s.next_run_at);
+                    if (!isNaN(dt.getTime())) {
+                        nextRunDisplay = `<span title="${dt.toLocaleString()}">${formatRelativeTimeOrDate(dt)}</span>`;
+                    }
+                }
+
+                const isActive = (s.status === 'active' || s.is_active);
+                const statusPill = isActive 
+                    ? `<span class="pill pill-healthy">Active</span>`
+                    : `<span class="pill pill-stopped">Paused</span>`;
+
+                return `<tr>
+                    <td>
+                        <div style="font-weight:600; color:var(--pg-text-primary);">${escapeHtml(s.name)}</div>
+                        ${s.description ? `<div style="font-size:11px; color:var(--pg-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:250px;">${escapeHtml(s.description)}</div>` : ''}
+                    </td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span class="pill pill-purple font-mono" style="font-weight:600; font-size:11px;">${escapeHtml(s.cron_expression)}</span>
+                            <span style="font-size:11px; color:var(--pg-text-muted);">${escapeHtml(describeCronSimple(s.cron_expression))}</span>
+                        </div>
+                    </td>
+                    <td>${targetDisplay}</td>
+                    <td style="font-size:12px;">${nextRunDisplay}</td>
+                    <td>${statusPill}</td>
+                    <td>
+                        <div class="table-actions" style="justify-content:flex-end;">
+                            ${canWrite() ? `
+                            <button class="btn btn-sm btn-outline-primary" title="Trigger Run Now" onclick="runScheduleNow('${escapeHtml(s.id)}', '${escapeHtml(s.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span>Run</span>
+                            </button>
+                            <button class="btn btn-sm" title="${isActive ? 'Pause Schedule' : 'Resume Schedule'}" onclick="toggleSchedulePause('${escapeHtml(s.id)}', ${isActive})">
+                                ${isActive 
+                                    ? `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span>Pause</span>` 
+                                    : `<svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Resume</span>`}
+                            </button>
+                            <button class="btn btn-sm" title="Edit Schedule" onclick="openEditScheduleModal('${escapeHtml(s.id)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" title="Delete Schedule" onclick="deleteSchedule('${escapeHtml(s.id)}', '${escapeHtml(s.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                            ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function switchScheduleSubTab(tab) {
+            currentScheduleSubTab = tab;
+            const btnSched = document.getElementById('sched-tab-btn-schedules');
+            const btnRuns = document.getElementById('sched-tab-btn-runs');
+            const viewSched = document.getElementById('sched-subview-schedules');
+            const viewRuns = document.getElementById('sched-subview-runs');
+
+            if (tab === 'schedules') {
+                if (btnSched) { btnSched.className = 'btn btn-sm btn-primary'; }
+                if (btnRuns) { btnRuns.className = 'btn btn-sm'; }
+                if (viewSched) viewSched.style.display = 'block';
+                if (viewRuns) viewRuns.style.display = 'none';
+                filterAndRenderSchedules();
+            } else {
+                if (btnSched) { btnSched.className = 'btn btn-sm'; }
+                if (btnRuns) { btnRuns.className = 'btn btn-sm btn-primary'; }
+                if (viewSched) viewSched.style.display = 'none';
+                if (viewRuns) viewRuns.style.display = 'block';
+                fetchScheduleRuns();
+            }
+        }
+
+        async function fetchScheduleRuns() {
+            try {
+                const res = await authFetch('/api/v1/jobs');
+                if (!res.ok) {
+                    showToast('Failed to load runs', 'error');
+                    return;
+                }
+                const runs = await res.json() || [];
+                scheduleRunsData = Array.isArray(runs) ? runs : [];
+                const runsEl = document.getElementById('stat-sched-runs');
+                if (runsEl) runsEl.innerText = scheduleRunsData.length;
+                renderScheduleRuns();
+            } catch (err) {
+                console.error('fetchScheduleRuns error:', err);
+            }
+        }
+
+        function renderScheduleRuns() {
+            const tbody = document.getElementById('sched-runs-table-body');
+            if (!tbody) return;
+
+            if (scheduleRunsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 28px; color:var(--pg-text-muted);">No background job executions recorded yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = scheduleRunsData.map(j => {
+                const triggerBadge = j.trigger_type === 'CRON' 
+                    ? `<span class="pill pill-purple">CRON</span>` 
+                    : (j.trigger_type === 'MANUAL' ? `<span class="pill pill-blue">MANUAL</span>` : `<span class="pill pill-slate">${escapeHtml(j.trigger_type || 'QUEUE')}</span>`);
+
+                let statusPill = '';
+                if (j.status === 'COMPLETED') statusPill = '<span class="pill pill-healthy">COMPLETED</span>';
+                else if (j.status === 'FAILED') statusPill = '<span class="pill pill-stopped">FAILED</span>';
+                else if (j.status === 'RUNNING') statusPill = '<span class="pill pill-blue">RUNNING</span>';
+                else statusPill = `<span class="pill pill-warning">${escapeHtml(j.status)}</span>`;
+
+                let exitBadge = '--';
+                if (j.status === 'COMPLETED' || j.status === 'FAILED') {
+                    const code = (j.exit_code !== undefined && j.exit_code !== null) ? j.exit_code : (j.status === 'COMPLETED' ? 0 : 1);
+                    exitBadge = code === 0 
+                        ? `<span class="pill pill-healthy font-mono">0</span>` 
+                        : `<span class="pill pill-stopped font-mono">${code}</span>`;
+                }
+
+                const createdDate = j.created_at ? new Date(j.created_at).toLocaleString() : '--';
+
+                return `<tr>
+                    <td><strong class="font-mono" style="font-size:11px;" title="${escapeHtml(j.id)}">${escapeHtml(j.id.substring(0, 14))}...</strong></td>
+                    <td>
+                        <div style="font-weight:600; font-size:12px;">${escapeHtml(j.type || 'job')}</div>
+                        ${j.schedule_id ? `<div class="font-mono text-muted" style="font-size:10px;">sched: ${escapeHtml(j.schedule_id.substring(0, 8))}</div>` : ''}
+                    </td>
+                    <td>${triggerBadge}</td>
+                    <td style="font-size:11px;">${createdDate}</td>
+                    <td>${exitBadge}</td>
+                    <td>${statusPill}</td>
+                    <td>
+                        <div class="table-actions" style="justify-content:flex-end;">
+                            <button class="btn btn-sm" title="View Output & Logs" onclick="openJobLogsModal('${escapeHtml(j.id)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                <span>Output</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function onScheduleTargetTypeChange(prefix) {
+            const val = document.getElementById(`${prefix}-sched-target-type`)?.value;
+            const pCont = document.getElementById(`${prefix}-sched-panel-container`);
+            const pWf = document.getElementById(`${prefix}-sched-panel-workflow`);
+            const pHttp = document.getElementById(`${prefix}-sched-panel-http`);
+
+            if (pCont) pCont.style.display = (val === 'container') ? 'block' : 'none';
+            if (pWf) pWf.style.display = (val === 'workflow') ? 'block' : 'none';
+            if (pHttp) pHttp.style.display = (val === 'http') ? 'block' : 'none';
+        }
+
+        function onSchedulePresetChange(prefix) {
+            const preset = document.getElementById(`${prefix}-sched-preset`)?.value;
+            const cronInput = document.getElementById(`${prefix}-sched-cron`);
+            if (preset && preset !== 'custom' && cronInput) {
+                cronInput.value = preset;
+                updateCronHumanPreview(prefix);
+            }
+        }
+
+        function describeCronSimple(expr) {
+            if (!expr) return '';
+            const e = expr.trim();
+            if (e === '@hourly' || e === '0 * * * *') return 'Every hour at minute 0';
+            if (e === '@daily' || e === '@midnight' || e === '0 0 * * *') return 'Every day at 00:00 (Midnight)';
+            if (e === '0 2 * * *') return 'Every day at 02:00 AM';
+            if (e === '@weekly' || e === '0 0 * * 0') return 'Weekly on Sunday at 00:00';
+            if (e === '*/5 * * * *') return 'Every 5 minutes';
+            if (e === '*/10 * * * *') return 'Every 10 minutes';
+            if (e === '*/15 * * * *') return 'Every 15 minutes';
+            if (e === '*/30 * * * *') return 'Every 30 minutes';
+            if (e.startsWith('*/')) {
+                const parts = e.split(' ');
+                if (parts.length === 5 && parts[0].startsWith('*/')) {
+                    const mins = parts[0].substring(2);
+                    return `Every ${mins} minutes`;
+                }
+            }
+            return 'Custom cron cadence';
+        }
+
+        function updateCronHumanPreview(prefix) {
+            const cronInput = document.getElementById(`${prefix}-sched-cron`);
+            const previewEl = document.getElementById(`${prefix}-sched-cron-preview`);
+            if (cronInput && previewEl) {
+                previewEl.innerText = describeCronSimple(cronInput.value);
+            }
+        }
+
+        async function submitCreateSchedule() {
+            const name = document.getElementById('new-sched-name')?.value.trim();
+            if (!name) {
+                showToast('Schedule name is required', 'error');
+                return;
+            }
+            const cron = document.getElementById('new-sched-cron')?.value.trim();
+            if (!cron) {
+                showToast('Cron expression is required', 'error');
+                return;
+            }
+
+            const targetType = document.getElementById('new-sched-target-type')?.value || 'container';
+            const targetSpec = {};
+
+            if (targetType === 'container') {
+                const img = document.getElementById('new-sched-img')?.value.trim();
+                if (!img) {
+                    showToast('Container image is required', 'error');
+                    return;
+                }
+                targetSpec.image = img; targetSpec.container_image = img;
+                targetSpec.command = document.getElementById('new-sched-cmd')?.value.trim() || '';
+                const envStr = document.getElementById('new-sched-env')?.value.trim() || '';
+                if (envStr) {
+                    const envObj = {};
+                    envStr.split(',').forEach(kv => {
+                        const parts = kv.split('=');
+                        if (parts[0]) envObj[parts[0].trim()] = parts.slice(1).join('=').trim();
+                    });
+                    targetSpec.env = envObj;
+                }
+            } else if (targetType === 'workflow') {
+                const wfid = document.getElementById('new-sched-wfid')?.value.trim();
+                if (!wfid) {
+                    showToast('Workflow ID is required', 'error');
+                    return;
+                }
+                targetSpec.workflow_name = wfid; targetSpec.workflow_id = wfid;
+                const payloadStr = document.getElementById('new-sched-wfpayload')?.value.trim() || '';
+                if (payloadStr) {
+                    try { targetSpec.payload = JSON.parse(payloadStr); } catch (_) {
+                        showToast('Workflow payload must be valid JSON', 'error');
+                        return;
+                    }
+                }
+            } else if (targetType === 'http') {
+                const url = document.getElementById('new-sched-http-url')?.value.trim();
+                if (!url) {
+                    showToast('Webhook URL is required', 'error');
+                    return;
+                }
+                targetSpec.http_url = url;
+                targetSpec.http_method = document.getElementById('new-sched-http-method')?.value || 'POST';
+                const bodyStr = document.getElementById('new-sched-http-body')?.value.trim() || '';
+                if (bodyStr) {
+                    try { targetSpec.http_body = JSON.parse(bodyStr); } catch (_) {
+                        targetSpec.http_body = bodyStr;
+                    }
+                }
+            }
+
+            const payload = {
+                name: name,
+                description: document.getElementById('new-sched-desc')?.value.trim() || '',
+                cron_expression: cron,
+                timezone: document.getElementById('new-sched-timezone')?.value.trim() || 'UTC',
+                job_type: targetType,
+                target_spec: targetSpec,
+                concurrency_policy: document.getElementById('new-sched-concurrency')?.value || 'Forbid',
+                max_retries: parseInt(document.getElementById('new-sched-retries')?.value || '0', 10),
+                timeout_seconds: parseInt(document.getElementById('new-sched-timeout')?.value || '300', 10),
+                is_active: document.getElementById('new-sched-active')?.checked ?? true
+            };
+
+            try {
+                const res = await authFetch('/api/v1/schedules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    showToast('Failed to create schedule: ' + (errData.error || res.statusText), 'error');
+                    return;
+                }
+                closeModal('create-schedule-modal');
+                showToast(`Schedule "${name}" created successfully`, 'success');
+                fetchSchedules();
+            } catch (err) {
+                console.error('submitCreateSchedule error:', err);
+                showToast('Error saving schedule', 'error');
+            }
+        }
+
+        function openEditScheduleModal(id) {
+            const s = schedulesData.find(item => item.id === id);
+            if (!s) return;
+
+            document.getElementById('edit-sched-id').value = s.id;
+            document.getElementById('edit-sched-name').value = s.name || '';
+            document.getElementById('edit-sched-desc').value = s.description || '';
+            document.getElementById('edit-sched-cron').value = s.cron_expression || '';
+            document.getElementById('edit-sched-timezone').value = s.timezone || 'UTC';
+            document.getElementById('edit-sched-target-type').value = s.job_type || s.target_type || 'container';
+            document.getElementById('edit-sched-concurrency').value = s.concurrency_policy || 'Forbid';
+            document.getElementById('edit-sched-retries').value = s.max_retries ?? 0;
+            document.getElementById('edit-sched-timeout').value = s.timeout_seconds ?? 300;
+
+            const spec = s.target_spec || {};
+            const curType = s.job_type || s.target_type || 'container';
+            if (curType === 'container') {
+                document.getElementById('edit-sched-img').value = spec.image || spec.container_image || '';
+                document.getElementById('edit-sched-cmd').value = spec.command || '';
+                if (spec.env) {
+                    document.getElementById('edit-sched-env').value = Object.entries(spec.env).map(([k,v]) => `${k}=${v}`).join(',');
+                } else {
+                    document.getElementById('edit-sched-env').value = '';
+                }
+            } else if (curType === 'workflow') {
+                document.getElementById('edit-sched-wfid').value = spec.workflow_name || spec.workflow_id || '';
+                document.getElementById('edit-sched-wfpayload').value = spec.payload ? JSON.stringify(spec.payload) : '';
+            } else if (curType === 'http') {
+                document.getElementById('edit-sched-http-url').value = spec.http_url || '';
+                document.getElementById('edit-sched-http-method').value = spec.http_method || 'POST';
+                document.getElementById('edit-sched-http-body').value = spec.http_body ? (typeof spec.http_body === 'object' ? JSON.stringify(spec.http_body) : spec.http_body) : '';
+            }
+
+            onScheduleTargetTypeChange('edit');
+            updateCronHumanPreview('edit');
+            openModal('edit-schedule-modal');
+        }
+
+        async function submitEditSchedule() {
+            const id = document.getElementById('edit-sched-id')?.value;
+            if (!id) return;
+
+            const name = document.getElementById('edit-sched-name')?.value.trim();
+            const cron = document.getElementById('edit-sched-cron')?.value.trim();
+            const targetType = document.getElementById('edit-sched-target-type')?.value;
+
+            const targetSpec = {};
+            if (targetType === 'container') {
+                const editImg = document.getElementById('edit-sched-img')?.value.trim(); targetSpec.image = editImg; targetSpec.container_image = editImg;
+                targetSpec.command = document.getElementById('edit-sched-cmd')?.value.trim() || '';
+                const envStr = document.getElementById('edit-sched-env')?.value.trim() || '';
+                if (envStr) {
+                    const envObj = {};
+                    envStr.split(',').forEach(kv => {
+                        const parts = kv.split('=');
+                        if (parts[0]) envObj[parts[0].trim()] = parts.slice(1).join('=').trim();
+                    });
+                    targetSpec.env = envObj;
+                }
+            } else if (targetType === 'workflow') {
+                const editWf = document.getElementById('edit-sched-wfid')?.value.trim(); targetSpec.workflow_name = editWf; targetSpec.workflow_id = editWf;
+                const p = document.getElementById('edit-sched-wfpayload')?.value.trim() || '';
+                if (p) {
+                    try { targetSpec.payload = JSON.parse(p); } catch(_) {}
+                }
+            } else if (targetType === 'http') {
+                targetSpec.http_url = document.getElementById('edit-sched-http-url')?.value.trim();
+                targetSpec.http_method = document.getElementById('edit-sched-http-method')?.value || 'POST';
+                const b = document.getElementById('edit-sched-http-body')?.value.trim() || '';
+                if (b) {
+                    try { targetSpec.http_body = JSON.parse(b); } catch(_) { targetSpec.http_body = b; }
+                }
+            }
+
+            const payload = {
+                name: name,
+                description: document.getElementById('edit-sched-desc')?.value.trim() || '',
+                cron_expression: cron,
+                timezone: document.getElementById('edit-sched-timezone')?.value.trim() || 'UTC',
+                job_type: targetType,
+                target_spec: targetSpec,
+                concurrency_policy: document.getElementById('edit-sched-concurrency')?.value || 'Forbid',
+                max_retries: parseInt(document.getElementById('edit-sched-retries')?.value || '0', 10),
+                timeout_seconds: parseInt(document.getElementById('edit-sched-timeout')?.value || '300', 10)
+            };
+
+            try {
+                const res = await authFetch(`/api/v1/schedules/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showToast('Failed to update schedule: ' + (err.error || res.statusText), 'error');
+                    return;
+                }
+                closeModal('edit-schedule-modal');
+                showToast(`Schedule updated`, 'success');
+                fetchSchedules();
+            } catch (err) {
+                console.error('submitEditSchedule error:', err);
+                showToast('Error updating schedule', 'error');
+            }
+        }
+
+        async function toggleSchedulePause(id, isCurrentlyActive) {
+            const action = isCurrentlyActive ? 'pause' : 'resume';
+            try {
+                const res = await authFetch(`/api/v1/schedules/${id}/${action}`, { method: 'POST' });
+                if (!res.ok) {
+                    showToast(`Failed to ${action} schedule`, 'error');
+                    return;
+                }
+                showToast(`Schedule ${isCurrentlyActive ? 'paused' : 'resumed'}`, 'success');
+                fetchSchedules();
+            } catch (err) {
+                console.error('toggleSchedulePause error:', err);
+                showToast('Error updating schedule status', 'error');
+            }
+        }
+
+        async function runScheduleNow(id, name) {
+            try {
+                showToast(`Triggering job for "${name}"...`, 'info');
+                const res = await authFetch(`/api/v1/schedules/${id}/run`, { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showToast('Run failed: ' + (err.error || res.statusText), 'error');
+                    return;
+                }
+                const data = await res.json();
+                showToast(`Job queued! ID: ${data.job_id || 'active'}`, 'success');
+                switchScheduleSubTab('runs');
+            } catch (err) {
+                console.error('runScheduleNow error:', err);
+                showToast('Error triggering schedule', 'error');
+            }
+        }
+
+        async function deleteSchedule(id, name) {
+            if (!confirm(`Are you sure you want to delete scheduled job "${name}"?`)) return;
+            try {
+                const res = await authFetch(`/api/v1/schedules/${id}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    showToast('Failed to delete schedule', 'error');
+                    return;
+                }
+                showToast(`Schedule "${name}" deleted`, 'success');
+                fetchSchedules();
+            } catch (err) {
+                console.error('deleteSchedule error:', err);
+                showToast('Error deleting schedule', 'error');
+            }
+        }
+
+        async function openJobLogsModal(jobId) {
+            const modal = document.getElementById('job-logs-modal');
+            const titleEl = document.getElementById('job-logs-modal-title');
+            const idEl = document.getElementById('job-log-id');
+            const triggerEl = document.getElementById('job-log-trigger');
+            const statusEl = document.getElementById('job-log-status');
+            const exitEl = document.getElementById('job-log-exit');
+            const contentEl = document.getElementById('job-logs-content');
+
+            if (idEl) idEl.innerText = jobId;
+            if (contentEl) contentEl.innerText = 'Loading execution output and logs...';
+            openModal('job-logs-modal');
+
+            try {
+                const res = await authFetch(`/api/v1/jobs/${jobId}/logs`);
+                if (!res.ok) {
+                    if (contentEl) contentEl.innerText = 'Logs not available for this job run.';
+                    return;
+                }
+                const data = await res.json();
+                if (titleEl) titleEl.innerText = `Job Logs: ${data.job_id || jobId}`;
+                if (triggerEl) triggerEl.innerText = data.trigger_type || 'CRON';
+                if (statusEl) {
+                    statusEl.innerText = data.status || 'UNKNOWN';
+                    statusEl.className = data.status === 'COMPLETED' ? 'pill pill-healthy' : 'pill pill-stopped';
+                }
+                if (exitEl) {
+                    exitEl.innerText = data.exit_code !== undefined ? data.exit_code : '--';
+                    exitEl.style.color = data.exit_code === 0 ? 'var(--pg-emerald)' : 'var(--pg-danger)';
+                }
+                if (contentEl) {
+                    contentEl.innerText = data.logs || (data.status === 'RUNNING' ? 'Job is currently running. Logs will appear on completion.' : 'No output captured for this run.');
+                    contentEl.scrollTop = contentEl.scrollHeight;
+                }
+            } catch (err) {
+                console.error('openJobLogsModal error:', err);
+                if (contentEl) contentEl.innerText = 'Error loading logs: ' + err.message;
+            }
+        }
+
+        function copyJobLogs() {
+            const contentEl = document.getElementById('job-logs-content');
+            if (contentEl && contentEl.innerText) {
+                navigator.clipboard.writeText(contentEl.innerText).then(() => {
+                    showToast('Job output copied to clipboard', 'success');
+                }).catch(() => {
+                    showToast('Failed to copy to clipboard', 'error');
+                });
+            }
+        }
+
     </script>
 
     <!-- Unified ProGit Toast Notification Container -->

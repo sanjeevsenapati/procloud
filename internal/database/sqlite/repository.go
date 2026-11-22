@@ -863,15 +863,21 @@ func scanDeploymentRows(rows *sql.Rows) (*protocol.Deployment, error) {
 // -------------------------------------------------------------
 
 func (r *Repository) EnqueueJob(ctx context.Context, job *protocol.Job) error {
+	triggerType := job.TriggerType
+	if triggerType == "" {
+		triggerType = "manual"
+	}
 	query := `
 		INSERT INTO jobs (
 			id, type, status, payload_json, idempotency_key,
-			retry_count, max_retries, scheduled_at, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			retry_count, max_retries, worker_id, error_details, logs, schedule_id, trigger_type, exit_code,
+			scheduled_at, created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.sqlDB.ExecContext(ctx, query,
 		job.ID, job.Type, job.Status, job.PayloadJSON, job.IdempotencyKey,
-		job.RetryCount, job.MaxRetries, job.ScheduledAt, job.CreatedAt,
+		job.RetryCount, job.MaxRetries, job.WorkerID, job.ErrorDetails, job.Logs, job.ScheduleID, triggerType, job.ExitCode,
+		job.ScheduledAt, job.CreatedAt,
 	)
 	return err
 }
@@ -891,6 +897,7 @@ func (r *Repository) ClaimNextJob(ctx context.Context, workerID string) (*protoc
 	row := tx.QueryRowContext(ctx, `
 		SELECT id, type, status, payload_json, idempotency_key,
 		       retry_count, max_retries, worker_id, error_details,
+		       COALESCE(logs, ''), COALESCE(schedule_id, ''), COALESCE(trigger_type, 'manual'), COALESCE(exit_code, 0),
 		       scheduled_at, started_at, completed_at, created_at
 		FROM jobs
 		WHERE status = 'QUEUED' AND scheduled_at <= ?
@@ -900,6 +907,7 @@ func (r *Repository) ClaimNextJob(ctx context.Context, workerID string) (*protoc
 	err = row.Scan(
 		&job.ID, &job.Type, &job.Status, &job.PayloadJSON, &job.IdempotencyKey,
 		&job.RetryCount, &job.MaxRetries, &job.WorkerID, &job.ErrorDetails,
+		&job.Logs, &job.ScheduleID, &job.TriggerType, &job.ExitCode,
 		&job.ScheduledAt, &job.StartedAt, &job.CompletedAt, &job.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -935,6 +943,14 @@ func (r *Repository) CompleteJob(ctx context.Context, id string) error {
 	return err
 }
 
+func (r *Repository) CompleteJobWithOutput(ctx context.Context, id string, logs string, exitCode int) error {
+	now := time.Now()
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE jobs SET status = 'COMPLETED', logs = ?, exit_code = ?, completed_at = ? WHERE id = ?
+	`, logs, exitCode, now, id)
+	return err
+}
+
 func (r *Repository) FailJob(ctx context.Context, id string, errStr string, retryIn *time.Duration) error {
 	if retryIn != nil {
 		scheduled := time.Now().Add(*retryIn)
@@ -960,6 +976,35 @@ func (r *Repository) FailJob(ctx context.Context, id string, errStr string, retr
 	return err
 }
 
+func (r *Repository) FailJobWithOutput(ctx context.Context, id string, errStr string, logs string, exitCode int, retryIn *time.Duration) error {
+	if retryIn != nil {
+		scheduled := time.Now().Add(*retryIn)
+		_, err := r.db.sqlDB.ExecContext(ctx, `
+			UPDATE jobs SET
+				status = 'QUEUED',
+				retry_count = retry_count + 1,
+				error_details = ?,
+				logs = ?,
+				exit_code = ?,
+				scheduled_at = ?
+			WHERE id = ?
+		`, errStr, logs, exitCode, scheduled, id)
+		return err
+	}
+
+	now := time.Now()
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE jobs SET
+			status = 'FAILED',
+			error_details = ?,
+			logs = ?,
+			exit_code = ?,
+			completed_at = ?
+		WHERE id = ?
+	`, errStr, logs, exitCode, now, id)
+	return err
+}
+
 // RecoverInterruptedJobs resets jobs that were marked 'RUNNING' when the process crashed or restarted.
 func (r *Repository) RecoverInterruptedJobs(ctx context.Context) (int, error) {
 	res, err := r.db.sqlDB.ExecContext(ctx, `
@@ -980,6 +1025,7 @@ func (r *Repository) GetJobByID(ctx context.Context, id string) (*protocol.Job, 
 	row := r.db.sqlDB.QueryRowContext(ctx, `
 		SELECT id, type, status, payload_json, idempotency_key,
 		       retry_count, max_retries, worker_id, error_details,
+		       COALESCE(logs, ''), COALESCE(schedule_id, ''), COALESCE(trigger_type, 'manual'), COALESCE(exit_code, 0),
 		       scheduled_at, started_at, completed_at, created_at
 		FROM jobs WHERE id = ?
 	`, id)
@@ -988,6 +1034,7 @@ func (r *Repository) GetJobByID(ctx context.Context, id string) (*protocol.Job, 
 	err := row.Scan(
 		&job.ID, &job.Type, &job.Status, &job.PayloadJSON, &job.IdempotencyKey,
 		&job.RetryCount, &job.MaxRetries, &job.WorkerID, &job.ErrorDetails,
+		&job.Logs, &job.ScheduleID, &job.TriggerType, &job.ExitCode,
 		&job.ScheduledAt, &job.StartedAt, &job.CompletedAt, &job.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -1003,6 +1050,7 @@ func (r *Repository) ListRecentJobs(ctx context.Context, limit int) ([]*protocol
 	rows, err := r.db.sqlDB.QueryContext(ctx, `
 		SELECT id, type, status, payload_json, idempotency_key,
 		       retry_count, max_retries, worker_id, error_details,
+		       COALESCE(logs, ''), COALESCE(schedule_id, ''), COALESCE(trigger_type, 'manual'), COALESCE(exit_code, 0),
 		       scheduled_at, started_at, completed_at, created_at
 		FROM jobs ORDER BY created_at DESC LIMIT ?
 	`, limit)
@@ -1017,6 +1065,7 @@ func (r *Repository) ListRecentJobs(ctx context.Context, limit int) ([]*protocol
 		err := rows.Scan(
 			&job.ID, &job.Type, &job.Status, &job.PayloadJSON, &job.IdempotencyKey,
 			&job.RetryCount, &job.MaxRetries, &job.WorkerID, &job.ErrorDetails,
+			&job.Logs, &job.ScheduleID, &job.TriggerType, &job.ExitCode,
 			&job.ScheduledAt, &job.StartedAt, &job.CompletedAt, &job.CreatedAt,
 		)
 		if err != nil {
@@ -1025,6 +1074,200 @@ func (r *Repository) ListRecentJobs(ctx context.Context, limit int) ([]*protocol
 		list = append(list, &job)
 	}
 	return list, nil
+}
+
+func (r *Repository) ListJobsBySchedule(ctx context.Context, scheduleID string, limit int) ([]*protocol.Job, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := r.db.sqlDB.QueryContext(ctx, `
+		SELECT id, type, status, payload_json, idempotency_key,
+		       retry_count, max_retries, worker_id, error_details,
+		       COALESCE(logs, ''), COALESCE(schedule_id, ''), COALESCE(trigger_type, 'manual'), COALESCE(exit_code, 0),
+		       scheduled_at, started_at, completed_at, created_at
+		FROM jobs
+		WHERE schedule_id = ?
+		ORDER BY created_at DESC LIMIT ?
+	`, scheduleID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []*protocol.Job
+	for rows.Next() {
+		var job protocol.Job
+		err := rows.Scan(
+			&job.ID, &job.Type, &job.Status, &job.PayloadJSON, &job.IdempotencyKey,
+			&job.RetryCount, &job.MaxRetries, &job.WorkerID, &job.ErrorDetails,
+			&job.Logs, &job.ScheduleID, &job.TriggerType, &job.ExitCode,
+			&job.ScheduledAt, &job.StartedAt, &job.CompletedAt, &job.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, &job)
+	}
+	return list, nil
+}
+
+func (r *Repository) IsScheduleRunning(ctx context.Context, scheduleID string) (bool, error) {
+	var count int
+	err := r.db.sqlDB.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM jobs WHERE schedule_id = ? AND status IN ('QUEUED', 'RUNNING')
+	`, scheduleID).Scan(&count)
+	return count > 0, err
+}
+
+// -------------------------------------------------------------
+// Schedule Repository (Cron / Scheduled Jobs Service)
+// -------------------------------------------------------------
+
+func (r *Repository) CreateSchedule(ctx context.Context, s *protocol.Schedule) error {
+	query := `
+		INSERT INTO cron_schedules (
+			id, tenant_id, name, description, cron_expression, job_type,
+			target_spec_json, concurrency_policy, max_retries, timeout_seconds,
+			status, last_run_at, last_run_status, next_run_at, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	_, err := r.db.sqlDB.ExecContext(ctx, query,
+		s.ID, s.TenantID, s.Name, s.Description, s.CronExpression, s.JobType,
+		s.TargetSpecJSON, s.ConcurrencyPolicy, s.MaxRetries, s.TimeoutSeconds,
+		s.Status, s.LastRunAt, s.LastRunStatus, s.NextRunAt, s.CreatedAt, s.UpdatedAt,
+	)
+	return err
+}
+
+func (r *Repository) GetScheduleByID(ctx context.Context, id string) (*protocol.Schedule, error) {
+	row := r.db.sqlDB.QueryRowContext(ctx, `
+		SELECT id, tenant_id, name, description, cron_expression, job_type,
+		       target_spec_json, concurrency_policy, max_retries, timeout_seconds,
+		       status, last_run_at, last_run_status, next_run_at, created_at, updated_at
+		FROM cron_schedules WHERE id = ?
+	`, id)
+
+	var s protocol.Schedule
+	err := row.Scan(
+		&s.ID, &s.TenantID, &s.Name, &s.Description, &s.CronExpression, &s.JobType,
+		&s.TargetSpecJSON, &s.ConcurrencyPolicy, &s.MaxRetries, &s.TimeoutSeconds,
+		&s.Status, &s.LastRunAt, &s.LastRunStatus, &s.NextRunAt, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("schedule not found")
+	}
+	return &s, err
+}
+
+func (r *Repository) ListSchedules(ctx context.Context, tenantID string) ([]*protocol.Schedule, error) {
+	var rows *sql.Rows
+	var err error
+
+	if tenantID != "" {
+		rows, err = r.db.sqlDB.QueryContext(ctx, `
+			SELECT id, tenant_id, name, description, cron_expression, job_type,
+			       target_spec_json, concurrency_policy, max_retries, timeout_seconds,
+			       status, last_run_at, last_run_status, next_run_at, created_at, updated_at
+			FROM cron_schedules WHERE tenant_id = ? ORDER BY created_at DESC
+		`, tenantID)
+	} else {
+		rows, err = r.db.sqlDB.QueryContext(ctx, `
+			SELECT id, tenant_id, name, description, cron_expression, job_type,
+			       target_spec_json, concurrency_policy, max_retries, timeout_seconds,
+			       status, last_run_at, last_run_status, next_run_at, created_at, updated_at
+			FROM cron_schedules ORDER BY created_at DESC
+		`)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []*protocol.Schedule
+	for rows.Next() {
+		var s protocol.Schedule
+		err := rows.Scan(
+			&s.ID, &s.TenantID, &s.Name, &s.Description, &s.CronExpression, &s.JobType,
+			&s.TargetSpecJSON, &s.ConcurrencyPolicy, &s.MaxRetries, &s.TimeoutSeconds,
+			&s.Status, &s.LastRunAt, &s.LastRunStatus, &s.NextRunAt, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, &s)
+	}
+	return list, nil
+}
+
+func (r *Repository) ListDueSchedules(ctx context.Context, now time.Time) ([]*protocol.Schedule, error) {
+	rows, err := r.db.sqlDB.QueryContext(ctx, `
+		SELECT id, tenant_id, name, description, cron_expression, job_type,
+		       target_spec_json, concurrency_policy, max_retries, timeout_seconds,
+		       status, last_run_at, last_run_status, next_run_at, created_at, updated_at
+		FROM cron_schedules
+		WHERE status = 'active' AND next_run_at <= ?
+		ORDER BY next_run_at ASC
+	`, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []*protocol.Schedule
+	for rows.Next() {
+		var s protocol.Schedule
+		err := rows.Scan(
+			&s.ID, &s.TenantID, &s.Name, &s.Description, &s.CronExpression, &s.JobType,
+			&s.TargetSpecJSON, &s.ConcurrencyPolicy, &s.MaxRetries, &s.TimeoutSeconds,
+			&s.Status, &s.LastRunAt, &s.LastRunStatus, &s.NextRunAt, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, &s)
+	}
+	return list, nil
+}
+
+func (r *Repository) UpdateSchedule(ctx context.Context, s *protocol.Schedule) error {
+	s.UpdatedAt = time.Now()
+	query := `
+		UPDATE cron_schedules SET
+			name = ?, description = ?, cron_expression = ?, job_type = ?,
+			target_spec_json = ?, concurrency_policy = ?, max_retries = ?,
+			timeout_seconds = ?, status = ?, next_run_at = ?, updated_at = ?
+		WHERE id = ?
+	`
+	_, err := r.db.sqlDB.ExecContext(ctx, query,
+		s.Name, s.Description, s.CronExpression, s.JobType,
+		s.TargetSpecJSON, s.ConcurrencyPolicy, s.MaxRetries,
+		s.TimeoutSeconds, s.Status, s.NextRunAt, s.UpdatedAt, s.ID,
+	)
+	return err
+}
+
+func (r *Repository) UpdateScheduleStatus(ctx context.Context, id string, status string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE cron_schedules SET status = ?, updated_at = ? WHERE id = ?
+	`, status, time.Now(), id)
+	return err
+}
+
+func (r *Repository) RecordScheduleRun(ctx context.Context, id string, lastRun time.Time, nextRun time.Time, status string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, `
+		UPDATE cron_schedules SET
+			last_run_at = ?,
+			next_run_at = ?,
+			last_run_status = ?,
+			updated_at = ?
+		WHERE id = ?
+	`, lastRun, nextRun, status, time.Now(), id)
+	return err
+}
+
+func (r *Repository) DeleteSchedule(ctx context.Context, id string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, `DELETE FROM cron_schedules WHERE id = ?`, id)
+	return err
 }
 
 // -------------------------------------------------------------

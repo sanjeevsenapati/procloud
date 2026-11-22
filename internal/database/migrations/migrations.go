@@ -351,4 +351,37 @@ ALTER TABLE loadbalancers ADD COLUMN ssl_cert_secret TEXT NOT NULL DEFAULT '';
 ALTER TABLE loadbalancers ADD COLUMN ssl_cert_type TEXT NOT NULL DEFAULT 'auto';
 `,
 	},
+	{
+		Version:     8,
+		Description: "Create cron_schedules and add logs/tracking to jobs table",
+		SQL: `
+ALTER TABLE jobs ADD COLUMN logs TEXT NOT NULL DEFAULT '';
+ALTER TABLE jobs ADD COLUMN schedule_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE jobs ADD COLUMN trigger_type TEXT NOT NULL DEFAULT 'manual';
+ALTER TABLE jobs ADD COLUMN exit_code INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_jobs_schedule_id ON jobs(schedule_id) WHERE schedule_id != '';
+
+CREATE TABLE IF NOT EXISTS cron_schedules (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    cron_expression TEXT NOT NULL,
+    job_type TEXT NOT NULL DEFAULT 'container',
+    target_spec_json TEXT NOT NULL DEFAULT '{}',
+    concurrency_policy TEXT NOT NULL DEFAULT 'Forbid',
+    max_retries INTEGER NOT NULL DEFAULT 3,
+    timeout_seconds INTEGER NOT NULL DEFAULT 1800,
+    status TEXT NOT NULL DEFAULT 'active',
+    last_run_at DATETIME,
+    last_run_status TEXT NOT NULL DEFAULT '',
+    next_run_at DATETIME NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_schedules_tenant ON cron_schedules(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_cron_schedules_status_next ON cron_schedules(status, next_run_at);
+`,
+	},
 }

@@ -83,10 +83,25 @@ type JobRepository interface {
 	EnqueueJob(ctx context.Context, job *protocol.Job) error
 	ClaimNextJob(ctx context.Context, workerID string) (*protocol.Job, error)
 	CompleteJob(ctx context.Context, id string) error
+	CompleteJobWithOutput(ctx context.Context, id string, logs string, exitCode int) error
 	FailJob(ctx context.Context, id string, errStr string, retryIn *time.Duration) error
+	FailJobWithOutput(ctx context.Context, id string, errStr string, logs string, exitCode int, retryIn *time.Duration) error
 	RecoverInterruptedJobs(ctx context.Context) (int, error)
 	GetJobByID(ctx context.Context, id string) (*protocol.Job, error)
 	ListRecentJobs(ctx context.Context, limit int) ([]*protocol.Job, error)
+	ListJobsBySchedule(ctx context.Context, scheduleID string, limit int) ([]*protocol.Job, error)
+	IsScheduleRunning(ctx context.Context, scheduleID string) (bool, error)
+}
+
+type ScheduleRepository interface {
+	CreateSchedule(ctx context.Context, s *protocol.Schedule) error
+	GetScheduleByID(ctx context.Context, id string) (*protocol.Schedule, error)
+	ListSchedules(ctx context.Context, tenantID string) ([]*protocol.Schedule, error)
+	ListDueSchedules(ctx context.Context, now time.Time) ([]*protocol.Schedule, error)
+	UpdateSchedule(ctx context.Context, s *protocol.Schedule) error
+	UpdateScheduleStatus(ctx context.Context, id string, status string) error
+	RecordScheduleRun(ctx context.Context, id string, lastRun time.Time, nextRun time.Time, status string) error
+	DeleteSchedule(ctx context.Context, id string) error
 }
 
 type AuditRepository interface {
