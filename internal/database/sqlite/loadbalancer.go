@@ -103,11 +103,15 @@ func (r *Repository) ListLoadBalancers(ctx context.Context, tenantID string) ([]
 		); err != nil {
 			return nil, err
 		}
+		list = append(list, lb)
+	}
+	_ = rows.Close()
+
+	for _, lb := range list {
 		listeners, _ := r.ListListenersByLB(ctx, lb.ID)
 		lb.Listeners = listeners
 		pools, _ := r.ListPoolsByLB(ctx, lb.ID)
 		lb.Pools = pools
-		list = append(list, lb)
 	}
 	return list, nil
 }
@@ -209,9 +213,13 @@ func (r *Repository) ListListenersByLB(ctx context.Context, lbID string) ([]*pro
 			return nil, err
 		}
 		l.HTTPRedirect = (httpRedir == 1)
+		list = append(list, l)
+	}
+	_ = rows.Close()
+
+	for _, l := range list {
 		policies, _ := r.ListPoliciesByListener(ctx, l.ID)
 		l.Policies = policies
-		list = append(list, l)
 	}
 	return list, nil
 }
@@ -319,9 +327,13 @@ func (r *Repository) ListPoolsByLB(ctx context.Context, lbID string) ([]*protoco
 		); err != nil {
 			return nil, err
 		}
+		list = append(list, p)
+	}
+	_ = rows.Close()
+
+	for _, p := range list {
 		members, _ := r.ListMembersByPool(ctx, p.ID)
 		p.Members = members
-		list = append(list, p)
 	}
 	return list, nil
 }

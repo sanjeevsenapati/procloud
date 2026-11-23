@@ -1300,7 +1300,7 @@ func (r *Repository) ListRecentEvents(ctx context.Context, limit int) ([]*protoc
 	}
 	defer rows.Close()
 
-	var list []*protocol.AuditEvent
+	list := make([]*protocol.AuditEvent, 0)
 	for rows.Next() {
 		var ev protocol.AuditEvent
 		err := rows.Scan(&ev.ID, &ev.Actor, &ev.Action, &ev.ResourceType, &ev.ResourceID, &ev.IPAddress, &ev.Details, &ev.CreatedAt)

@@ -41,8 +41,8 @@ func DefaultConfig(path string) Config {
 	return Config{
 		Path:            path,
 		BusyTimeoutMs:   5000,
-		MaxOpenConns:    10,
-		MaxIdleConns:    5,
+		MaxOpenConns:    50,
+		MaxIdleConns:    25,
 		ConnMaxLifetime: 30 * time.Minute,
 	}
 }

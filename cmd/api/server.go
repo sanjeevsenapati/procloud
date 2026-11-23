@@ -336,6 +336,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/auth/register", s.handleRegister)
 	s.mux.HandleFunc("POST /api/v1/auth/login", s.handleLogin)
 	s.mux.HandleFunc("GET /api/v1/auth/me", s.authRequired(s.handleMe))
+	s.mux.HandleFunc("GET /api/v1/auth/roles", s.authRequired(s.handleListRoles))
 
 	// Compute Nodes (Protected)
 	s.mux.HandleFunc("GET /api/v1/nodes", s.authRequired(s.handleListNodes))
@@ -445,6 +446,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/v1/deployments", s.writeRequired(s.handleCreateDeployment))
 	s.mux.HandleFunc("POST /api/v1/deployments/{workload}/rollback", s.writeRequired(s.handleRollback))
 	s.mux.HandleFunc("GET /api/v1/quadlet/units", s.authRequired(s.handleListQuadletUnits))
+	s.mux.HandleFunc("GET /api/v1/quadlets", s.authRequired(s.handleListQuadletUnits))
 	s.mux.HandleFunc("POST /api/v1/quadlet/generate", s.authRequired(s.handleGenerateQuadlet))
 
 	// Database & WAL Management (Protected)
@@ -582,6 +584,11 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, u)
 }
 
+func (s *Server) handleListRoles(w http.ResponseWriter, r *http.Request) {
+	roles := auth.GetRBACRoles()
+	respondJSON(w, http.StatusOK, roles)
+}
+
 // -------------------------------------------------------------
 // Podman Desktop: Container Provisioning & Management
 // -------------------------------------------------------------
@@ -615,17 +622,42 @@ func (s *Server) handleListContainers(w http.ResponseWriter, r *http.Request) {
 				filtered = append(filtered, c)
 			}
 		}
+		if filtered == nil {
+			filtered = []*podman.ContainerSummary{}
+		}
 		containers = filtered
+	}
+	if containers == nil {
+		containers = []*podman.ContainerSummary{}
 	}
 
 	respondJSON(w, http.StatusOK, containers)
 }
 
 func (s *Server) handleRunContainer(w http.ResponseWriter, r *http.Request) {
-	var opts podman.RunOptions
-	if err := json.NewDecoder(r.Body).Decode(&opts); err != nil {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	var opts podman.RunOptions
+	if err := json.Unmarshal(bodyBytes, &opts); err != nil {
+		// Attempt fallback parsing if command was passed as a plain string
+		var rawMap map[string]any
+		if err2 := json.Unmarshal(bodyBytes, &rawMap); err2 == nil {
+			if cmdStr, ok := rawMap["command"].(string); ok && cmdStr != "" {
+				delete(rawMap, "command")
+				if cleaned, err3 := json.Marshal(rawMap); err3 == nil {
+					_ = json.Unmarshal(cleaned, &opts)
+					opts.Command = strings.Fields(cmdStr)
+				}
+			}
+		}
+		if opts.Image == "" {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 	if opts.Image == "" {
 		http.Error(w, "image is required", http.StatusBadRequest)
@@ -1036,7 +1068,13 @@ func (s *Server) handleListPods(w http.ResponseWriter, r *http.Request) {
 				filtered = append(filtered, p)
 			}
 		}
+		if filtered == nil {
+			filtered = []*podman.PodSummary{}
+		}
 		pods = filtered
+	}
+	if pods == nil {
+		pods = []*podman.PodSummary{}
 	}
 
 	respondJSON(w, http.StatusOK, pods)
@@ -1166,9 +1204,14 @@ func (s *Server) handlePlayKube(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(contentType, "application/json") {
 		var req struct {
 			KubeYAML string `json:"kube_yaml"`
+			YAML     string `json:"yaml"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err == nil && req.KubeYAML != "" {
-			yamlStr = req.KubeYAML
+		if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+			if req.KubeYAML != "" {
+				yamlStr = req.KubeYAML
+			} else if req.YAML != "" {
+				yamlStr = req.YAML
+			}
 		}
 	}
 	if yamlStr == "" {
@@ -2521,6 +2564,9 @@ func (s *Server) handleListAudit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if events == nil {
+		events = []*protocol.AuditEvent{}
 	}
 	respondJSON(w, http.StatusOK, events)
 }
