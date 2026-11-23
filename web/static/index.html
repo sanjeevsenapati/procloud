@@ -1218,7 +1218,7 @@
             flex-wrap: wrap;
             gap: 16px;
         }
-        .cd-subnav, .pd-subnav, .lbd-subnav {
+        .cd-subnav, .pd-subnav, .lbd-subnav, .dep-subnav {
             display: flex;
             gap: 6px;
             border-bottom: 1px solid var(--pg-border);
@@ -1226,7 +1226,7 @@
             overflow-x: auto;
             white-space: nowrap;
         }
-        .cd-subnav-tab, .pd-subnav-tab, .lbd-subnav-tab {
+        .cd-subnav-tab, .pd-subnav-tab, .lbd-subnav-tab, .dep-subnav-tab {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -1239,21 +1239,21 @@
             transition: all 0.15s ease;
             text-decoration: none;
         }
-        .cd-subnav-tab:hover, .pd-subnav-tab:hover, .lbd-subnav-tab:hover {
+        .cd-subnav-tab:hover, .pd-subnav-tab:hover, .lbd-subnav-tab:hover, .dep-subnav-tab:hover {
             color: var(--pg-blue-600);
             background: #f0f6ff;
             border-radius: 6px 6px 0 0;
         }
-        .cd-subnav-tab.active, .pd-subnav-tab.active, .lbd-subnav-tab.active {
+        .cd-subnav-tab.active, .pd-subnav-tab.active, .lbd-subnav-tab.active, .dep-subnav-tab.active {
             color: var(--pg-blue-600);
             border-bottom-color: var(--pg-blue-600);
             background: #eff6ff;
             border-radius: 6px 6px 0 0;
         }
-        .cd-subcontent, .pd-subcontent, .lbd-subcontent {
+        .cd-subcontent, .pd-subcontent, .lbd-subcontent, .dep-subcontent {
             display: none;
         }
-        .cd-subcontent.active, .pd-subcontent.active, .lbd-subcontent.active {
+        .cd-subcontent.active, .pd-subcontent.active, .lbd-subcontent.active, .dep-subcontent.active {
             display: block;
         }
 
@@ -4361,26 +4361,171 @@
 
         <!-- 7. DEPLOYMENTS & QUADLET TAB -->
         <div id="tab-deployments" class="tab-content">
-            <div class="grid-12">
-                <div class="pg-box col-7">
-                    <div class="pg-box-header">
-                        <div class="pg-box-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-                            <span>GitOps Manifest Deployment (deploy.yml v1alpha1)</span>
+            <!-- KPI Summary Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
+                <div class="pg-stat-card">
+                    <div class="stat-label">Workload Deployments</div>
+                    <div class="stat-number" style="color: var(--pg-blue-600);" id="stat-dep-workloads">0</div>
+                    <div class="stat-hint">Active GitOps services</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Running Replicas</div>
+                    <div class="stat-number" style="color: var(--pg-emerald);" id="stat-dep-running">0</div>
+                    <div class="stat-hint">Containers healthy in service</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Systemd Quadlets</div>
+                    <div class="stat-number" style="color: var(--pg-purple);" id="stat-dep-quadlets">0</div>
+                    <div class="stat-hint">Declarative host unit files</div>
+                </div>
+                <div class="pg-stat-card">
+                    <div class="stat-label">Latest Release</div>
+                    <div class="stat-number" style="color: var(--pg-blue-600); font-size: 20px; line-height: 32px;" id="stat-dep-releases">-</div>
+                    <div class="stat-hint" id="stat-dep-latest-name">No deployments yet</div>
+                </div>
+            </div>
+
+            <!-- Main Deployments & Quadlet Box -->
+            <div class="pg-box">
+                <div class="pg-box-header" style="flex-wrap:wrap; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width: 38px; height: 38px; border-radius: 8px; background: #eff6ff; color: var(--pg-blue-600); display: flex; align-items: center; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                         </div>
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn btn-primary rbac-write-only" onclick="openModal('create-deployment-modal')">
-                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                <span>+ New Deployment</span>
-                            </button>
-                            <button class="btn btn-emerald rbac-write-only" onclick="deployManifest()">
-                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-                                <span>Deploy YAML</span>
-                            </button>
+                        <div>
+                            <div class="pg-box-title" style="margin-bottom:2px;">Deployments &amp; Quadlet Manager</div>
+                            <div style="font-size:12px; color:var(--pg-text-muted);">GitOps Application Workloads, systemd Quadlet Services &amp; Declarative Containers</div>
                         </div>
                     </div>
-                    <div style="padding: 16px;">
-                        <textarea id="manifest-editor" class="form-input" style="height: 380px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.5;">apiVersion: procloud.io/v1alpha1
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <button class="btn btn-sm" onclick="fetchDeployments(); fetchQuadletUnits();" title="Refresh Workloads &amp; Quadlets">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="switchDeploymentsSubTab('generator')" title="Synthesize Quadlet">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            <span>Quadlet Synthesizer</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm rbac-write-only" onclick="openModal('create-deployment-modal')">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <span>+ New Deployment</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Subnav Tabs -->
+                <div class="dep-subnav cd-subnav" style="padding: 0 16px; margin-bottom: 0;">
+                    <div class="dep-subnav-tab cd-subnav-tab active" data-depsubtab="workloads" onclick="switchDeploymentsSubTab('workloads')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        <span>Active Workloads &amp; Releases</span>
+                        <span class="pill pill-blue" id="dep-badge-workloads" style="padding:2px 6px; font-size:11px;">0</span>
+                    </div>
+                    <div class="dep-subnav-tab cd-subnav-tab" data-depsubtab="quadlets" onclick="switchDeploymentsSubTab('quadlets')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                        <span>Systemd Quadlet Units</span>
+                        <span class="pill pill-purple" id="dep-badge-quadlets" style="padding:2px 6px; font-size:11px;">0</span>
+                    </div>
+                    <div class="dep-subnav-tab cd-subnav-tab" data-depsubtab="generator" onclick="switchDeploymentsSubTab('generator')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        <span>Manifest Editor &amp; Synthesizer</span>
+                    </div>
+                </div>
+
+                <!-- SUBTAB 1: Active Workloads & Releases -->
+                <div id="dep-subcontent-workloads" class="dep-subcontent cd-subcontent active" style="padding: 16px;">
+                    <!-- Filter Toolbar -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;">
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; flex:1;">
+                            <div style="position:relative; display:inline-flex; align-items:center; min-width:240px;">
+                                <svg class="icon-svg" style="position:absolute; left:10px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <input type="text" id="dep-search-input" class="form-input form-input-sm" style="width:100%; padding-left:30px;" placeholder="Search workloads by name, image, port..." oninput="filterAndRenderDeployments()">
+                            </div>
+                            <select id="dep-status-filter" class="form-input form-input-sm" style="width:auto;" onchange="filterAndRenderDeployments()">
+                                <option value="">All Statuses</option>
+                                <option value="running">Running</option>
+                                <option value="healthy">Healthy</option>
+                                <option value="stopped">Stopped</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                        </div>
+                        <div style="font-size:12px; color:var(--pg-text-muted);" id="dep-showing-text">
+                            Showing all workloads
+                        </div>
+                    </div>
+
+                    <!-- Workloads Table -->
+                    <div style="overflow-x:auto; border: 1px solid var(--pg-border); border-radius: 8px;">
+                        <table class="pg-table" style="margin:0;">
+                            <thead>
+                                <tr>
+                                    <th style="width:150px;">Application</th>
+                                    <th style="width:190px;">Image &amp; Tag</th>
+                                    <th style="width:95px;">Release</th>
+                                    <th style="width:135px;">Networking</th>
+                                    <th style="width:155px;">Quadlet Unit</th>
+                                    <th style="width:95px;">Status / Health</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workloads-list-table">
+                                <tr><td colspan="7" style="text-align:center; padding: 24px;">Loading application workloads...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SUBTAB 2: Systemd Quadlet Units -->
+                <div id="dep-subcontent-quadlets" class="dep-subcontent cd-subcontent" style="padding: 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <div style="font-weight:600; font-size:14px; color:var(--pg-text-main);">Host Systemd Quadlet Unit Files</div>
+                            <div style="font-size:12px; color:var(--pg-text-muted);">
+                                Podman Quadlet automatically converts declarative units in <code>~/.config/containers/systemd/</code> into native systemd services on host boot.
+                            </div>
+                        </div>
+                        <div style="position:relative; display:inline-flex; align-items:center; min-width:220px;">
+                            <svg class="icon-svg" style="position:absolute; left:10px; width:13px; height:13px; color:var(--pg-text-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="quadlet-search-input" class="form-input form-input-sm" style="width:100%; padding-left:30px;" placeholder="Search Quadlet units..." oninput="filterAndRenderQuadlets()">
+                        </div>
+                    </div>
+
+                    <div style="overflow-x:auto; border: 1px solid var(--pg-border); border-radius: 8px;">
+                        <table class="pg-table" style="margin:0;">
+                            <thead>
+                                <tr>
+                                    <th>Unit Name</th>
+                                    <th>Type</th>
+                                    <th>Systemd Service</th>
+                                    <th>File Size</th>
+                                    <th>Last Modified</th>
+                                    <th style="text-align:right; min-width: 230px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quadlet-units-table">
+                                <tr><td colspan="6" style="text-align:center; padding: 24px;">Loading Quadlet units...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SUBTAB 3: Manifest Editor & Synthesizer -->
+                <div id="dep-subcontent-generator" class="dep-subcontent cd-subcontent" style="padding: 16px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <!-- Left: Manifest YAML Editor -->
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <div>
+                                    <span style="font-weight:600; font-size:13px; color:var(--pg-text-main);">Deployment Manifest (deploy.yml v1alpha1)</span>
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                    <span style="font-size:11px; color:var(--pg-text-muted);">Presets:</span>
+                                    <button class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:11px;" onclick="applyManifestPreset('webapp')">Web App</button>
+                                    <button class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:11px;" onclick="applyManifestPreset('api')">FastAPI</button>
+                                    <button class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:11px;" onclick="applyManifestPreset('redis')">Redis</button>
+                                    <button class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:11px;" onclick="applyManifestPreset('worker')">Worker</button>
+                                </div>
+                            </div>
+                            <textarea id="manifest-editor" class="form-input" style="height: 420px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.5; background:#0f172a; color:#f8fafc; border-radius:8px; padding:12px;" oninput="debounceSynthesizeQuadlet()">apiVersion: procloud.io/v1alpha1
 kind: Deployment
 metadata:
   name: demo-webapp
@@ -4406,30 +4551,43 @@ spec:
       path: /
       port: 8080
   restartPolicy: always</textarea>
-                    </div>
-                </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-primary rbac-write-only" style="flex:1; justify-content:center;" onclick="deployManifest()">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                                    <span>Deploy Application</span>
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="synthesizeQuadlet()" title="Generate Quadlet Unit from Manifest">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                                    <span>Synthesize Quadlet</span>
+                                </button>
+                            </div>
+                        </div>
 
-                <div class="pg-box col-5">
-                    <div class="pg-box-header">
-                        <div class="pg-box-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                            <span>Active Workload Releases</span>
+                        <!-- Right: Live Quadlet Unit Preview -->
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-weight:600; font-size:13px; color:var(--pg-text-main);">Synthesized Systemd Quadlet Unit</span>
+                                    <span class="pill pill-emerald" id="quadlet-service-name" style="font-size:11px;">demo-webapp.service</span>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button class="btn btn-sm" onclick="copyQuadletPreview()" title="Copy Quadlet Unit to Clipboard">
+                                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                        <span>Copy</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-ghost" onclick="downloadCurrentQuadlet()" title="Download .container unit file">
+                                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        <span>Download</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <pre id="quadlet-preview-box" style="height: 420px; overflow:auto; margin:0; padding:14px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.5; background:#1e293b; color:#38bdf8; border-radius:8px; border:1px solid #334155; white-space:pre-wrap; word-break:break-all;">Click "Synthesize Quadlet" or type in the editor to preview generated unit...</pre>
+                            <div style="font-size:11px; color:var(--pg-text-muted); display:flex; align-items:center; gap:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Quadlet units are written to <code>~/.config/containers/systemd/*.container</code> and executed via rootless <code>systemd --user</code>.</span>
+                            </div>
                         </div>
                     </div>
-                    <table class="pg-table">
-                        <thead>
-                            <tr>
-                                <th>App</th>
-                                <th>Release</th>
-                                <th>Status</th>
-                                <th>Port</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="workloads-list-table">
-                            <tr><td colspan="5" style="text-align:center;">No workloads deployed yet.</td></tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
@@ -4983,6 +5141,102 @@ spec:
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                     <span>Deploy Manifest</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: View Quadlet Unit -->
+    <div id="view-quadlet-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 680px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    <span id="view-quadlet-title">Systemd Quadlet Unit</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('view-quadlet-modal')">&times;</div>
+            </div>
+            <div style="padding: 16px 0 8px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:12px; color:var(--pg-text-muted);" id="view-quadlet-path">Path: ~/.config/containers/systemd/</div>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-sm" onclick="copyModalQuadletText()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>Copy</span>
+                        </button>
+                        <button class="btn btn-sm btn-ghost" onclick="downloadModalQuadlet()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span>Download</span>
+                        </button>
+                    </div>
+                </div>
+                <pre id="view-quadlet-content" style="background:#0f172a; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:12px; padding:14px; border-radius:8px; max-height:450px; overflow:auto; margin:0; line-height:1.5; white-space:pre-wrap; word-break:break-all;"></pre>
+            </div>
+            <div class="modal-dialog-footer" style="margin-top:16px;">
+                <button class="btn" onclick="closeModal('view-quadlet-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: View Deployment Manifest YAML -->
+    <div id="view-manifest-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 680px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span id="view-manifest-title">Deployment Manifest YAML</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('view-manifest-modal')">&times;</div>
+            </div>
+            <div style="padding: 16px 0 8px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:12px; color:var(--pg-text-muted);">ProCloud Declarative Workload Manifest (v1alpha1)</div>
+                    <button class="btn btn-sm" onclick="copyModalManifestText()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy YAML</span>
+                    </button>
+                </div>
+                <pre id="view-manifest-content" style="background:#0f172a; color:#f8fafc; font-family:'JetBrains Mono',monospace; font-size:12px; padding:14px; border-radius:8px; max-height:450px; overflow:auto; margin:0; line-height:1.5; white-space:pre-wrap; word-break:break-all;"></pre>
+            </div>
+            <div class="modal-dialog-footer" style="margin-top:16px;">
+                <button class="btn btn-outline-primary" onclick="copyManifestToEditor()">Copy to Manifest Editor</button>
+                <button class="btn" onclick="closeModal('view-manifest-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Workload Release History & Rollback -->
+    <div id="release-history-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 850px; width: 95%;">
+            <div class="modal-dialog-header">
+                <div class="modal-dialog-title">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                    <span id="release-history-title">Workload Release History</span>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('release-history-modal')">&times;</div>
+            </div>
+            <div style="padding: 16px 0 8px 0;">
+                <div style="margin-bottom: 12px; font-size:12px; color:var(--pg-text-muted);">
+                    Complete immutable release timeline for workload <strong id="release-history-workload-name" style="color:var(--pg-text-main);"></strong>. You can inspect specs or perform a 1-click zero-downtime rollback to any prior release.
+                </div>
+                <div style="overflow-x:auto; border: 1px solid var(--pg-border); border-radius: 8px;">
+                    <table class="pg-table" style="margin:0;">
+                        <thead>
+                            <tr>
+                                <th>Release</th>
+                                <th>Image &amp; Digest</th>
+                                <th>Status</th>
+                                <th>Deployed At</th>
+                                <th style="text-align:right;">Rollback / Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="release-history-table">
+                            <tr><td colspan="5" style="text-align:center; padding:20px;">Loading release timeline...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-dialog-footer" style="margin-top:16px;">
+                <button class="btn" onclick="closeModal('release-history-modal')">Close</button>
             </div>
         </div>
     </div>
@@ -8148,10 +8402,6 @@ spec:
 
         function openStats(idOrName) {
             activeContainerForStats = idOrName;
-            document.getElementById('stats-modal-title').innerText = 'Resource Utilisation: ' + idOrName;
-            openModal('stats-modal');
-            fetchContainerStats();
-            startStatsPolling();
         }
 
         async function fetchContainerStats() {
@@ -11422,36 +11672,676 @@ spec:
             });
         }
 
+        let rawWorkloadsList = [];
+        let rawQuadletsList = [];
+        let activeWorkloadHistoryList = [];
+        let currentModalQuadletContent = '';
+        let currentModalQuadletName = '';
+        let currentModalManifestContent = '';
+        let debounceQuadletTimer = null;
+
+        function timeAgo(date) {
+            if (!date || isNaN(date.getTime())) return 'recently';
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return `${Math.max(1, seconds)}s ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        function switchDeploymentsSubTab(subTab) {
+            document.querySelectorAll('.dep-subnav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.dep-subcontent').forEach(c => c.classList.remove('active'));
+
+            const tabEl = document.querySelector(`.dep-subnav-tab[data-depsubtab="${subTab}"]`);
+            if (tabEl) tabEl.classList.add('active');
+
+            const contentEl = document.getElementById(`dep-subcontent-${subTab}`);
+            if (contentEl) contentEl.classList.add('active');
+
+            if (subTab === 'quadlets') {
+                fetchQuadletUnits();
+            } else if (subTab === 'generator') {
+                synthesizeQuadlet();
+            }
+        }
+
         async function fetchDeployments() {
             try {
                 const res = await authFetch('/api/v1/workloads');
                 const list = await res.json() || [];
-                const tbody = document.getElementById('workloads-list-table');
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No workloads deployed yet.</td></tr>';
+                rawWorkloadsList = Array.isArray(list) ? list : [];
+
+                // Update KPI Cards
+                const totalWorkloads = rawWorkloadsList.length;
+                const runningCount = rawWorkloadsList.filter(w => (w.status || '').toLowerCase() === 'running' || (w.health_status || '').toLowerCase() === 'healthy').length;
+                
+                const statWorkloads = document.getElementById('stat-dep-workloads');
+                const statRunning = document.getElementById('stat-dep-running');
+                const statReleases = document.getElementById('stat-dep-releases');
+                const statLatestName = document.getElementById('stat-dep-latest-name');
+                const badgeWorkloads = document.getElementById('dep-badge-workloads');
+
+                if (statWorkloads) statWorkloads.innerText = totalWorkloads;
+                if (statRunning) statRunning.innerText = runningCount;
+                if (badgeWorkloads) badgeWorkloads.innerText = totalWorkloads;
+
+                if (rawWorkloadsList.length > 0) {
+                    const sorted = [...rawWorkloadsList].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+                    const latest = sorted[0];
+                    if (statReleases) statReleases.innerText = `Release v${latest.current_release || 1}`;
+                    if (statLatestName) statLatestName.innerText = `${latest.name} (${timeAgo(new Date(latest.updated_at))})`;
+                } else {
+                    if (statReleases) statReleases.innerText = '-';
+                    if (statLatestName) statLatestName.innerText = 'No workloads deployed yet';
+                }
+
+                filterAndRenderDeployments();
+                fetchQuadletUnits();
+            } catch (err) {
+                console.error('Failed to fetch workloads:', err);
+            }
+        }
+
+        function filterAndRenderDeployments() {
+            const tbody = document.getElementById('workloads-list-table');
+            if (!tbody) return;
+
+            const searchInput = (document.getElementById('dep-search-input')?.value || '').toLowerCase().trim();
+            const statusFilter = (document.getElementById('dep-status-filter')?.value || '').toLowerCase().trim();
+
+            let filtered = rawWorkloadsList.filter(w => {
+                const matchesSearch = !searchInput ||
+                    (w.name || '').toLowerCase().includes(searchInput) ||
+                    (w.image_tag || '').toLowerCase().includes(searchInput) ||
+                    (w.ingress_domain || '').toLowerCase().includes(searchInput) ||
+                    (w.quadlet_unit_name || '').toLowerCase().includes(searchInput) ||
+                    String(w.host_port || '').includes(searchInput);
+
+                const matchesStatus = !statusFilter ||
+                    (w.status || '').toLowerCase() === statusFilter ||
+                    (w.health_status || '').toLowerCase() === statusFilter;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            const showingText = document.getElementById('dep-showing-text');
+            if (showingText) {
+                showingText.innerText = `Showing ${filtered.length} of ${rawWorkloadsList.length} workloads`;
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 28px; color:var(--pg-text-muted);">
+                    <div style="font-weight:600; margin-bottom:4px;">No application workloads found</div>
+                    <div style="font-size:12px;">Deploy a new workload or clear filters to see your active services.</div>
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(w => {
+                const isRunning = (w.status || '').toLowerCase() === 'running';
+                const isHealthy = (w.health_status || '').toLowerCase() === 'healthy';
+                const pillClass = isHealthy ? 'pill-healthy' : (isRunning ? 'pill-blue' : 'pill-stopped');
+                const statusLabel = isHealthy ? 'healthy' : (w.status || 'unknown');
+                const quadletName = w.quadlet_unit_name || `${w.name}.container`;
+
+                const netInfo = w.host_port ? `
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--pg-text-main); font-weight:600;">:${w.host_port} &rarr; :${w.container_port || 80}</div>
+                    ${w.ingress_domain ? `<a href="http://${escapeHtml(w.ingress_domain)}:${w.host_port}" target="_blank" style="font-size:11px; color:var(--pg-blue-600); text-decoration:none; display:inline-flex; align-items:center; gap:3px;">
+                        <span>${escapeHtml(w.ingress_domain)}</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>` : ''}
+                ` : `<span style="font-size:12px; color:var(--pg-text-muted);">Host network / None</span>`;
+
+                const imageDisplay = w.image_tag ? escapeHtml(w.image_tag) : 'unknown';
+                const shortDigest = w.image_digest ? `<span class="pill pill-slate" style="font-size:10px; font-family:'JetBrains Mono',monospace;" title="${escapeHtml(w.image_digest)}">sha256:${escapeHtml(w.image_digest.slice(0, 7))}</span>` : '';
+
+                return `
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="width:28px; height:28px; border-radius:6px; background:#eff6ff; color:var(--pg-blue-600); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; color:var(--pg-text-main); font-size:13px;">${escapeHtml(w.name)}</div>
+                                <div style="font-size:11px; color:var(--pg-text-muted);">ID: ${escapeHtml(w.id || w.name)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size:12px; font-weight:600; color:var(--pg-text-main); font-family:'JetBrains Mono',monospace;">${imageDisplay}</div>
+                        ${shortDigest}
+                    </td>
+                    <td>
+                        <button class="pill pill-blue" style="cursor:pointer; border:none; display:inline-flex; align-items:center; gap:4px; font-weight:600;" onclick="viewWorkloadHistory('${escapeHtml(w.name)}')" title="View Release History &amp; Rollback">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                            <span>Release v${w.current_release || 1}</span>
+                        </button>
+                    </td>
+                    <td>${netInfo}</td>
+                    <td>
+                        <button class="pill pill-purple" style="cursor:pointer; border:none; font-family:'JetBrains Mono',monospace; font-size:11px; display:inline-flex; align-items:center; gap:4px;" onclick="viewWorkloadQuadlet('${escapeHtml(w.name)}')" title="Inspect Quadlet Unit">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                            <span>${escapeHtml(quadletName)}</span>
+                        </button>
+                    </td>
+                    <td>
+                        <span class="pill ${pillClass}">
+                            <span class="status-dot"></span>
+                            <span>${escapeHtml(statusLabel)}</span>
+                        </span>
+                    </td>
+                    <td style="text-align:right; white-space:nowrap;">
+                        <div class="table-actions" style="justify-content:flex-end; gap:3px; flex-wrap:nowrap;">
+                            <button class="btn btn-sm btn-ghost" title="View Systemd Quadlet Unit" onclick="viewWorkloadQuadlet('${escapeHtml(w.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                            </button>
+                            <button class="btn btn-sm btn-ghost" title="View Manifest YAML" onclick="viewWorkloadManifest('${escapeHtml(w.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <span>YAML</span>
+                            </button>
+                            <button class="btn btn-sm btn-ghost" title="Release Timeline &amp; Rollback" onclick="viewWorkloadHistory('${escapeHtml(w.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                                <span>History</span>
+                            </button>
+                            ${canWrite() ? `
+                            <button class="btn btn-sm btn-ghost" title="Restart Workload" onclick="restartWorkload('${escapeHtml(w.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            </button>
+                            <button class="btn btn-sm btn-ghost text-danger" title="Delete Workload" onclick="deleteWorkload('${escapeHtml(w.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function fetchQuadletUnits() {
+            try {
+                const res = await authFetch('/api/v1/quadlet/units');
+                const units = await res.json() || [];
+                rawQuadletsList = Array.isArray(units) ? units : [];
+
+                const statQuadlets = document.getElementById('stat-dep-quadlets');
+                const badgeQuadlets = document.getElementById('dep-badge-quadlets');
+                if (statQuadlets) statQuadlets.innerText = rawQuadletsList.length;
+                if (badgeQuadlets) badgeQuadlets.innerText = rawQuadletsList.length;
+
+                filterAndRenderQuadlets();
+            } catch (err) {
+                console.error('Failed to fetch Quadlet units:', err);
+            }
+        }
+
+        function filterAndRenderQuadlets() {
+            const tbody = document.getElementById('quadlet-units-table');
+            if (!tbody) return;
+
+            const searchInput = (document.getElementById('quadlet-search-input')?.value || '').toLowerCase().trim();
+
+            let filtered = rawQuadletsList.filter(u => {
+                return !searchInput ||
+                    (u.name || '').toLowerCase().includes(searchInput) ||
+                    (u.type || '').toLowerCase().includes(searchInput) ||
+                    (u.systemd_service || '').toLowerCase().includes(searchInput) ||
+                    (u.associated_app || '').toLowerCase().includes(searchInput);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 28px; color:var(--pg-text-muted);">
+                    <div style="font-weight:600; margin-bottom:4px;">No Quadlet units found</div>
+                    <div style="font-size:12px;">Synthesize and deploy a workload manifest to generate systemd units.</div>
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(u => {
+                const typePill = u.type === 'Container' ? 'pill-blue' :
+                                 u.type === 'Kube' ? 'pill-purple' :
+                                 u.type === 'Volume' ? 'pill-emerald' : 'pill-amber';
+
+                const sizeFormatted = u.size > 1024 ? `${(u.size / 1024).toFixed(1)} KB` : `${u.size} B`;
+                const dateFormatted = u.updated_at ? new Date(u.updated_at).toLocaleString() : 'N/A';
+
+                return `
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="width:28px; height:28px; border-radius:6px; background:#eff6ff; color:var(--pg-purple); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; color:var(--pg-text-main); font-family:'JetBrains Mono',monospace; font-size:13px;">${escapeHtml(u.name)}</div>
+                                <div style="font-size:11px; color:var(--pg-text-muted);">App: ${escapeHtml(u.associated_app || 'system')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="pill ${typePill}">${escapeHtml(u.type || 'Container')}</span></td>
+                    <td><code style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--pg-blue-600);">${escapeHtml(u.systemd_service || u.name.replace('.container', '.service'))}</code></td>
+                    <td><span style="font-size:12px; color:var(--pg-text-muted);">${sizeFormatted}</span></td>
+                    <td><span style="font-size:12px; color:var(--pg-text-muted);">${dateFormatted}</span></td>
+                    <td style="text-align:right;">
+                        <div class="table-actions" style="justify-content:flex-end; gap:4px;">
+                            <button class="btn btn-sm btn-ghost" title="View Unit Content" onclick="openQuadletModalDirect('${escapeHtml(u.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                <span>Inspect</span>
+                            </button>
+                            <button class="btn btn-sm btn-ghost" title="Copy Unit File" onclick="copyQuadletUnitByName('${escapeHtml(u.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                            <button class="btn btn-sm btn-ghost" title="Download .container" onclick="downloadQuadletByName('${escapeHtml(u.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function viewWorkloadQuadlet(workloadName) {
+            const unit = rawQuadletsList.find(u => u.name === `${workloadName}.container` || u.associated_app === workloadName);
+            if (unit && unit.content) {
+                showQuadletModal(unit.name, unit.path, unit.content);
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/v1/workloads/${workloadName}/deployments`);
+                const list = await res.json() || [];
+                if (list.length > 0 && list[0].quadlet_spec) {
+                    showQuadletModal(`${workloadName}.container`, `~/.config/containers/systemd/${workloadName}.container`, list[0].quadlet_spec);
+                } else {
+                    showToast('Quadlet unit spec not found for ' + workloadName, 'info');
+                }
+            } catch (err) {
+                showToast('Failed to load Quadlet unit: ' + err.message, 'error');
+            }
+        }
+
+        function openQuadletModalDirect(unitName) {
+            const unit = rawQuadletsList.find(u => u.name === unitName);
+            if (unit) {
+                showQuadletModal(unit.name, unit.path, unit.content);
+            }
+        }
+
+        function showQuadletModal(unitName, path, content) {
+            currentModalQuadletContent = content || '';
+            currentModalQuadletName = unitName || 'unit.container';
+
+            const titleEl = document.getElementById('view-quadlet-title');
+            const pathEl = document.getElementById('view-quadlet-path');
+            const contentEl = document.getElementById('view-quadlet-content');
+
+            if (titleEl) titleEl.innerText = `Quadlet Unit: ${unitName}`;
+            if (pathEl) pathEl.innerText = `Host Path: ${path || '~/.config/containers/systemd/' + unitName}`;
+            if (contentEl) contentEl.innerText = content || '// Unit content empty';
+
+            openModal('view-quadlet-modal');
+        }
+
+        async function viewWorkloadManifest(workloadName) {
+            try {
+                const res = await authFetch(`/api/v1/workloads/${workloadName}/deployments`);
+                const list = await res.json() || [];
+                if (list.length > 0 && list[0].manifest_yaml) {
+                    showManifestModal(workloadName, list[0].manifest_yaml);
+                } else {
+                    showToast('No deployment manifest saved for ' + workloadName, 'info');
+                }
+            } catch (err) {
+                showToast('Failed to fetch manifest: ' + err.message, 'error');
+            }
+        }
+
+        function showManifestModal(workloadName, yamlContent) {
+            currentModalManifestContent = yamlContent || '';
+            const titleEl = document.getElementById('view-manifest-title');
+            const contentEl = document.getElementById('view-manifest-content');
+
+            if (titleEl) titleEl.innerText = `Manifest: ${workloadName} (v1alpha1)`;
+            if (contentEl) contentEl.innerText = yamlContent || '# Empty manifest';
+
+            openModal('view-manifest-modal');
+        }
+
+        async function viewWorkloadHistory(workloadName) {
+            const titleEl = document.getElementById('release-history-title');
+            const nameEl = document.getElementById('release-history-workload-name');
+            const tbody = document.getElementById('release-history-table');
+
+            if (titleEl) titleEl.innerText = `Release History: ${workloadName}`;
+            if (nameEl) nameEl.innerText = workloadName;
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Loading release timeline...</td></tr>';
+
+            openModal('release-history-modal');
+
+            try {
+                const res = await authFetch(`/api/v1/workloads/${workloadName}/deployments`);
+                const list = await res.json() || [];
+                activeWorkloadHistoryList = Array.isArray(list) ? list : [];
+
+                const currentWl = rawWorkloadsList.find(w => w.name === workloadName);
+                const currentReleaseNum = currentWl ? (currentWl.current_release || 1) : 1;
+
+                if (activeWorkloadHistoryList.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--pg-text-muted);">No recorded release history found.</td></tr>';
                     return;
                 }
-                tbody.innerHTML = list.map(w => `
+
+                tbody.innerHTML = activeWorkloadHistoryList.map(dep => {
+                    const isCurrent = dep.release_number === currentReleaseNum;
+                    const dateFormatted = dep.started_at ? new Date(dep.started_at).toLocaleString() : 'N/A';
+                    const imageDigestShort = dep.image_digest ? `sha256:${dep.image_digest.slice(0, 7)}` : 'ad9db73';
+
+                    return `
                     <tr>
-                        <td><strong>${escapeHtml(w.name)}</strong></td>
-                        <td><span class="pill pill-blue">Release v${w.current_release}</span></td>
-                        <td><span class="pill pill-${w.status === 'running' ? 'healthy' : 'stopped'}">${escapeHtml(w.status)}</span></td>
-                        <td>${w.host_port ? `localhost:${w.host_port}` : 'None'}</td>
                         <td>
-                            <div class="table-actions">
-                                ${canWrite() ? `
-                                <button class="btn btn-sm btn-outline-primary" title="Rollback Release" onclick="rollback('${escapeHtml(w.name)}', ${Math.max(1, w.current_release - 1)})">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
-                                    <span>Rollback</span>
-                                </button>
-                                ` : '<span class="pill pill-slate" style="font-size:11px;">Read-Only</span>'}
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span class="pill ${isCurrent ? 'pill-blue' : 'pill-slate'}" style="font-weight:700;">v${dep.release_number}</span>
+                                ${isCurrent ? '<span class="pill pill-emerald" style="font-size:10px; padding:2px 6px;">Active</span>' : ''}
                             </div>
                         </td>
-                    </tr>
-                `).join('');
+                        <td>
+                            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;">${escapeHtml(dep.image_tag || 'latest')}</div>
+                            <div style="font-size:10px; color:var(--pg-text-muted); font-family:'JetBrains Mono',monospace;">${escapeHtml(imageDigestShort)}</div>
+                        </td>
+                        <td>
+                            <span class="pill pill-${dep.status === 'running' || dep.status === 'healthy' ? 'healthy' : 'blue'}">
+                                ${escapeHtml(dep.status || 'deployed')}
+                            </span>
+                        </td>
+                        <td><span style="font-size:12px; color:var(--pg-text-muted);">${dateFormatted}</span></td>
+                        <td style="text-align:right;">
+                            <div class="table-actions" style="justify-content:flex-end; gap:4px;">
+                                <button class="btn btn-sm btn-ghost" title="View Manifest YAML" onclick="viewHistoryManifest(${dep.release_number})">YAML</button>
+                                <button class="btn btn-sm btn-ghost" title="View Quadlet Unit" onclick="viewHistoryQuadlet(${dep.release_number})">Unit</button>
+                                ${!isCurrent && canWrite() ? `
+                                <button class="btn btn-sm btn-outline-primary" title="Rollback to v${dep.release_number}" onclick="closeModal('release-history-modal'); rollback('${escapeHtml(workloadName)}', ${dep.release_number});">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+                                    <span>Rollback to v${dep.release_number}</span>
+                                </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
             } catch (err) {
-                console.error(err);
+                if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--pg-red); padding:16px;">Failed to load history: ${escapeHtml(err.message)}</td></tr>`;
             }
+        }
+
+        function viewHistoryManifest(releaseNum) {
+            const item = activeWorkloadHistoryList.find(d => d.release_number === releaseNum);
+            if (item && item.manifest_yaml) {
+                showManifestModal(`Release v${releaseNum}`, item.manifest_yaml);
+            }
+        }
+
+        function viewHistoryQuadlet(releaseNum) {
+            const item = activeWorkloadHistoryList.find(d => d.release_number === releaseNum);
+            if (item && item.quadlet_spec) {
+                showQuadletModal(`Release v${releaseNum} Quadlet`, `Deployment v${releaseNum}`, item.quadlet_spec);
+            }
+        }
+
+        function restartWorkload(workloadName) {
+            promptConfirmAction({
+                action: 'restart',
+                itemType: 'Workload',
+                name: workloadName,
+                id: workloadName,
+                warning: `This will restart the container and reload runtime configurations for workload '${workloadName}'.`,
+                onConfirm: async () => {
+                    try {
+                        const res = await authFetch(`/api/v1/workloads/${workloadName}/restart`, { method: 'POST' });
+                        if (res.ok) {
+                            showToast(`Workload '${workloadName}' restarted successfully`, 'success');
+                            fetchDeployments();
+                        } else {
+                            showToast(`Restart failed: ${await res.text()}`, 'error');
+                        }
+                    } catch (err) {
+                        showToast(`Restart error: ${err.message}`, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteWorkload(workloadName) {
+            promptConfirmAction({
+                action: 'delete',
+                itemType: 'Workload',
+                name: workloadName,
+                id: workloadName,
+                warning: `This will permanently stop and remove the container, remove the Quadlet systemd unit from ~/.config/containers/systemd/, and purge all deployment history for '${workloadName}'.`,
+                onConfirm: async () => {
+                    try {
+                        const res = await authFetch(`/api/v1/workloads/${workloadName}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            showToast(`Workload '${workloadName}' deleted`, 'success');
+                            fetchDeployments();
+                        } else {
+                            showToast(`Delete failed: ${await res.text()}`, 'error');
+                        }
+                    } catch (err) {
+                        showToast(`Delete error: ${err.message}`, 'error');
+                    }
+                }
+            });
+        }
+
+        async function synthesizeQuadlet() {
+            const editor = document.getElementById('manifest-editor');
+            const previewBox = document.getElementById('quadlet-preview-box');
+            const serviceNameEl = document.getElementById('quadlet-service-name');
+            if (!editor || !previewBox) return;
+
+            const yamlText = editor.value.trim();
+            if (!yamlText) {
+                previewBox.innerText = '# Please provide a deployment manifest...';
+                return;
+            }
+
+            try {
+                const res = await authFetch('/api/v1/quadlet/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: yamlText
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    previewBox.innerText = data.quadlet_spec || '# Empty generated unit';
+                    if (serviceNameEl) serviceNameEl.innerText = data.systemd_service || `${data.manifest_name}.service`;
+                } else {
+                    const err = await res.text();
+                    previewBox.innerText = `# Manifest validation notice:\n${err}`;
+                }
+            } catch (err) {
+                previewBox.innerText = `# Synthesis error:\n${err.message}`;
+            }
+        }
+
+        function debounceSynthesizeQuadlet() {
+            if (debounceQuadletTimer) clearTimeout(debounceQuadletTimer);
+            debounceQuadletTimer = setTimeout(() => {
+                synthesizeQuadlet();
+            }, 600);
+        }
+
+        const manifestPresets = {
+            webapp: `apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: demo-webapp
+spec:
+  replicas: 1
+  image:
+    repository: localhost/demo-app
+    tag: v1
+  ports:
+    - containerPort: 8080
+      hostPort: 9090
+      protocol: TCP
+      ingress:
+        enabled: true
+        domain: demo.procloud.local
+        path: /
+  volumes:
+    - name: app-data
+      mountPath: /data
+      size: 1Gi
+  healthCheck:
+    httpGet:
+      path: /
+      port: 8080
+  restartPolicy: always`,
+
+            api: `apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: fastapi-microservice
+spec:
+  replicas: 1
+  image:
+    repository: localhost/fastapi-app
+    tag: latest
+  ports:
+    - containerPort: 8000
+      hostPort: 8000
+      protocol: TCP
+      ingress:
+        enabled: true
+        domain: api.procloud.local
+        path: /api
+  healthCheck:
+    httpGet:
+      path: /health
+      port: 8000
+  restartPolicy: on-failure`,
+
+            redis: `apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: redis-cache
+spec:
+  replicas: 1
+  image:
+    repository: docker.io/library/redis
+    tag: alpine
+  ports:
+    - containerPort: 6379
+      hostPort: 6379
+      protocol: TCP
+  volumes:
+    - name: redis-data
+      mountPath: /data
+      size: 2Gi
+  restartPolicy: always`,
+
+            worker: `apiVersion: procloud.io/v1alpha1
+kind: Deployment
+metadata:
+  name: async-worker
+spec:
+  replicas: 2
+  image:
+    repository: docker.io/library/alpine
+    tag: latest
+  restartPolicy: always`
+        };
+
+        function applyManifestPreset(presetKey) {
+            const editor = document.getElementById('manifest-editor');
+            if (editor && manifestPresets[presetKey]) {
+                editor.value = manifestPresets[presetKey];
+                synthesizeQuadlet();
+                showToast(`Loaded ${presetKey.toUpperCase()} preset`, 'info');
+            }
+        }
+
+        function copyQuadletPreview() {
+            const previewBox = document.getElementById('quadlet-preview-box');
+            if (previewBox && previewBox.innerText) {
+                navigator.clipboard.writeText(previewBox.innerText);
+                showToast('Quadlet unit copied to clipboard', 'success');
+            }
+        }
+
+        function downloadCurrentQuadlet() {
+            const previewBox = document.getElementById('quadlet-preview-box');
+            const serviceNameEl = document.getElementById('quadlet-service-name');
+            const name = (serviceNameEl?.innerText || 'workload.service').replace('.service', '.container');
+            if (previewBox && previewBox.innerText) {
+                downloadFile(name, previewBox.innerText);
+            }
+        }
+
+        function copyModalQuadletText() {
+            if (currentModalQuadletContent) {
+                navigator.clipboard.writeText(currentModalQuadletContent);
+                showToast('Quadlet unit copied to clipboard', 'success');
+            }
+        }
+
+        function downloadModalQuadlet() {
+            if (currentModalQuadletContent) {
+                downloadFile(currentModalQuadletName || 'workload.container', currentModalQuadletContent);
+            }
+        }
+
+        function copyModalManifestText() {
+            if (currentModalManifestContent) {
+                navigator.clipboard.writeText(currentModalManifestContent);
+                showToast('Manifest YAML copied to clipboard', 'success');
+            }
+        }
+
+        function copyManifestToEditor() {
+            if (currentModalManifestContent) {
+                const editor = document.getElementById('manifest-editor');
+                if (editor) {
+                    editor.value = currentModalManifestContent;
+                    closeModal('view-manifest-modal');
+                    switchDeploymentsSubTab('generator');
+                    showToast('Manifest copied into editor', 'success');
+                }
+            }
+        }
+
+        function copyQuadletUnitByName(name) {
+            const unit = rawQuadletsList.find(u => u.name === name);
+            if (unit && unit.content) {
+                navigator.clipboard.writeText(unit.content);
+                showToast(`Unit '${name}' copied to clipboard`, 'success');
+            }
+        }
+
+        function downloadQuadletByName(name) {
+            const unit = rawQuadletsList.find(u => u.name === name);
+            if (unit && unit.content) {
+                downloadFile(name, unit.content);
+            }
+        }
+
+        function downloadFile(filename, text) {
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Downloaded ${filename}`, 'info');
         }
 
         async function fetchTelemetry() {

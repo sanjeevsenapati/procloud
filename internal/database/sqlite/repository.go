@@ -715,6 +715,11 @@ func (r *Repository) UpdateWorkloadRelease(ctx context.Context, id string, relea
 	return err
 }
 
+func (r *Repository) DeleteWorkload(ctx context.Context, id string) error {
+	_, err := r.db.sqlDB.ExecContext(ctx, `DELETE FROM workloads WHERE id = ? OR name = ?`, id, id)
+	return err
+}
+
 func scanWorkload(row *sql.Row) (*protocol.Workload, error) {
 	var wl protocol.Workload
 	err := row.Scan(

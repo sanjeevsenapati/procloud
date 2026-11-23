@@ -24,6 +24,7 @@ import (
 	"procloud.io/procloud/internal/ingress"
 	"procloud.io/procloud/internal/job"
 	"procloud.io/procloud/internal/loadbalancer"
+	"procloud.io/procloud/internal/manifest"
 	"procloud.io/procloud/internal/monitoring"
 	"procloud.io/procloud/internal/network"
 	"procloud.io/procloud/internal/repository"
@@ -33,6 +34,7 @@ import (
 	"procloud.io/procloud/internal/vpc"
 	"procloud.io/procloud/internal/workflow"
 	"procloud.io/procloud/pkg/podman"
+	"procloud.io/procloud/pkg/quadlet"
 	"procloud.io/procloud/pkg/protocol"
 	"procloud.io/procloud/web"
 )
@@ -436,8 +438,14 @@ func (s *Server) registerRoutes() {
 
 	// Workloads & Deployments (Protected)
 	s.mux.HandleFunc("GET /api/v1/workloads", s.authRequired(s.handleListWorkloads))
+	s.mux.HandleFunc("GET /api/v1/workloads/{id}", s.authRequired(s.handleGetWorkload))
+	s.mux.HandleFunc("GET /api/v1/workloads/{id}/deployments", s.authRequired(s.handleGetWorkloadDeployments))
+	s.mux.HandleFunc("POST /api/v1/workloads/{id}/restart", s.writeRequired(s.handleRestartWorkload))
+	s.mux.HandleFunc("DELETE /api/v1/workloads/{id}", s.writeRequired(s.handleDeleteWorkload))
 	s.mux.HandleFunc("POST /api/v1/deployments", s.writeRequired(s.handleCreateDeployment))
 	s.mux.HandleFunc("POST /api/v1/deployments/{workload}/rollback", s.writeRequired(s.handleRollback))
+	s.mux.HandleFunc("GET /api/v1/quadlet/units", s.authRequired(s.handleListQuadletUnits))
+	s.mux.HandleFunc("POST /api/v1/quadlet/generate", s.authRequired(s.handleGenerateQuadlet))
 
 	// Database & WAL Management (Protected)
 	s.mux.HandleFunc("GET /api/v1/database/status", s.adminOnly(s.handleDBStatus))
@@ -2104,6 +2112,193 @@ func (s *Server) handleRollback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, dep)
+}
+
+func (s *Server) handleGetWorkload(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	wl, err := s.wlRepo.GetWorkloadByID(r.Context(), id)
+	if err != nil || wl == nil {
+		all, _ := s.wlRepo.ListAllWorkloads(r.Context())
+		for _, item := range all {
+			if item.Name == id || item.ID == id {
+				wl = item
+				break
+			}
+		}
+	}
+	if wl == nil {
+		http.Error(w, "workload not found", http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, wl)
+}
+
+func (s *Server) handleGetWorkloadDeployments(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	wl, err := s.wlRepo.GetWorkloadByID(r.Context(), id)
+	if err != nil || wl == nil {
+		all, _ := s.wlRepo.ListAllWorkloads(r.Context())
+		for _, item := range all {
+			if item.Name == id || item.ID == id {
+				wl = item
+				break
+			}
+		}
+	}
+	if wl == nil {
+		http.Error(w, "workload not found", http.StatusNotFound)
+		return
+	}
+	deps, err := s.depRepo.ListDeploymentsByWorkload(r.Context(), wl.ID)
+	if err != nil {
+		http.Error(w, "failed fetching deployments: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, deps)
+}
+
+func (s *Server) handleRestartWorkload(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	wl, err := s.wlRepo.GetWorkloadByID(r.Context(), id)
+	if err != nil || wl == nil {
+		all, _ := s.wlRepo.ListAllWorkloads(r.Context())
+		for _, item := range all {
+			if item.Name == id || item.ID == id {
+				wl = item
+				break
+			}
+		}
+	}
+	if wl == nil {
+		http.Error(w, "workload not found", http.StatusNotFound)
+		return
+	}
+	if err := s.runtime.RestartContainer(r.Context(), wl.Name, 5); err != nil {
+		if startErr := s.runtime.StartContainer(r.Context(), wl.Name); startErr != nil {
+			http.Error(w, "failed restarting workload container: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	_ = s.wlRepo.UpdateWorkloadStatus(r.Context(), wl.ID, "running", "healthy", wl.ContainerID, wl.InternalIP)
+	respondJSON(w, http.StatusOK, map[string]string{"status": "restarted", "name": wl.Name})
+}
+
+func (s *Server) handleDeleteWorkload(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	wl, err := s.wlRepo.GetWorkloadByID(r.Context(), id)
+	if err != nil || wl == nil {
+		all, _ := s.wlRepo.ListAllWorkloads(r.Context())
+		for _, item := range all {
+			if item.Name == id || item.ID == id {
+				wl = item
+				break
+			}
+		}
+	}
+	if wl == nil {
+		http.Error(w, "workload not found", http.StatusNotFound)
+		return
+	}
+	_ = s.runtime.StopContainer(r.Context(), wl.Name, 5)
+	_ = s.runtime.RemoveContainer(r.Context(), wl.Name, true)
+	if wl.QuadletUnitName != "" {
+		_ = s.runtime.RemoveQuadletUnit(r.Context(), wl.QuadletUnitName)
+	}
+	if err := s.wlRepo.DeleteWorkload(r.Context(), wl.ID); err != nil {
+		http.Error(w, "failed deleting workload: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": wl.ID, "name": wl.Name})
+}
+
+type QuadletUnitSummary struct {
+	Name           string    `json:"name"`
+	Type           string    `json:"type"` // "Container", "Volume", "Network", "Kube", "Image"
+	Path           string    `json:"path"`
+	Size           int64     `json:"size"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Content        string    `json:"content"`
+	SystemdService string    `json:"systemd_service"`
+	AssociatedApp  string    `json:"associated_app,omitempty"`
+}
+
+func (s *Server) handleListQuadletUnits(w http.ResponseWriter, r *http.Request) {
+	homeDir, _ := os.UserHomeDir()
+	quadletDir := filepath.Join(homeDir, ".config/containers/systemd")
+	_ = os.MkdirAll(quadletDir, 0755)
+
+	entries, err := os.ReadDir(quadletDir)
+	if err != nil {
+		http.Error(w, "failed reading quadlet directory: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	units := make([]*QuadletUnitSummary, 0)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		fname := entry.Name()
+		ext := filepath.Ext(fname)
+		var uType string
+		switch ext {
+		case ".container":
+			uType = "Container"
+		case ".volume":
+			uType = "Volume"
+		case ".network":
+			uType = "Network"
+		case ".kube":
+			uType = "Kube"
+		case ".image":
+			uType = "Image"
+		default:
+			continue
+		}
+
+		fPath := filepath.Join(quadletDir, fname)
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		data, _ := os.ReadFile(fPath)
+		appName := strings.TrimSuffix(fname, ext)
+
+		units = append(units, &QuadletUnitSummary{
+			Name:           fname,
+			Type:           uType,
+			Path:           fPath,
+			Size:           info.Size(),
+			UpdatedAt:      info.ModTime(),
+			Content:        string(data),
+			SystemdService: fmt.Sprintf("%s.service", appName),
+			AssociatedApp:  appName,
+		})
+	}
+	respondJSON(w, http.StatusOK, units)
+}
+
+func (s *Server) handleGenerateQuadlet(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil || len(body) == 0 {
+		http.Error(w, "empty manifest body", http.StatusBadRequest)
+		return
+	}
+
+	m, err := manifest.ParseAndValidate(body)
+	if err != nil {
+		http.Error(w, "invalid manifest: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cfg := m.ToQuadletContainer("podman", nil)
+	content := quadlet.GenerateContainerUnit(cfg)
+	respondJSON(w, http.StatusOK, map[string]any{
+		"unit_name":       fmt.Sprintf("%s.container", m.Metadata.Name),
+		"quadlet_spec":    content,
+		"manifest_name":   m.Metadata.Name,
+		"systemd_service": fmt.Sprintf("%s.service", m.Metadata.Name),
+	})
 }
 
 func (s *Server) handleDBStatus(w http.ResponseWriter, r *http.Request) {

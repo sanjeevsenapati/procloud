@@ -67,6 +67,7 @@ type WorkloadRepository interface {
 	ListAllWorkloads(ctx context.Context) ([]*protocol.Workload, error)
 	UpdateWorkloadStatus(ctx context.Context, id, status, healthStatus, containerID, internalIP string) error
 	UpdateWorkloadRelease(ctx context.Context, id string, releaseNum int, imageTag, imageDigest, commitSHA string) error
+	DeleteWorkload(ctx context.Context, id string) error
 }
 
 type DeploymentRepository interface {
