@@ -473,6 +473,10 @@ func (s *Service) handleWireQuery(conn *net.UDPConn, clientAddr *net.UDPAddr, qu
 		qType = "CNAME"
 	} else if qTypeNum == 16 {
 		qType = "TXT"
+	} else if qTypeNum == 2 {
+		qType = "NS"
+	} else if qTypeNum == 6 {
+		qType = "SOA"
 	}
 
 	// Query Service
@@ -533,6 +537,39 @@ func (s *Service) handleWireQuery(conn *net.UDPConn, clientAddr *net.UDPAddr, qu
 				respOffset += 2
 				copy(respBuf[respOffset:respOffset+len(cnameWire)], cnameWire)
 				respOffset += len(cnameWire)
+				anCount++
+			} else if ans.Type == "NS" {
+				nsWire := encodeDNSName(ans.Value)
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 0xc00c)
+				respOffset += 2
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 2) // TYPE NS
+				respOffset += 2
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 1) // CLASS IN
+				respOffset += 2
+				binary.BigEndian.PutUint32(respBuf[respOffset:respOffset+4], uint32(ans.TTL))
+				respOffset += 4
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], uint16(len(nsWire)))
+				respOffset += 2
+				copy(respBuf[respOffset:respOffset+len(nsWire)], nsWire)
+				respOffset += len(nsWire)
+				anCount++
+			} else if ans.Type == "TXT" {
+				valBytes := []byte(ans.Value)
+				rdLen := len(valBytes) + 1
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 0xc00c)
+				respOffset += 2
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 16) // TYPE TXT
+				respOffset += 2
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 1) // CLASS IN
+				respOffset += 2
+				binary.BigEndian.PutUint32(respBuf[respOffset:respOffset+4], uint32(ans.TTL))
+				respOffset += 4
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], uint16(rdLen))
+				respOffset += 2
+				respBuf[respOffset] = byte(len(valBytes))
+				respOffset++
+				copy(respBuf[respOffset:respOffset+len(valBytes)], valBytes)
+				respOffset += len(valBytes)
 				anCount++
 			}
 		}
