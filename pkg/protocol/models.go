@@ -326,6 +326,8 @@ type LoadBalancer struct {
 	Status        string        `json:"status"`    // "active", "provisioning", "error", "disabled"
 	SSLCertSecret string        `json:"ssl_cert_secret,omitempty"`
 	SSLCertType   string        `json:"ssl_cert_type,omitempty"` // "auto", "secret", "custom"
+	DNSName       string        `json:"dns_name,omitempty"`      // e.g. "pd-lb.procloud.net"
+	CNAME         string        `json:"cname,omitempty"`         // e.g. "pd-lb.procloud.net"
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 	Listeners     []*LBListener `json:"listeners,omitempty"`

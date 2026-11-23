@@ -3649,6 +3649,8 @@
                             <div style="display:flex; align-items:center; gap:12px; margin-top:5px; font-size:12px; color:var(--pg-text-muted); flex-wrap:wrap;">
                                 <span>Public VIP: <code id="lbd-vip-badge" style="color:var(--pg-blue-600); font-weight:700;">127.0.0.1</code></span>
                                 <span>•</span>
+                                <span>DNS CNAME: <span id="lbd-cname-badge" class="pill pill-purple" style="font-size:11px; font-weight:700;">-</span></span>
+                                <span>•</span>
                                 <span>Access URL: <a id="lbd-access-url-link" href="#" target="_blank" style="color:var(--pg-blue-600); text-decoration:none; font-weight:600;"><span id="lbd-access-url-text">-</span> ↗</a></span>
                                 <span>•</span>
                                 <span>Attached SSL: <span id="lbd-ssl-secret-badge" class="pill pill-emerald" style="font-size:11px;">Auto Sovereign CA</span></span>
@@ -9461,6 +9463,8 @@ spec:
                     accessUrlText = `${host}${portSuffix}`;
                 }
 
+                const cnameVal = lb.cname || (lb.name.toLowerCase().replace(/[^a-z0-9-]/g, '-') + '.procloud.net');
+
                 return `
                     <tr>
                         <td>
@@ -9470,7 +9474,13 @@ spec:
                                     <span>${escapeHtml(lb.name)}</span>
                                 </a>
                             </div>
-                            ${lb.description ? `<div style="font-size:11px; color:var(--pg-text-secondary); margin-top:2px;">${escapeHtml(lb.description)}</div>` : ''}
+                            <div style="display:flex; align-items:center; gap:6px; margin-top:2px; flex-wrap:wrap;">
+                                <span class="pill pill-purple" style="font-size:10px; font-weight:700; padding:1px 5px; display:inline-flex; align-items:center; gap:2px;" title="Authoritative DNS CNAME in procloud.net">
+                                    <svg class="icon-svg" style="width:9px; height:9px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                                    <span>${escapeHtml(cnameVal)}</span>
+                                </span>
+                                ${lb.description ? `<span style="font-size:11px; color:var(--pg-text-secondary);">${escapeHtml(lb.description)}</span>` : ''}
+                            </div>
                         </td>
                         <td>${typePill}</td>
                         <td>
@@ -9906,6 +9916,10 @@ spec:
             if (vipBadge) vipBadge.innerText = lb.public_ip || 'Auto Host VIP (127.0.0.1)';
             if (vpcBadge) vpcBadge.innerText = lb.vpc_network || 'podman';
 
+            const cnameBadge = document.getElementById('lbd-cname-badge');
+            const cnameVal = lb.cname || (lb.name.toLowerCase().replace(/[^a-z0-9-]/g, '-') + '.procloud.net');
+            if (cnameBadge) cnameBadge.innerText = cnameVal;
+
             // Access URL calculation
             const listeners = lb.listeners || [];
             let primary = listeners.find(l => l.protocol === 'HTTPS') || listeners.find(l => l.protocol === 'HTTP') || listeners[0];
@@ -9967,9 +9981,10 @@ spec:
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; overflow-x:auto; padding:10px 0;">
                         <!-- Edge Traffic Node -->
                         <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:14px 18px; text-align:center; min-width:170px;">
-                            <div style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase; letter-spacing:0.5px;">Public Edge VIP</div>
+                            <div style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase; letter-spacing:0.5px;">Public Edge VIP &amp; DNS</div>
                             <div style="font-size:14px; font-weight:800; color:#0284c7; margin-top:4px;"><code style="background:transparent;">${escapeHtml(lb.public_ip || '127.0.0.1')}</code></div>
-                            <div style="font-size:11px; color:#0369a1; margin-top:2px;">${escapeHtml(accessUrlStr)}</div>
+                            <div style="margin-top:4px;"><span class="pill pill-purple" style="font-size:10px; padding:1px 6px; font-weight:700;">CNAME: ${escapeHtml(cnameVal)}</span></div>
+                            <div style="font-size:11px; color:#0369a1; margin-top:3px;">${escapeHtml(accessUrlStr)}</div>
                         </div>
 
                         <svg class="icon-svg" style="color:#94a3b8; width:20px; height:20px; flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -12680,15 +12695,12 @@ spec:
             const wrapper = document.getElementById('cd-term-xterm-container');
             if (!wrapper) return;
 
-            // Detach previous container's terminal DOM if different
-            if (activeTerminalContainerId && activeTerminalContainerId !== containerId) {
-                const prevSession = containerTerminalSessions.get(activeTerminalContainerId);
-                if (prevSession && prevSession.mountEl && prevSession.mountEl.parentNode === wrapper) {
-                    wrapper.removeChild(prevSession.mountEl);
-                }
-            }
-
             activeTerminalContainerId = containerId;
+
+            // Clear any lingering elements in wrapper to ensure complete isolation
+            while (wrapper.firstChild) {
+                wrapper.removeChild(wrapper.firstChild);
+            }
 
             let session = containerTerminalSessions.get(containerId);
             if (!session) {

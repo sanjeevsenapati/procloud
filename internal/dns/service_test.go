@@ -213,3 +213,107 @@ func TestDNSService_EndToEnd(t *testing.T) {
 		t.Fatalf("expected all records to be cascade deleted, got %d", len(remainingRecs))
 	}
 }
+
+func TestDNSService_ALBCNAMEIntegration(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	dbPath := filepath.Join(tmpDir, "test_dns_alb.db")
+	db, err := sqlite.Open(sqlite.DefaultConfig(dbPath))
+	if err != nil {
+		t.Fatalf("failed opening sqlite db: %v", err)
+	}
+	defer db.Close()
+
+	repo := sqlite.NewRepository(db)
+	svc := NewService(repo)
+
+	// Setup Tenant
+	_ = repo.CreateTenant(ctx, &protocol.Tenant{
+		ID:        "tnt-default",
+		Name:      "Default Organization",
+		Slug:      "default-org",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	// Ensure CNAME for Application Load Balancer
+	cnameRec, err := svc.EnsureALBCNAME(ctx, "tnt-default", "store-front", "layer7", "198.51.100.55")
+	if err != nil {
+		t.Fatalf("failed ensuring ALB CNAME: %v", err)
+	}
+	if cnameRec == nil || cnameRec.Type != "CNAME" || cnameRec.Name != "store-front" {
+		t.Fatalf("unexpected CNAME record: %+v", cnameRec)
+	}
+	if !strings.Contains(cnameRec.Value, "alb-store-front.procloud.net") {
+		t.Fatalf("expected CNAME value to target alb-store-front.procloud.net, got: %s", cnameRec.Value)
+	}
+
+	// Verify procloud.net zone exists
+	zone, err := svc.GetZoneByName(ctx, "tnt-default", "procloud.net")
+	if err != nil || zone == nil {
+		t.Fatalf("expected procloud.net zone to be created, got error: %v", err)
+	}
+
+	// Query store-front.procloud.net (Type A) - should follow CNAME recursively to 198.51.100.55
+	queryResA, err := svc.Query(ctx, protocol.DNSQueryRequest{
+		Host: "store-front.procloud.net",
+		Type: "A",
+	})
+	if err != nil {
+		t.Fatalf("failed querying store-front.procloud.net: %v", err)
+	}
+	if queryResA.Status != "NOERROR" || queryResA.Resolved != "198.51.100.55" {
+		t.Fatalf("expected NOERROR with resolved IP 198.51.100.55, got status=%s resolved=%s", queryResA.Status, queryResA.Resolved)
+	}
+	if len(queryResA.Answers) < 2 {
+		t.Fatalf("expected at least 2 answers (CNAME + recursive A), got %d: %+v", len(queryResA.Answers), queryResA.Answers)
+	}
+
+	// Query store-front.procloud.net (Type CNAME)
+	queryResCNAME, err := svc.Query(ctx, protocol.DNSQueryRequest{
+		Host: "store-front.procloud.net",
+		Type: "CNAME",
+	})
+	if err != nil {
+		t.Fatalf("failed querying CNAME: %v", err)
+	}
+	if len(queryResCNAME.Answers) == 0 || queryResCNAME.Answers[0].Type != "CNAME" {
+		t.Fatalf("expected CNAME answer, got: %+v", queryResCNAME.Answers)
+	}
+
+	// Test SyncAllALBCNAMEs with multiple load balancers
+	lbs := []*protocol.LoadBalancer{
+		{Name: "api-gateway", Type: "layer7", PublicIP: "198.51.100.60"},
+		{Name: "web-hybrid", Type: "hybrid", PublicIP: "198.51.100.70"},
+		{Name: "raw-tcp", Type: "layer4", PublicIP: "198.51.100.80"}, // L4 NLB, not ALB
+	}
+	if err := svc.SyncAllALBCNAMEs(ctx, lbs); err != nil {
+		t.Fatalf("failed syncing ALB CNAMEs: %v", err)
+	}
+
+	// Verify api-gateway and web-hybrid have CNAMEs, raw-tcp does not
+	qAPI, _ := svc.Query(ctx, protocol.DNSQueryRequest{Host: "api-gateway.procloud.net", Type: "A"})
+	if qAPI == nil || qAPI.Resolved != "198.51.100.60" {
+		t.Fatalf("expected api-gateway to resolve to 198.51.100.60, got: %+v", qAPI)
+	}
+
+	qHybrid, _ := svc.Query(ctx, protocol.DNSQueryRequest{Host: "web-hybrid.procloud.net", Type: "A"})
+	if qHybrid == nil || qHybrid.Resolved != "198.51.100.70" {
+		t.Fatalf("expected web-hybrid to resolve to 198.51.100.70, got: %+v", qHybrid)
+	}
+
+	qTCP, _ := svc.Query(ctx, protocol.DNSQueryRequest{Host: "raw-tcp.procloud.net", Type: "A"})
+	if qTCP != nil && qTCP.Status == "NOERROR" {
+		t.Fatalf("expected raw-tcp (layer4) to not have CNAME in procloud.net")
+	}
+
+	// Test RemoveALBCNAME
+	if err := svc.RemoveALBCNAME(ctx, "tnt-default", "store-front"); err != nil {
+		t.Fatalf("failed removing ALB CNAME: %v", err)
+	}
+	qDeleted, _ := svc.Query(ctx, protocol.DNSQueryRequest{Host: "store-front.procloud.net", Type: "A"})
+	if qDeleted != nil && qDeleted.Status == "NOERROR" {
+		t.Fatalf("expected store-front to be removed from DNS, but it still resolved")
+	}
+}

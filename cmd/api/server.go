@@ -74,6 +74,13 @@ func NewServer(
 	ingressCtrl := ingress.NewController("")
 	lbSvc := loadbalancer.NewService(repo, runtime, "")
 	dnsSvc := dns.NewService(repo)
+	lbSvc.SetDNSService(dnsSvc)
+
+	// Ensure each existing Application Load Balancer has a CNAME in procloud.net DNS
+	if existingLBs, err := repo.ListLoadBalancers(context.Background(), ""); err == nil {
+		_ = dnsSvc.SyncAllALBCNAMEs(context.Background(), existingLBs)
+	}
+
 	if err := dnsSvc.StartUDPServer("127.0.0.1:1053"); err != nil {
 		log.Printf("[DNS] Warning: failed starting authoritative UDP listener on 127.0.0.1:1053: %v", err)
 	} else {
@@ -2744,6 +2751,9 @@ func (s *Server) handleUpdateLoadBalancer(w http.ResponseWriter, r *http.Request
 	if err := s.nodeRepo.(*sqlite.Repository).UpdateLoadBalancer(r.Context(), lb); err != nil {
 		http.Error(w, "failed updating loadbalancer: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if s.dnsSvc != nil && (lb.Type == "" || lb.Type == "layer7" || lb.Type == "hybrid" || lb.Type == "l7") {
+		_, _ = s.dnsSvc.EnsureALBCNAME(r.Context(), lb.TenantID, lb.Name, lb.Type, lb.PublicIP)
 	}
 	_, _ = s.lbSvc.SynthesizeConfig(r.Context(), lb.ID)
 	respondJSON(w, http.StatusOK, lb)

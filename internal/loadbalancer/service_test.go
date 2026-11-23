@@ -505,3 +505,103 @@ func TestLoadBalancerMetrics(t *testing.T) {
 		t.Errorf("expected 1 LB metrics record for tenant, got %d", len(allMetrics))
 	}
 }
+
+type mockDNSService struct {
+	ensured   map[string]string
+	removed   map[string]bool
+	syncCount int
+}
+
+func newMockDNSService() *mockDNSService {
+	return &mockDNSService{
+		ensured: make(map[string]string),
+		removed: make(map[string]bool),
+	}
+}
+
+func (m *mockDNSService) EnsureALBCNAME(ctx context.Context, tenantID, lbName, lbType, publicIP string) (*protocol.DNSRecord, error) {
+	m.ensured[lbName] = publicIP
+	return &protocol.DNSRecord{
+		ID:    "rec-mock",
+		Name:  lbName,
+		Type:  "CNAME",
+		Value: fmt.Sprintf("alb-%s.procloud.net.", lbName),
+	}, nil
+}
+
+func (m *mockDNSService) RemoveALBCNAME(ctx context.Context, tenantID, lbName string) error {
+	m.removed[lbName] = true
+	delete(m.ensured, lbName)
+	return nil
+}
+
+func (m *mockDNSService) SyncAllALBCNAMEs(ctx context.Context, lbs []*protocol.LoadBalancer) error {
+	m.syncCount += len(lbs)
+	return nil
+}
+
+func TestLoadBalancer_ALBCNAMEIntegration(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+
+	dbPath := filepath.Join(tmpDir, "test_lb_dns.db")
+	db, err := sqlite.Open(sqlite.DefaultConfig(dbPath))
+	if err != nil {
+		t.Fatalf("failed opening sqlite db: %v", err)
+	}
+	defer db.Close()
+
+	repo := sqlite.NewRepository(db)
+	mockRuntime := podman.NewMockRuntime()
+	confDir := filepath.Join(tmpDir, "nginx_lb_dns")
+	svc := NewService(repo, mockRuntime, confDir)
+
+	mockDNS := newMockDNSService()
+	svc.SetDNSService(mockDNS)
+
+	_ = repo.CreateTenant(ctx, &protocol.Tenant{
+		ID:        "tnt-cname",
+		Name:      "CNAME Corp",
+		Slug:      "cname-corp",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	// 1. Create Application Load Balancer
+	lb, err := svc.CreateLoadBalancer(ctx, protocol.CreateLoadBalancerRequest{
+		TenantID: "tnt-cname",
+		Name:     "store-gateway",
+		Type:     "layer7",
+		PublicIP: "198.51.100.99",
+	})
+	if err != nil {
+		t.Fatalf("failed creating loadbalancer: %v", err)
+	}
+
+	// Verify DNSName and CNAME are populated
+	if lb.CNAME != "store-gateway.procloud.net" || lb.DNSName != "store-gateway.procloud.net" {
+		t.Errorf("expected CNAME to be store-gateway.procloud.net, got: %s", lb.CNAME)
+	}
+
+	// Verify mockDNSService was called
+	if mockDNS.ensured["store-gateway"] != "198.51.100.99" {
+		t.Errorf("expected EnsureALBCNAME to be called for store-gateway with IP 198.51.100.99, got: %v", mockDNS.ensured)
+	}
+
+	// 2. Test GetLoadBalancer populates CNAME
+	getLB, err := svc.GetLoadBalancer(ctx, lb.ID)
+	if err != nil {
+		t.Fatalf("failed getting LB: %v", err)
+	}
+	if getLB.CNAME != "store-gateway.procloud.net" {
+		t.Errorf("expected GetLoadBalancer to populate CNAME, got: %s", getLB.CNAME)
+	}
+
+	// 3. Test DeleteLoadBalancer cleans up CNAME
+	if err := svc.DeleteLoadBalancer(ctx, lb.ID); err != nil {
+		t.Fatalf("failed deleting LB: %v", err)
+	}
+	if !mockDNS.removed["store-gateway"] {
+		t.Errorf("expected RemoveALBCNAME to be called on delete")
+	}
+}

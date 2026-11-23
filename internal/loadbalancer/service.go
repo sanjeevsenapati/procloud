@@ -33,13 +33,24 @@ func genLBID(prefix string) string {
 	return fmt.Sprintf("%s-%d-%d", prefix, time.Now().UnixNano(), seq)
 }
 
+type DNSService interface {
+	EnsureALBCNAME(ctx context.Context, tenantID, lbName, lbType, publicIP string) (*protocol.DNSRecord, error)
+	RemoveALBCNAME(ctx context.Context, tenantID, lbName string) error
+	SyncAllALBCNAMEs(ctx context.Context, lbs []*protocol.LoadBalancer) error
+}
+
 type Service struct {
 	repo      repository.LoadBalancerRepository
 	runtime   podman.ContainerRuntime
 	confDir   string
+	dnsSvc    DNSService
 	mu        sync.Mutex
 	metricsMu sync.RWMutex
 	metrics   map[string]*lbMetricsTracker
+}
+
+func (s *Service) SetDNSService(dnsSvc DNSService) {
+	s.dnsSvc = dnsSvc
 }
 
 func NewService(
@@ -126,8 +137,39 @@ func (s *Service) CreateLoadBalancer(ctx context.Context, req protocol.CreateLoa
 		return nil, fmt.Errorf("failed creating loadbalancer: %w", err)
 	}
 
+	// Ensure Application Load Balancers have an authoritative CNAME in procloud.net DNS
+	if s.dnsSvc != nil && (lb.Type == "" || lb.Type == "layer7" || lb.Type == "hybrid" || lb.Type == "l7") {
+		_, _ = s.dnsSvc.EnsureALBCNAME(ctx, lb.TenantID, lb.Name, lb.Type, lb.PublicIP)
+	}
+	s.populateDNSName(lb)
+
 	_, _ = s.SynthesizeConfig(ctx, lb.ID)
 	return lb, nil
+}
+
+func (s *Service) populateDNSName(lb *protocol.LoadBalancer) {
+	if lb == nil {
+		return
+	}
+	name := strings.ToLower(strings.TrimSpace(lb.Name))
+	var sb strings.Builder
+	for _, ch := range name {
+		if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') {
+			sb.WriteRune(ch)
+		} else if ch == '-' || ch == '_' || ch == ' ' || ch == '.' {
+			sb.WriteRune('-')
+		}
+	}
+	res := strings.Trim(sb.String(), "-")
+	for strings.Contains(res, "--") {
+		res = strings.ReplaceAll(res, "--", "-")
+	}
+	if res == "" {
+		res = "alb"
+	}
+	cname := fmt.Sprintf("%s.procloud.net", res)
+	lb.DNSName = cname
+	lb.CNAME = cname
 }
 
 func (s *Service) AttachSSLSecret(ctx context.Context, lbID string, req protocol.AttachSSLSecretRequest) (*protocol.LoadBalancer, error) {
@@ -179,15 +221,31 @@ func (s *Service) AttachSSLSecret(ctx context.Context, lbID string, req protocol
 	}
 
 	_, _ = s.SynthesizeConfig(ctx, lb.ID)
-	return s.repo.GetLoadBalancerByID(ctx, lb.ID)
+	resLB, err := s.repo.GetLoadBalancerByID(ctx, lb.ID)
+	if err == nil {
+		s.populateDNSName(resLB)
+	}
+	return resLB, err
 }
 
 func (s *Service) GetLoadBalancer(ctx context.Context, id string) (*protocol.LoadBalancer, error) {
-	return s.repo.GetLoadBalancerByID(ctx, id)
+	lb, err := s.repo.GetLoadBalancerByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	s.populateDNSName(lb)
+	return lb, nil
 }
 
 func (s *Service) ListLoadBalancers(ctx context.Context, tenantID string) ([]*protocol.LoadBalancer, error) {
-	return s.repo.ListLoadBalancers(ctx, tenantID)
+	lbs, err := s.repo.ListLoadBalancers(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	for _, lb := range lbs {
+		s.populateDNSName(lb)
+	}
+	return lbs, nil
 }
 
 func (s *Service) DeleteLoadBalancer(ctx context.Context, id string) error {
@@ -203,6 +261,11 @@ func (s *Service) DeleteLoadBalancer(ctx context.Context, id string) error {
 	// Remove config file
 	confFile := filepath.Join(s.confDir, fmt.Sprintf("%s.conf", lb.ID))
 	_ = os.Remove(confFile)
+
+	// Clean up CNAME from procloud.net DNS
+	if s.dnsSvc != nil {
+		_ = s.dnsSvc.RemoveALBCNAME(ctx, lb.TenantID, lb.Name)
+	}
 
 	if err := s.repo.DeleteLoadBalancer(ctx, id); err != nil {
 		return err

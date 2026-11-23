@@ -118,6 +118,12 @@ func (s *Service) GetZone(ctx context.Context, id string) (*protocol.DNSZone, er
 	return s.repo.GetZoneByID(ctx, id)
 }
 
+func (s *Service) GetZoneByName(ctx context.Context, tenantID, name string) (*protocol.DNSZone, error) {
+	name = strings.TrimSpace(strings.ToLower(name))
+	name = strings.TrimSuffix(name, ".")
+	return s.repo.GetZoneByName(ctx, tenantID, name)
+}
+
 func (s *Service) ListZones(ctx context.Context, tenantID string) ([]*protocol.DNSZone, error) {
 	return s.repo.ListZones(ctx, tenantID)
 }
@@ -513,10 +519,225 @@ func (s *Service) handleWireQuery(conn *net.UDPConn, clientAddr *net.UDPAddr, qu
 				copy(respBuf[respOffset:respOffset+4], ip)
 				respOffset += 4
 				anCount++
+			} else if ans.Type == "CNAME" {
+				cnameWire := encodeDNSName(ans.Value)
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 0xc00c)
+				respOffset += 2
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 5) // TYPE CNAME
+				respOffset += 2
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], 1) // CLASS IN
+				respOffset += 2
+				binary.BigEndian.PutUint32(respBuf[respOffset:respOffset+4], uint32(ans.TTL))
+				respOffset += 4
+				binary.BigEndian.PutUint16(respBuf[respOffset:respOffset+2], uint16(len(cnameWire)))
+				respOffset += 2
+				copy(respBuf[respOffset:respOffset+len(cnameWire)], cnameWire)
+				respOffset += len(cnameWire)
+				anCount++
 			}
 		}
 	}
 	binary.BigEndian.PutUint16(respBuf[6:8], anCount) // ANCOUNT
 
 	_, _ = conn.WriteToUDP(respBuf[:respOffset], clientAddr)
+}
+
+func encodeDNSName(name string) []byte {
+	name = strings.TrimSuffix(name, ".")
+	parts := strings.Split(name, ".")
+	var buf []byte
+	for _, p := range parts {
+		if len(p) == 0 {
+			continue
+		}
+		buf = append(buf, byte(len(p)))
+		buf = append(buf, []byte(p)...)
+	}
+	buf = append(buf, 0)
+	return buf
+}
+
+// -------------------------------------------------------------
+// Application Load Balancer (ALB) DNS CNAME Engine
+// -------------------------------------------------------------
+
+// SanitizeDNSLabel converts an arbitrary string into a valid RFC 1123 DNS label:
+// lowercase, alphanumeric and hyphens, max 63 characters.
+func SanitizeDNSLabel(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	var sb strings.Builder
+	for _, ch := range name {
+		if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') {
+			sb.WriteRune(ch)
+		} else if ch == '-' || ch == '_' || ch == ' ' || ch == '.' {
+			sb.WriteRune('-')
+		}
+	}
+	res := strings.Trim(sb.String(), "-")
+	for strings.Contains(res, "--") {
+		res = strings.ReplaceAll(res, "--", "-")
+	}
+	if len(res) > 63 {
+		res = res[:63]
+		res = strings.TrimRight(res, "-")
+	}
+	if res == "" {
+		res = "alb"
+	}
+	return res
+}
+
+// EnsureALBCNAME ensures that the procloud.net DNS zone exists and provisions:
+// 1. A Canonical A record: "alb-<cleanName>.procloud.net" -> publicIP (e.g. 127.0.0.1)
+// 2. A CNAME record: "<cleanName>.procloud.net" -> "alb-<cleanName>.procloud.net."
+// Returns the CNAME record.
+func (s *Service) EnsureALBCNAME(ctx context.Context, tenantID, lbName, lbType, publicIP string) (*protocol.DNSRecord, error) {
+	if lbName == "" {
+		return nil, fmt.Errorf("load balancer name is required")
+	}
+	if tenantID == "" {
+		tenantID = "tnt-default"
+	}
+
+	cleanName := SanitizeDNSLabel(lbName)
+
+	// Resolve publicIP: if empty or "0.0.0.0", use "127.0.0.1" so it's a valid host VIP
+	ip := strings.TrimSpace(publicIP)
+	if ip == "" || ip == "0.0.0.0" {
+		ip = "127.0.0.1"
+	}
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil || parsedIP.To4() == nil {
+		ip = "127.0.0.1"
+	}
+
+	// 1. Ensure procloud.net zone exists
+	zone, err := s.repo.GetZoneByName(ctx, tenantID, "procloud.net")
+	if err != nil || zone == nil {
+		zone, err = s.repo.GetZoneByName(ctx, "", "procloud.net")
+	}
+	if zone == nil {
+		zone, err = s.CreateZone(ctx, protocol.CreateDNSZoneRequest{
+			TenantID:    tenantID,
+			Name:        "procloud.net",
+			Type:        "private",
+			Description: "ProCloud Sovereign Cloud Default Domain & ALB Ingress Routing",
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed ensuring procloud.net zone: %w", err)
+		}
+	}
+
+	// 2. Ensure canonical A record: "alb-<cleanName>"
+	canonicalName := fmt.Sprintf("alb-%s", cleanName)
+	canonicalTarget := fmt.Sprintf("alb-%s.procloud.net.", cleanName)
+
+	records, err := s.repo.ListRecordsByZone(ctx, zone.ID)
+	if err != nil {
+		records = []*protocol.DNSRecord{}
+	}
+
+	var existingARecord *protocol.DNSRecord
+	var existingCNAMERecord *protocol.DNSRecord
+
+	for _, r := range records {
+		if strings.EqualFold(r.Name, canonicalName) && r.Type == "A" {
+			existingARecord = r
+		}
+		if strings.EqualFold(r.Name, cleanName) && r.Type == "CNAME" {
+			existingCNAMERecord = r
+		}
+	}
+
+	// Create or update canonical A record
+	if existingARecord == nil {
+		existingARecord = &protocol.DNSRecord{
+			ID:            genDNSID("rec"),
+			ZoneID:        zone.ID,
+			Name:          canonicalName,
+			Type:          "A",
+			Value:         ip,
+			TTL:           300,
+			RoutingPolicy: "simple",
+			Status:        "active",
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		if err := s.repo.CreateRecord(ctx, existingARecord); err != nil {
+			return nil, fmt.Errorf("failed creating canonical A record: %w", err)
+		}
+	} else if existingARecord.Value != ip {
+		existingARecord.Value = ip
+		existingARecord.UpdatedAt = time.Now()
+		_ = s.repo.UpdateRecord(ctx, existingARecord)
+	}
+
+	// Create or update CNAME record
+	if existingCNAMERecord == nil {
+		existingCNAMERecord = &protocol.DNSRecord{
+			ID:            genDNSID("rec"),
+			ZoneID:        zone.ID,
+			Name:          cleanName,
+			Type:          "CNAME",
+			Value:         canonicalTarget,
+			TTL:           300,
+			RoutingPolicy: "simple",
+			Status:        "active",
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		if err := s.repo.CreateRecord(ctx, existingCNAMERecord); err != nil {
+			return nil, fmt.Errorf("failed creating CNAME record: %w", err)
+		}
+	} else if existingCNAMERecord.Value != canonicalTarget {
+		existingCNAMERecord.Value = canonicalTarget
+		existingCNAMERecord.UpdatedAt = time.Now()
+		_ = s.repo.UpdateRecord(ctx, existingCNAMERecord)
+	}
+
+	return existingCNAMERecord, nil
+}
+
+// RemoveALBCNAME removes the CNAME and canonical A records for an ALB from procloud.net zone.
+func (s *Service) RemoveALBCNAME(ctx context.Context, tenantID, lbName string) error {
+	cleanName := SanitizeDNSLabel(lbName)
+	canonicalName := fmt.Sprintf("alb-%s", cleanName)
+
+	zone, err := s.repo.GetZoneByName(ctx, tenantID, "procloud.net")
+	if err != nil || zone == nil {
+		zone, err = s.repo.GetZoneByName(ctx, "", "procloud.net")
+	}
+	if zone == nil {
+		return nil
+	}
+
+	records, err := s.repo.ListRecordsByZone(ctx, zone.ID)
+	if err != nil {
+		return nil
+	}
+
+	for _, r := range records {
+		if strings.EqualFold(r.Name, cleanName) && r.Type == "CNAME" {
+			_ = s.repo.DeleteRecord(ctx, r.ID)
+		}
+		if strings.EqualFold(r.Name, canonicalName) && r.Type == "A" {
+			_ = s.repo.DeleteRecord(ctx, r.ID)
+		}
+	}
+	return nil
+}
+
+// SyncAllALBCNAMEs iterates through all load balancers and ensures every Application Load Balancer
+// has a CNAME record in procloud.net.
+func (s *Service) SyncAllALBCNAMEs(ctx context.Context, lbs []*protocol.LoadBalancer) error {
+	for _, lb := range lbs {
+		lbType := strings.ToLower(strings.TrimSpace(lb.Type))
+		if lbType != "layer4" && lbType != "l4" {
+			_, err := s.EnsureALBCNAME(ctx, lb.TenantID, lb.Name, lb.Type, lb.PublicIP)
+			if err != nil {
+				fmt.Printf("[DNS] Sync ALB CNAME warning for %s: %v\n", lb.Name, err)
+			}
+		}
+	}
+	return nil
 }
