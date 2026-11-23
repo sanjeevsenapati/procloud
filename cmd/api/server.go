@@ -1419,20 +1419,32 @@ func (s *Server) handleListPodmanNetworks(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) handleCreatePodmanNetwork(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Name    string `json:"name"`
-		Subnet  string `json:"subnet"`
-		Gateway string `json:"gateway"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+	var opts podman.NetworkCreateOptions
+	if err := json.NewDecoder(r.Body).Decode(&opts); err != nil || strings.TrimSpace(opts.Name) == "" {
 		http.Error(w, "network name is required", http.StatusBadRequest)
 		return
 	}
-	if err := s.runtime.CreateNetwork(r.Context(), req.Name, req.Subnet, req.Gateway); err != nil {
+	opts.Name = strings.TrimSpace(opts.Name)
+	if opts.Driver == "" {
+		opts.Driver = "bridge"
+	}
+	if err := s.runtime.CreateNetworkWithOptions(r.Context(), opts); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	respondJSON(w, http.StatusCreated, map[string]string{"message": "network created", "name": req.Name})
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "NETWORK_CREATE", "Network", opts.Name, r.RemoteAddr, fmt.Sprintf("Created network %s (driver: %s, internal: %t, ipv6: %t)", opts.Name, opts.Driver, opts.Internal, opts.IPv6))
+
+	respondJSON(w, http.StatusCreated, map[string]any{
+		"message":  "network created",
+		"name":     opts.Name,
+		"driver":   opts.Driver,
+		"internal": opts.Internal,
+	})
 }
 
 func (s *Server) handleRemovePodmanNetwork(w http.ResponseWriter, r *http.Request) {
@@ -1441,6 +1453,13 @@ func (s *Server) handleRemovePodmanNetwork(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	actor := "anonymous"
+	if claims := s.checkAuth(r); claims != nil {
+		actor = claims.Username
+	}
+	s.auditSvc.Log(r.Context(), actor, "NETWORK_DELETE", "Network", id, r.RemoteAddr, fmt.Sprintf("Removed network %s", id))
+
 	respondJSON(w, http.StatusOK, map[string]string{"message": "network removed", "name": id})
 }
 

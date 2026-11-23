@@ -52,6 +52,7 @@ type ContainerRuntime interface {
 	// Networks & Volumes
 	ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
 	CreateNetwork(ctx context.Context, name, subnet, gateway string) error
+	CreateNetworkWithOptions(ctx context.Context, opts NetworkCreateOptions) error
 	RemoveNetwork(ctx context.Context, name string) error
 
 	ListVolumes(ctx context.Context) ([]*VolumeSummary, error)
@@ -128,6 +129,21 @@ type PlayKubeResult struct {
 	Containers []string `json:"containers"`
 	Volumes    []string `json:"volumes"`
 	Output     string   `json:"output"`
+}
+
+type NetworkCreateOptions struct {
+	Name        string   `json:"name"`
+	Driver      string   `json:"driver"`                // "bridge", "macvlan", "ipvlan"
+	Subnet      string   `json:"subnet,omitempty"`      // e.g. 10.89.2.0/24
+	Gateway     string   `json:"gateway,omitempty"`     // e.g. 10.89.2.1
+	IPRange     string   `json:"ip_range,omitempty"`    // e.g. 10.89.2.100-10.89.2.200
+	Internal    bool     `json:"internal,omitempty"`    // air-gapped / no external WAN
+	IPv6        bool     `json:"ipv6,omitempty"`        // dual-stack IPv6
+	DisableDNS  bool     `json:"disable_dns,omitempty"` // disable aardvark name resolution
+	Parent      string   `json:"parent,omitempty"`      // host interface (e.g. eth0) for macvlan/ipvlan
+	IPvlanMode  string   `json:"ipvlan_mode,omitempty"` // l2 or l3
+	DNS         []string `json:"dns,omitempty"`         // custom DNS servers
+	Options     []string `json:"options,omitempty"`     // custom -o options
 }
 
 type ContainerMountInfo struct {
@@ -224,12 +240,15 @@ type VolumeSummary struct {
 }
 
 type NetworkSummary struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Driver   string `json:"driver"`
-	Subnet   string `json:"subnet"`
-	Gateway  string `json:"gateway"`
-	Internal bool   `json:"internal"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Driver           string `json:"driver"`
+	Subnet           string `json:"subnet"`
+	Gateway          string `json:"gateway"`
+	Internal         bool   `json:"internal"`
+	IPv6             bool   `json:"ipv6"`
+	DNSEnabled       bool   `json:"dns_enabled"`
+	NetworkInterface string `json:"network_interface,omitempty"`
 }
 
 // PodmanCLI implements ContainerRuntime by executing the podman command.
@@ -1220,14 +1239,18 @@ func (p *PodmanCLI) ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
 	}
 
 	var raw []struct {
-		Id          string `json:"Id"`
-		Name        string `json:"Name"`
-		Driver      string `json:"Driver"`
-		Subnets     []struct {
-			Subnet  string `json:"Subnet"`
-			Gateway string `json:"Gateway"`
+		ID               string `json:"id"`
+		Id               string `json:"Id"`
+		Name             string `json:"name"`
+		Driver           string `json:"driver"`
+		NetworkInterface string `json:"network_interface"`
+		Subnets          []struct {
+			Subnet  string `json:"subnet"`
+			Gateway string `json:"gateway"`
 		} `json:"subnets"`
 		Internal    bool `json:"internal"`
+		IPv6Enabled bool `json:"ipv6_enabled"`
+		DNSEnabled  bool `json:"dns_enabled"`
 	}
 	if err := json.Unmarshal(out, &raw); err != nil {
 		return nil, err
@@ -1241,33 +1264,89 @@ func (p *PodmanCLI) ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
 			subnet = n.Subnets[0].Subnet
 			gateway = n.Subnets[0].Gateway
 		}
-		idShort := n.Id
+		idShort := n.ID
+		if idShort == "" {
+			idShort = n.Id
+		}
 		if len(idShort) > 12 {
 			idShort = idShort[:12]
 		}
 		list = append(list, &NetworkSummary{
-			ID:       idShort,
-			Name:     n.Name,
-			Driver:   n.Driver,
-			Subnet:   subnet,
-			Gateway:  gateway,
-			Internal: n.Internal,
+			ID:               idShort,
+			Name:             n.Name,
+			Driver:           n.Driver,
+			Subnet:           subnet,
+			Gateway:          gateway,
+			Internal:         n.Internal,
+			IPv6:             n.IPv6Enabled,
+			DNSEnabled:       n.DNSEnabled,
+			NetworkInterface: n.NetworkInterface,
 		})
 	}
 	return list, nil
 }
 
-func (p *PodmanCLI) CreateNetwork(ctx context.Context, name, subnet, gateway string) error {
-	args := []string{"network", "create", "--driver", "bridge"}
-	if subnet != "" {
-		args = append(args, "--subnet", subnet)
+func (p *PodmanCLI) CreateNetworkWithOptions(ctx context.Context, opts NetworkCreateOptions) error {
+	driver := strings.TrimSpace(opts.Driver)
+	if driver == "" {
+		driver = "bridge"
 	}
-	if gateway != "" {
-		args = append(args, "--gateway", gateway)
+	args := []string{"network", "create", "--driver", driver}
+	if opts.Subnet != "" {
+		args = append(args, "--subnet", strings.TrimSpace(opts.Subnet))
 	}
-	args = append(args, name)
+	if opts.Gateway != "" {
+		args = append(args, "--gateway", strings.TrimSpace(opts.Gateway))
+	}
+	if opts.IPRange != "" {
+		args = append(args, "--ip-range", strings.TrimSpace(opts.IPRange))
+	}
+	if opts.Internal {
+		args = append(args, "--internal")
+	}
+	if opts.IPv6 {
+		args = append(args, "--ipv6")
+	}
+	if opts.DisableDNS {
+		args = append(args, "--disable-dns")
+	}
+	for _, d := range opts.DNS {
+		if trimmed := strings.TrimSpace(d); trimmed != "" {
+			args = append(args, "--dns", trimmed)
+		}
+	}
+	if opts.Parent != "" {
+		args = append(args, "-o", fmt.Sprintf("parent=%s", strings.TrimSpace(opts.Parent)))
+	}
+	if driver == "ipvlan" && opts.IPvlanMode != "" {
+		args = append(args, "-o", fmt.Sprintf("mode=%s", strings.TrimSpace(opts.IPvlanMode)))
+	}
+	for _, o := range opts.Options {
+		if trimmed := strings.TrimSpace(o); trimmed != "" {
+			args = append(args, "-o", trimmed)
+		}
+	}
+	args = append(args, strings.TrimSpace(opts.Name))
+
 	cmd := exec.CommandContext(ctx, p.binPath, args...)
-	return cmd.Run()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg != "" {
+			return fmt.Errorf("podman network create failed: %s", msg)
+		}
+		return fmt.Errorf("podman network create failed: %w", err)
+	}
+	return nil
+}
+
+func (p *PodmanCLI) CreateNetwork(ctx context.Context, name, subnet, gateway string) error {
+	return p.CreateNetworkWithOptions(ctx, NetworkCreateOptions{
+		Name:    name,
+		Driver:  "bridge",
+		Subnet:  subnet,
+		Gateway: gateway,
+	})
 }
 
 func (p *PodmanCLI) RemoveNetwork(ctx context.Context, name string) error {

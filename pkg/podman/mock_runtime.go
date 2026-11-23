@@ -620,18 +620,39 @@ func (m *MockRuntime) ListNetworks(ctx context.Context) ([]*NetworkSummary, erro
 	return list, nil
 }
 
-func (m *MockRuntime) CreateNetwork(ctx context.Context, name, subnet, gateway string) error {
+func (m *MockRuntime) CreateNetworkWithOptions(ctx context.Context, opts NetworkCreateOptions) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.Networks[name] = &NetworkSummary{
-		ID:      fmt.Sprintf("net-%d", time.Now().UnixNano())[:12],
+	driver := opts.Driver
+	if driver == "" {
+		driver = "bridge"
+	}
+	dnsEnabled := true
+	if opts.DisableDNS {
+		dnsEnabled = false
+	}
+	m.Networks[opts.Name] = &NetworkSummary{
+		ID:               fmt.Sprintf("net-%d", time.Now().UnixNano())[:12],
+		Name:             opts.Name,
+		Driver:           driver,
+		Subnet:           opts.Subnet,
+		Gateway:          opts.Gateway,
+		Internal:         opts.Internal,
+		IPv6:             opts.IPv6,
+		DNSEnabled:       dnsEnabled,
+		NetworkInterface: opts.Parent,
+	}
+	return nil
+}
+
+func (m *MockRuntime) CreateNetwork(ctx context.Context, name, subnet, gateway string) error {
+	return m.CreateNetworkWithOptions(ctx, NetworkCreateOptions{
 		Name:    name,
 		Driver:  "bridge",
 		Subnet:  subnet,
 		Gateway: gateway,
-	}
-	return nil
+	})
 }
 
 func (m *MockRuntime) RemoveNetwork(ctx context.Context, name string) error {
