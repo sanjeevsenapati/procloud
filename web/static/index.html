@@ -1358,6 +1358,38 @@
             display: none;
         }
 
+        .sidebar-category-header {
+            padding: 14px 14px 4px 14px;
+            display: flex;
+            align-items: center;
+        }
+        .sidebar-category-header:first-child {
+            padding-top: 4px;
+        }
+        .sidebar-category-header .sidebar-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            user-select: none;
+        }
+        aside.progit-sidebar.collapsed .sidebar-category-header {
+            padding: 6px 6px 2px 6px;
+            border-top: 1px solid #f1f5f9;
+            margin-top: 4px;
+        }
+        aside.progit-sidebar.collapsed .sidebar-category-header:first-child {
+            border-top: none;
+            margin-top: 0;
+            padding-top: 0;
+        }
+        aside.progit-sidebar.collapsed .sidebar-category-header .sidebar-section-title {
+            display: none;
+        }
+
         .sidebar-pin-btn {
             background: transparent;
             border: 1px solid var(--pg-border);
@@ -2001,15 +2033,19 @@
             </div>
 
             <nav class="sidebar-nav">
+                <!-- 1. DASHBOARD -->
+                <div class="sidebar-category-header">
+                    <span class="sidebar-section-title">Dashboard</span>
+                </div>
                 <a class="sidebar-item active" onclick="switchTab('dashboard')" data-tab="dashboard" data-tooltip="Overview">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
                     <span class="sidebar-label">Overview</span>
                 </a>
-                <a class="sidebar-item" onclick="switchTab('workflow')" data-tab="workflow" data-tooltip="Build & Deploy">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/></svg>
-                    <span class="sidebar-label">Build &amp; Deploy</span>
-                    <span class="sidebar-badge pill-blue">CI/CD</span>
-                </a>
+
+                <!-- 2. COMPUTE & WORKLOADS -->
+                <div class="sidebar-category-header">
+                    <span class="sidebar-section-title">Workloads &amp; Compute</span>
+                </div>
                 <a class="sidebar-item" onclick="switchTab('containers')" data-tab="containers" data-tooltip="Containers">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
                     <span class="sidebar-label">Containers</span>
@@ -2020,21 +2056,35 @@
                     <span class="sidebar-label">Pods</span>
                     <span class="sidebar-badge" id="tab-badge-pods">0</span>
                 </a>
+                <a class="sidebar-item" onclick="switchTab('deployments')" data-tab="deployments" data-tooltip="Deployments & Quadlet">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                    <span class="sidebar-label">Deployments &amp; Quadlet</span>
+                </a>
+                <a class="sidebar-item" onclick="switchTab('schedules')" data-tab="schedules" data-tooltip="Cron & Schedules">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="sidebar-label">Cron &amp; Schedules</span>
+                    <span class="sidebar-badge pill-purple" id="tab-badge-schedules">0</span>
+                </a>
+
+                <!-- 3. BUILD & CI/CD -->
+                <div class="sidebar-category-header">
+                    <span class="sidebar-section-title">Build &amp; CI/CD</span>
+                </div>
+                <a class="sidebar-item" onclick="switchTab('workflow')" data-tab="workflow" data-tooltip="Build & Deploy">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M18 6a9 9 0 0 1-9 9"/><path d="M18 15v3"/><path d="m21 15-3 3-3-3"/><path d="M6 9v12"/></svg>
+                    <span class="sidebar-label">Build &amp; Deploy</span>
+                    <span class="sidebar-badge pill-blue">CI/CD</span>
+                </a>
                 <a class="sidebar-item" onclick="switchTab('images')" data-tab="images" data-tooltip="Images">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                     <span class="sidebar-label">Images</span>
                     <span class="sidebar-badge" id="tab-badge-images">0</span>
                 </a>
-                <a class="sidebar-item" onclick="switchTab('volumes')" data-tab="volumes" data-tooltip="Volumes">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
-                    <span class="sidebar-label">Volumes</span>
-                    <span class="sidebar-badge" id="tab-badge-volumes">0</span>
-                </a>
-                <a class="sidebar-item" onclick="switchTab('networks')" data-tab="networks" data-tooltip="Networks">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
-                    <span class="sidebar-label">Networks</span>
-                    <span class="sidebar-badge" id="tab-badge-networks">0</span>
-                </a>
+
+                <!-- 4. NETWORKING & TRAFFIC -->
+                <div class="sidebar-category-header">
+                    <span class="sidebar-section-title">Networking &amp; Traffic</span>
+                </div>
                 <a class="sidebar-item" onclick="switchTab('loadbalancers')" data-tab="loadbalancers" data-tooltip="Load Balancers">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="6" x="3" y="3" rx="2"/><rect width="18" height="6" x="3" y="15" rx="2"/><circle cx="7" cy="18" r="1"/><circle cx="12" cy="18" r="1"/><circle cx="17" cy="18" r="1"/><path d="M7 6v3a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V6"/></svg>
                     <span class="sidebar-label">Load Balancers</span>
@@ -2045,20 +2095,31 @@
                     <span class="sidebar-label">DNS Service</span>
                     <span class="sidebar-badge pill-blue" id="tab-badge-dns">0</span>
                 </a>
+                <a class="sidebar-item" onclick="switchTab('networks')" data-tab="networks" data-tooltip="Networks">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    <span class="sidebar-label">Networks</span>
+                    <span class="sidebar-badge" id="tab-badge-networks">0</span>
+                </a>
+
+                <!-- 5. STORAGE & SECURITY -->
+                <div class="sidebar-category-header">
+                    <span class="sidebar-section-title">Storage &amp; Security</span>
+                </div>
+                <a class="sidebar-item" onclick="switchTab('volumes')" data-tab="volumes" data-tooltip="Volumes">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+                    <span class="sidebar-label">Volumes</span>
+                    <span class="sidebar-badge" id="tab-badge-volumes">0</span>
+                </a>
                 <a class="sidebar-item" onclick="switchTab('secrets')" data-tab="secrets" data-tooltip="Secrets">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></svg>
                     <span class="sidebar-label">Secrets</span>
                     <span class="sidebar-badge" id="tab-badge-secrets">0</span>
                 </a>
-                <a class="sidebar-item" onclick="switchTab('deployments')" data-tab="deployments" data-tooltip="Deployments & Quadlet">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-                    <span class="sidebar-label">Deployments &amp; Quadlet</span>
-                </a>
-                <a class="sidebar-item" onclick="switchTab('schedules')" data-tab="schedules" data-tooltip="Cron & Schedules">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span class="sidebar-label">Cron &amp; Schedules</span>
-                    <span class="sidebar-badge pill-purple" id="tab-badge-schedules">0</span>
-                </a>
+
+                <!-- 6. OPERATIONS & SYSTEM -->
+                <div class="sidebar-category-header" id="sidebar-system-title">
+                    <span class="sidebar-section-title">System &amp; Operations</span>
+                </div>
                 <a class="sidebar-item" onclick="switchTab('telemetry')" data-tab="telemetry" data-tooltip="SQLite WAL & Jobs">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     <span class="sidebar-label">SQLite WAL &amp; Jobs</span>
@@ -2069,7 +2130,10 @@
                     <span class="sidebar-badge pill-emerald">16 Steps</span>
                 </a>
 
-                <div class="sidebar-section-title" id="sidebar-admin-title" style="padding: 12px 14px 4px 14px; font-size: 10px; font-weight: 700; color: var(--pg-text-muted); text-transform: uppercase; letter-spacing: 0.6px;">Administration</div>
+                <!-- 7. ADMINISTRATION -->
+                <div class="sidebar-category-header" id="sidebar-admin-title">
+                    <span class="sidebar-section-title">Administration</span>
+                </div>
                 <a class="sidebar-item" onclick="switchTab('organizations')" data-tab="organizations" data-tooltip="Organizations">
                     <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
                     <span class="sidebar-label">Organizations</span>
@@ -7431,11 +7495,14 @@ spec:
             const sidebarMile = document.querySelector('.sidebar-item[data-tab="milestone"]');
             if (sidebarMile) sidebarMile.style.display = isSuper ? 'flex' : 'none';
 
+            const systemTitle = document.getElementById('sidebar-system-title');
+            if (systemTitle) systemTitle.style.display = isSuper ? 'flex' : 'none';
+
             const sidebarUsers = document.querySelector('.sidebar-item[data-tab="users"]');
             if (sidebarUsers) sidebarUsers.style.display = isOrg ? 'flex' : 'none';
 
             const adminTitle = document.getElementById('sidebar-admin-title');
-            if (adminTitle) adminTitle.style.display = isOrg ? 'block' : 'none';
+            if (adminTitle) adminTitle.style.display = isOrg ? 'flex' : 'none';
 
             // 2. Hide/show elements tagged with role classes
             document.querySelectorAll('.rbac-admin-only').forEach(el => {
