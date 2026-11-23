@@ -1516,13 +1516,14 @@ func (s *Server) handleListPodmanVolumes(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleCreatePodmanVolume(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name string `json:"name"`
+		Name   string            `json:"name"`
+		Labels map[string]string `json:"labels,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Name) == "" {
 		http.Error(w, "volume name is required", http.StatusBadRequest)
 		return
 	}
-	path, err := s.runtime.CreateVolume(r.Context(), req.Name)
+	path, err := s.runtime.CreateVolumeWithOptions(r.Context(), strings.TrimSpace(req.Name), req.Labels)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

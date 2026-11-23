@@ -642,6 +642,7 @@ func (m *MockRuntime) CreateNetworkWithOptions(ctx context.Context, opts Network
 		IPv6:             opts.IPv6,
 		DNSEnabled:       dnsEnabled,
 		NetworkInterface: opts.Parent,
+		Labels:           opts.Labels,
 	}
 	return nil
 }
@@ -673,7 +674,7 @@ func (m *MockRuntime) ListVolumes(ctx context.Context) ([]*VolumeSummary, error)
 	return list, nil
 }
 
-func (m *MockRuntime) CreateVolume(ctx context.Context, name string) (string, error) {
+func (m *MockRuntime) CreateVolumeWithOptions(ctx context.Context, name string, labels map[string]string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -683,8 +684,13 @@ func (m *MockRuntime) CreateVolume(ctx context.Context, name string) (string, er
 		Scope:      "local",
 		Mountpoint: fmt.Sprintf("/var/lib/procloud/volumes/%s", name),
 		Size:       "100 MB",
+		Labels:     labels,
 	}
 	return m.Volumes[name].Mountpoint, nil
+}
+
+func (m *MockRuntime) CreateVolume(ctx context.Context, name string) (string, error) {
+	return m.CreateVolumeWithOptions(ctx, name, nil)
 }
 
 func (m *MockRuntime) RemoveVolume(ctx context.Context, name string) error {

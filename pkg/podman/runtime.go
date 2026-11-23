@@ -57,6 +57,7 @@ type ContainerRuntime interface {
 
 	ListVolumes(ctx context.Context) ([]*VolumeSummary, error)
 	CreateVolume(ctx context.Context, name string) (string, error)
+	CreateVolumeWithOptions(ctx context.Context, name string, labels map[string]string) (string, error)
 	RemoveVolume(ctx context.Context, name string) error
 
 	// Secrets (Podman Desktop Secrets Engine)
@@ -142,8 +143,9 @@ type NetworkCreateOptions struct {
 	DisableDNS  bool     `json:"disable_dns,omitempty"` // disable aardvark name resolution
 	Parent      string   `json:"parent,omitempty"`      // host interface (e.g. eth0) for macvlan/ipvlan
 	IPvlanMode  string   `json:"ipvlan_mode,omitempty"` // l2 or l3
-	DNS         []string `json:"dns,omitempty"`         // custom DNS servers
-	Options     []string `json:"options,omitempty"`     // custom -o options
+	DNS         []string          `json:"dns,omitempty"`         // custom DNS servers
+	Options     []string          `json:"options,omitempty"`     // custom -o options
+	Labels      map[string]string `json:"labels,omitempty"`      // metadata tags/labels
 }
 
 type ContainerMountInfo struct {
@@ -232,23 +234,25 @@ type ImageSummary struct {
 }
 
 type VolumeSummary struct {
-	Name       string `json:"name"`
-	Driver     string `json:"driver"`
-	Scope      string `json:"scope"`
-	Mountpoint string `json:"mountpoint"`
-	Size       string `json:"size,omitempty"`
+	Name       string            `json:"name"`
+	Driver     string            `json:"driver"`
+	Scope      string            `json:"scope"`
+	Mountpoint string            `json:"mountpoint"`
+	Size       string            `json:"size,omitempty"`
+	Labels     map[string]string `json:"labels,omitempty"`
 }
 
 type NetworkSummary struct {
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	Driver           string `json:"driver"`
-	Subnet           string `json:"subnet"`
-	Gateway          string `json:"gateway"`
-	Internal         bool   `json:"internal"`
-	IPv6             bool   `json:"ipv6"`
-	DNSEnabled       bool   `json:"dns_enabled"`
-	NetworkInterface string `json:"network_interface,omitempty"`
+	ID               string            `json:"id"`
+	Name             string            `json:"name"`
+	Driver           string            `json:"driver"`
+	Subnet           string            `json:"subnet"`
+	Gateway          string            `json:"gateway"`
+	Internal         bool              `json:"internal"`
+	IPv6             bool              `json:"ipv6"`
+	DNSEnabled       bool              `json:"dns_enabled"`
+	NetworkInterface string            `json:"network_interface,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
 }
 
 // PodmanCLI implements ContainerRuntime by executing the podman command.
@@ -1192,10 +1196,11 @@ func (p *PodmanCLI) ListVolumes(ctx context.Context) ([]*VolumeSummary, error) {
 	}
 
 	var raw []struct {
-		Name       string `json:"Name"`
-		Driver     string `json:"Driver"`
-		Scope      string `json:"Scope"`
-		Mountpoint string `json:"Mountpoint"`
+		Name       string            `json:"Name"`
+		Driver     string            `json:"Driver"`
+		Scope      string            `json:"Scope"`
+		Mountpoint string            `json:"Mountpoint"`
+		Labels     map[string]string `json:"Labels"`
 	}
 	if err := json.Unmarshal(out, &raw); err != nil {
 		return nil, err
@@ -1208,18 +1213,30 @@ func (p *PodmanCLI) ListVolumes(ctx context.Context) ([]*VolumeSummary, error) {
 			Driver:     v.Driver,
 			Scope:      v.Scope,
 			Mountpoint: v.Mountpoint,
+			Labels:     v.Labels,
 		})
 	}
 	return list, nil
 }
 
-func (p *PodmanCLI) CreateVolume(ctx context.Context, name string) (string, error) {
-	cmd := exec.CommandContext(ctx, p.binPath, "volume", "create", name)
-	out, err := cmd.Output()
+func (p *PodmanCLI) CreateVolumeWithOptions(ctx context.Context, name string, labels map[string]string) (string, error) {
+	args := []string{"volume", "create"}
+	for k, v := range labels {
+		if strings.TrimSpace(k) != "" {
+			args = append(args, "--label", fmt.Sprintf("%s=%s", strings.TrimSpace(k), strings.TrimSpace(v)))
+		}
+	}
+	args = append(args, name)
+	cmd := exec.CommandContext(ctx, p.binPath, args...)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("podman volume create failed: %s (%w)", strings.TrimSpace(string(out)), err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func (p *PodmanCLI) CreateVolume(ctx context.Context, name string) (string, error) {
+	return p.CreateVolumeWithOptions(ctx, name, nil)
 }
 
 func (p *PodmanCLI) RemoveVolume(ctx context.Context, name string) error {
@@ -1248,9 +1265,10 @@ func (p *PodmanCLI) ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
 			Subnet  string `json:"subnet"`
 			Gateway string `json:"gateway"`
 		} `json:"subnets"`
-		Internal    bool `json:"internal"`
-		IPv6Enabled bool `json:"ipv6_enabled"`
-		DNSEnabled  bool `json:"dns_enabled"`
+		Internal    bool              `json:"internal"`
+		IPv6Enabled bool              `json:"ipv6_enabled"`
+		DNSEnabled  bool              `json:"dns_enabled"`
+		Labels      map[string]string `json:"labels"`
 	}
 	if err := json.Unmarshal(out, &raw); err != nil {
 		return nil, err
@@ -1281,6 +1299,7 @@ func (p *PodmanCLI) ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
 			IPv6:             n.IPv6Enabled,
 			DNSEnabled:       n.DNSEnabled,
 			NetworkInterface: n.NetworkInterface,
+			Labels:           n.Labels,
 		})
 	}
 	return list, nil
@@ -1324,6 +1343,11 @@ func (p *PodmanCLI) CreateNetworkWithOptions(ctx context.Context, opts NetworkCr
 	for _, o := range opts.Options {
 		if trimmed := strings.TrimSpace(o); trimmed != "" {
 			args = append(args, "-o", trimmed)
+		}
+	}
+	for k, v := range opts.Labels {
+		if strings.TrimSpace(k) != "" {
+			args = append(args, "--label", fmt.Sprintf("%s=%s", strings.TrimSpace(k), strings.TrimSpace(v)))
 		}
 	}
 	args = append(args, strings.TrimSpace(opts.Name))
@@ -1383,6 +1407,62 @@ func (p *PodmanCLI) RemoveQuadletUnit(ctx context.Context, unitName string) erro
 // -------------------------------------------------------------
 
 func (p *PodmanCLI) ListSecrets(ctx context.Context) ([]*SecretSummary, error) {
+	cmdLs := exec.CommandContext(ctx, p.binPath, "secret", "ls", "-q")
+	outLs, err := cmdLs.Output()
+	if err != nil {
+		return nil, err
+	}
+	ids := strings.Fields(strings.TrimSpace(string(outLs)))
+	if len(ids) == 0 {
+		return []*SecretSummary{}, nil
+	}
+
+	inspectArgs := append([]string{"secret", "inspect"}, ids...)
+	cmdInspect := exec.CommandContext(ctx, p.binPath, inspectArgs...)
+	outInspect, err := cmdInspect.Output()
+	if err != nil {
+		return p.listSecretsBasic(ctx)
+	}
+
+	var rawInspect []struct {
+		ID        string `json:"ID"`
+		CreatedAt string `json:"CreatedAt"`
+		UpdatedAt string `json:"UpdatedAt"`
+		Spec      struct {
+			Name   string `json:"Name"`
+			Driver struct {
+				Name string `json:"Name"`
+			} `json:"Driver"`
+			Labels map[string]string `json:"Labels"`
+		} `json:"Spec"`
+	}
+	if err := json.Unmarshal(outInspect, &rawInspect); err != nil {
+		return p.listSecretsBasic(ctx)
+	}
+
+	var list []*SecretSummary
+	for _, raw := range rawInspect {
+		idShort := raw.ID
+		if len(idShort) > 12 {
+			idShort = idShort[:12]
+		}
+		driver := raw.Spec.Driver.Name
+		if driver == "" {
+			driver = "file"
+		}
+		list = append(list, &SecretSummary{
+			ID:        idShort,
+			Name:      raw.Spec.Name,
+			Driver:    driver,
+			CreatedAt: raw.CreatedAt,
+			UpdatedAt: raw.UpdatedAt,
+			Labels:    raw.Spec.Labels,
+		})
+	}
+	return list, nil
+}
+
+func (p *PodmanCLI) listSecretsBasic(ctx context.Context) ([]*SecretSummary, error) {
 	cmd := exec.CommandContext(ctx, p.binPath, "secret", "ls", "--format", "{{json .}}")
 	out, err := cmd.Output()
 	if err != nil {
