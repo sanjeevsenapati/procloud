@@ -1107,7 +1107,7 @@ func (p *PodmanCLI) PlayKube(ctx context.Context, kubeYAML string) (*PlayKubeRes
 	}
 	tmpFile.Close()
 
-	cmd := exec.CommandContext(ctx, p.binPath, "play", "kube", tmpFile.Name())
+	cmd := exec.CommandContext(ctx, p.binPath, "play", "kube", "--replace", tmpFile.Name())
 	out, err := cmd.CombinedOutput()
 	outputStr := string(out)
 	if err != nil {
@@ -1124,39 +1124,38 @@ func (p *PodmanCLI) PlayKube(ctx context.Context, kubeYAML string) (*PlayKubeRes
 		if line == "" {
 			continue
 		}
-		if strings.HasPrefix(line, "Pod:") {
-			val := strings.TrimSpace(strings.TrimPrefix(line, "Pod:"))
+		if strings.HasPrefix(line, "Pod:") || (strings.HasPrefix(line, "Pods:") && !strings.Contains(line, "stopped") && !strings.Contains(line, "removed")) {
+			val := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "Pods:"), "Pod:"))
 			if val != "" {
 				result.Pods = append(result.Pods, val)
 				currentSection = ""
 			} else {
 				currentSection = "pod"
 			}
-		} else if strings.HasPrefix(line, "Container:") {
-			val := strings.TrimSpace(strings.TrimPrefix(line, "Container:"))
+		} else if strings.HasPrefix(line, "Container:") || strings.HasPrefix(line, "Containers:") {
+			val := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "Containers:"), "Container:"))
 			if val != "" {
 				result.Containers = append(result.Containers, val)
 				currentSection = ""
 			} else {
 				currentSection = "container"
 			}
-		} else if strings.HasPrefix(line, "Volume:") {
-			val := strings.TrimSpace(strings.TrimPrefix(line, "Volume:"))
+		} else if strings.HasPrefix(line, "Volume:") || (strings.HasPrefix(line, "Volumes:") && !strings.Contains(line, "removed")) {
+			val := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "Volumes:"), "Volume:"))
 			if val != "" {
 				result.Volumes = append(result.Volumes, val)
 				currentSection = ""
 			} else {
 				currentSection = "volume"
 			}
+		} else if strings.HasPrefix(line, "Secrets removed:") || strings.HasPrefix(line, "Pods stopped:") || strings.HasPrefix(line, "Pods removed:") || strings.HasPrefix(line, "Volumes removed:") {
+			currentSection = ""
 		} else if currentSection == "pod" {
 			result.Pods = append(result.Pods, line)
-			currentSection = ""
 		} else if currentSection == "container" {
 			result.Containers = append(result.Containers, line)
-			currentSection = ""
 		} else if currentSection == "volume" {
 			result.Volumes = append(result.Volumes, line)
-			currentSection = ""
 		}
 	}
 	return result, nil

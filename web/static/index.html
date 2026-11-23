@@ -4552,7 +4552,7 @@ spec:
       port: 8080
   restartPolicy: always</textarea>
                             <div style="display:flex; gap:8px;">
-                                <button class="btn btn-primary rbac-write-only" style="flex:1; justify-content:center;" onclick="deployManifest()">
+                                <button id="manifest-deploy-btn" class="btn btn-primary rbac-write-only" style="flex:1; justify-content:center;" onclick="deployManifest()">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                                     <span>Deploy Application</span>
                                 </button>
@@ -5128,7 +5128,7 @@ spec:
                     <input type="text" id="wiz-health-path" class="form-input" placeholder="/" value="/">
                 </div>
 
-                <button class="btn btn-primary" style="width:100%; justify-content:center; padding:10px; font-weight:600;" onclick="submitWizardDeployment()">
+                <button id="wiz-deploy-btn" class="btn btn-primary" style="width:100%; justify-content:center; padding:10px; font-weight:600;" onclick="submitWizardDeployment()">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                     <span>Deploy Application</span>
                 </button>
@@ -5137,7 +5137,7 @@ spec:
             <!-- Raw YAML Mode -->
             <div id="dep-view-raw" style="display:none;">
                 <textarea id="wiz-raw-yaml" class="form-input" style="height: 320px; font-family:'JetBrains Mono',monospace; font-size:12px;"></textarea>
-                <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:12px; padding:10px; font-weight:600;" onclick="submitRawDeployment()">
+                <button id="raw-deploy-btn" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:12px; padding:10px; font-weight:600;" onclick="submitRawDeployment()">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
                     <span>Deploy Manifest</span>
                 </button>
@@ -5768,17 +5768,26 @@ spec:
                 </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:8px;">
                 <label class="form-label">Kubernetes Pod Manifest (YAML)</label>
                 <textarea id="play-kube-yaml" class="form-input" style="height:320px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.45;"></textarea>
             </div>
 
-            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
-                <button class="btn" onclick="closeModal('play-kube-modal')">Cancel</button>
-                <button class="btn btn-primary" onclick="submitPlayKube()">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                    <span>Deploy Pod via Play Kube</span>
-                </button>
+            <!-- Feedback / Progress / Error Notice -->
+            <div id="play-kube-feedback" style="display:none; margin-bottom:12px;"></div>
+
+            <div style="display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap;">
+                <div style="font-size:12px; color:var(--pg-text-muted); display:flex; align-items:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Automatically updates and replaces existing pods (--replace).</span>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" id="play-kube-cancel-btn" onclick="closeModal('play-kube-modal')">Cancel</button>
+                    <button class="btn btn-primary" id="play-kube-submit-btn" onclick="submitPlayKube()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        <span>Deploy Pod via Play Kube</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -8546,6 +8555,13 @@ spec:
       port: ${containerPort}
   restartPolicy: always`;
 
+            const btn = document.getElementById('wiz-deploy-btn');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner" style="width:13px; height:13px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin 0.8s linear infinite;"></span> <span>Deploying Application...</span>`;
+            }
+
             try {
                 const res = await authFetch('/api/v1/deployments', {
                     method: 'POST',
@@ -8562,12 +8578,25 @@ spec:
                 }
             } catch (e) {
                 showToast('Deployment error: ' + e.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
             }
         }
 
         async function submitRawDeployment() {
             const yamlText = document.getElementById('wiz-raw-yaml').value;
             if (!yamlText.trim()) return;
+
+            const btn = document.getElementById('raw-deploy-btn');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner" style="width:13px; height:13px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin 0.8s linear infinite;"></span> <span>Deploying Manifest...</span>`;
+            }
+
             try {
                 const res = await authFetch('/api/v1/deployments', {
                     method: 'POST',
@@ -8584,6 +8613,11 @@ spec:
                 }
             } catch (e) {
                 showToast('Deployment error: ' + e.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
             }
         }
 
@@ -13089,6 +13123,13 @@ spec:
 
         async function deployManifest() {
             const yamlText = document.getElementById('manifest-editor').value;
+            const btn = document.getElementById('manifest-deploy-btn');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner" style="width:13px; height:13px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin 0.8s linear infinite;"></span> <span>Deploying Application...</span>`;
+            }
+
             try {
                 const res = await authFetch('/api/v1/deployments', {
                     method: 'POST',
@@ -13096,13 +13137,19 @@ spec:
                     body: yamlText
                 });
                 if (res.ok) {
-                    showToast('Deployment triggered successfully!', 'success');
+                    showToast('Application deployment triggered successfully!', 'success');
+                    switchDeploymentsSubTab('workloads');
                     fetchDeployments();
                 } else {
                     showToast('Deployment failed: ' + await res.text(), 'error');
                 }
             } catch (e) {
                 showToast('Deployment error: ' + e.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
             }
         }
 
@@ -14404,6 +14451,22 @@ spec:
 
         function openPlayKubeModal(initialYaml) {
             const editor = document.getElementById('play-kube-yaml');
+            const feedbackEl = document.getElementById('play-kube-feedback');
+            const submitBtn = document.getElementById('play-kube-submit-btn');
+            const cancelBtn = document.getElementById('play-kube-cancel-btn');
+
+            if (feedbackEl) {
+                feedbackEl.style.display = 'none';
+                feedbackEl.innerHTML = '';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>Deploy Pod via Play Kube</span>`;
+            }
+            if (cancelBtn) cancelBtn.disabled = false;
+
             if (initialYaml) {
                 editor.value = initialYaml;
             } else if (!editor.value.trim()) {
@@ -14415,6 +14478,11 @@ spec:
         function loadPlayKubeTemplate(tpl) {
             if (playKubeTemplates[tpl]) {
                 document.getElementById('play-kube-yaml').value = playKubeTemplates[tpl];
+                const feedbackEl = document.getElementById('play-kube-feedback');
+                if (feedbackEl) {
+                    feedbackEl.style.display = 'none';
+                    feedbackEl.innerHTML = '';
+                }
             }
         }
 
@@ -14424,6 +14492,11 @@ spec:
             const reader = new FileReader();
             reader.onload = (event) => {
                 document.getElementById('play-kube-yaml').value = event.target.result;
+                const feedbackEl = document.getElementById('play-kube-feedback');
+                if (feedbackEl) {
+                    feedbackEl.style.display = 'none';
+                    feedbackEl.innerHTML = '';
+                }
                 showToast(`Loaded ${file.name}`, 'info');
             };
             reader.readAsText(file);
@@ -14431,9 +14504,38 @@ spec:
 
         async function submitPlayKube() {
             const yamlText = document.getElementById('play-kube-yaml').value;
+            const feedbackEl = document.getElementById('play-kube-feedback');
+            const submitBtn = document.getElementById('play-kube-submit-btn');
+            const cancelBtn = document.getElementById('play-kube-cancel-btn');
+
             if (!yamlText.trim()) {
+                if (feedbackEl) {
+                    feedbackEl.style.display = 'block';
+                    feedbackEl.innerHTML = `
+                        <div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:12px;">
+                            Kubernetes YAML manifest cannot be empty. Please select a template or enter YAML.
+                        </div>`;
+                }
                 showToast('Kubernetes YAML manifest is required', 'error');
                 return;
+            }
+
+            // Enter active loading state
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `
+                    <span class="spinner" style="width:13px; height:13px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin 0.8s linear infinite;"></span>
+                    <span>Deploying Pod...</span>`;
+            }
+            if (cancelBtn) cancelBtn.disabled = true;
+
+            if (feedbackEl) {
+                feedbackEl.style.display = 'block';
+                feedbackEl.innerHTML = `
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; padding:10px 14px; border-radius:8px; font-size:12px; display:flex; align-items:center; gap:8px;">
+                        <span class="spinner" style="width:14px; height:14px; border:2px solid #2563eb; border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin 0.8s linear infinite; flex-shrink:0;"></span>
+                        <div>Deploying Kubernetes manifest to Podman runtime (creating pod, starting containers)...</div>
+                    </div>`;
             }
 
             try {
@@ -14445,17 +14547,83 @@ spec:
 
                 if (res.ok) {
                     const data = await res.json();
-                    closeModal('play-kube-modal');
-                    showToast('Pod successfully deployed via Kubernetes YAML manifest!', 'success');
-                    switchTab('pods');
-                    fetchPods();
-                    fetchContainers();
+                    const containerCount = (data && data.Containers) ? data.Containers.length : 0;
+
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML = `
+                            <div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#047857; padding:10px 14px; border-radius:8px; font-size:12px; display:flex; align-items:center; gap:8px;">
+                                <svg class="icon-svg" style="color:#059669; flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
+                                <div>
+                                    <strong>Pod deployed successfully!</strong> ${containerCount} container(s) active. Redirecting to Pods...
+                                </div>
+                            </div>`;
+                    }
+
+                    showToast('Pod successfully deployed via Play Kube!', 'success');
+
+                    setTimeout(() => {
+                        closeModal('play-kube-modal');
+                        if (feedbackEl) {
+                            feedbackEl.style.display = 'none';
+                            feedbackEl.innerHTML = '';
+                        }
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = `
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                                <span>Deploy Pod via Play Kube</span>`;
+                        }
+                        if (cancelBtn) cancelBtn.disabled = false;
+
+                        switchTab('pods');
+                        fetchPods();
+                        fetchContainers();
+                    }, 650);
                 } else {
                     const txt = await res.text();
-                    showToast('Play Kube failed: ' + txt, 'error');
+                    let cleanErr = txt;
+                    try {
+                        const parsed = JSON.parse(txt);
+                        if (parsed.error) cleanErr = parsed.error;
+                    } catch (_) {}
+
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML = `
+                            <div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px 14px; border-radius:8px; font-size:12px; line-height:1.4;">
+                                <div style="font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    <span>Deployment Failed</span>
+                                </div>
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; white-space:pre-wrap; word-break:break-all; max-height:120px; overflow:auto; background:#ffffff; padding:6px 8px; border-radius:4px; border:1px solid #fecaca; margin-top:6px;">${escapeHtml(cleanErr)}</div>
+                            </div>`;
+                    }
+
+                    showToast('Play Kube failed: ' + cleanErr, 'error');
+
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = `
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                            <span>Retry Deploy Pod</span>`;
+                    }
+                    if (cancelBtn) cancelBtn.disabled = false;
                 }
             } catch (err) {
+                if (feedbackEl) {
+                    feedbackEl.innerHTML = `
+                        <div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px 14px; border-radius:8px; font-size:12px;">
+                            <strong>Network Error:</strong> ${escapeHtml(err.message)}
+                        </div>`;
+                }
                 showToast('Play Kube error: ' + err.message, 'error');
+
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        <span>Retry Deploy Pod</span>`;
+                }
+                if (cancelBtn) cancelBtn.disabled = false;
             }
         }
 
