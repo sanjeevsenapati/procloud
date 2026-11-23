@@ -3604,10 +3604,7 @@
                                     <div class="th-content"><span>Type</span><span class="sort-indicator" id="sort-lb-type"></span></div>
                                 </th>
                                 <th class="sortable" onclick="sortLoadBalancers('ip')" title="Click to sort by Public VIP">
-                                    <div class="th-content"><span>Public VIP</span><span class="sort-indicator" id="sort-lb-ip"></span></div>
-                                </th>
-                                <th>
-                                    <div class="th-content"><span>Access URL</span></div>
+                                    <div class="th-content"><span>Public VIP &amp; Endpoint</span><span class="sort-indicator" id="sort-lb-ip"></span></div>
                                 </th>
                                 <th>
                                     <div class="th-content"><span>Listeners</span></div>
@@ -3621,11 +3618,11 @@
                                 <th class="sortable" onclick="sortLoadBalancers('created')" title="Click to sort by Created">
                                     <div class="th-content"><span>Created</span><span class="sort-indicator" id="sort-lb-created"></span></div>
                                 </th>
-                                <th style="text-align:right;">Actions</th>
+                                <th style="text-align:right; min-width:180px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="lbs-table-body">
-                            <tr><td colspan="9" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">Loading load balancers...</td></tr>
+                            <tr><td colspan="8" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">Loading load balancers...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -3683,26 +3680,26 @@
             </div>
 
             <!-- Sub-Navigation Tabs Bar -->
-            <div class="lbd-subnav cd-subnav">
+            <div class="lbd-subnav cd-subnav" style="padding-bottom:1px; overflow-x:auto;">
                 <div class="lbd-subnav-tab cd-subnav-tab active" data-subtab="overview" onclick="switchLBSubTab('overview')">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                     <span>Overview &amp; Topology</span>
                 </div>
                 <div class="lbd-subnav-tab cd-subnav-tab" data-subtab="listeners" onclick="switchLBSubTab('listeners')">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
-                    <span>Listeners &amp; Routing Policies</span>
+                    <span>Listeners &amp; Routing</span>
                 </div>
                 <div class="lbd-subnav-tab cd-subnav-tab" data-subtab="pools" onclick="switchLBSubTab('pools')">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
-                    <span>Backend Pools &amp; Upstream Targets</span>
+                    <span>Backend Pools</span>
                 </div>
                 <div class="lbd-subnav-tab cd-subnav-tab" data-subtab="config" onclick="switchLBSubTab('config')">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                    <span>Synthesized Nginx Configuration</span>
+                    <span>Nginx Config</span>
                 </div>
                 <div class="lbd-subnav-tab cd-subnav-tab" data-subtab="metrics" onclick="switchLBSubTab('metrics')">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                    <span>Traffic &amp; Error Metrics</span>
+                    <span>Traffic &amp; Metrics</span>
                 </div>
             </div>
 
@@ -9433,7 +9430,7 @@ spec:
             if (statBack) statBack.innerText = totalMembers;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No load balancers found matching current filters. Click "+ Create Load Balancer" to launch one.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px; color:var(--pg-text-muted);">No load balancers found matching current filters. Click "+ Create Load Balancer" to launch one.</td></tr>';
                 return;
             }
 
@@ -9446,8 +9443,10 @@ spec:
                 const poolsSummary = poolsCount > 0 ? `<span class="pill pill-slate" style="font-size:11px;">${poolsCount} pools (${memberCount} targets)</span>` : '<span style="color:var(--pg-text-muted); font-size:11px;">No pools</span>';
 
                 const typePill = lb.type === 'layer4' ?
-                    '<span class="pill pill-blue" style="font-weight:600;"><svg class="icon-svg" style="width:10px; height:10px; margin-right:3px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>L4 (Network LB)</span>' :
-                    '<span class="pill pill-purple" style="font-weight:600;"><svg class="icon-svg" style="width:10px; height:10px; margin-right:3px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>L7 (Load Balancer)</span>';
+                    '<span class="pill pill-blue" style="font-weight:600;"><svg class="icon-svg" style="width:10px; height:10px; margin-right:3px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>L4 NLB</span>' :
+                    (lb.type === 'hybrid' ?
+                    '<span class="pill pill-purple" style="font-weight:600;">Hybrid</span>' :
+                    '<span class="pill pill-purple" style="font-weight:600;"><svg class="icon-svg" style="width:10px; height:10px; margin-right:3px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>L7 ALB</span>');
 
                 // Access URL calculation
                 let primaryListener = listeners.find(l => l.protocol === 'HTTPS') || listeners.find(l => l.protocol === 'HTTP') || listeners[0];
@@ -9475,22 +9474,22 @@ spec:
                         </td>
                         <td>${typePill}</td>
                         <td>
-                            <code style="color:var(--pg-blue-600); font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:12px;">${escapeHtml(lb.public_ip || 'Auto Host VIP')}</code>
+                            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <code style="color:var(--pg-blue-600); font-weight:700; background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:12px;">${escapeHtml(lb.public_ip || 'Auto Host VIP')}</code>
+                                ${primaryListener ? `
+                                <a href="${accessUrl}" target="_blank" class="btn btn-sm" style="padding:1px 6px; font-size:11px; gap:3px; text-decoration:none; display:inline-flex; align-items:center; background:#f0f9ff; border:1px solid #bae6fd; color:#0369a1;" title="Open access endpoint in new tab">
+                                    <svg class="icon-svg" style="width:10px; height:10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                    <span>${escapeHtml(accessUrlText)}</span>
+                                </a>
+                                ` : '<span style="color:var(--pg-text-muted); font-size:10px;">Pending</span>'}
+                            </div>
                             <div style="font-size:10px; color:var(--pg-text-muted); margin-top:2px;">VPC: ${escapeHtml(lb.vpc_network || 'podman')}</div>
-                        </td>
-                        <td>
-                            ${primaryListener ? `
-                            <a href="${accessUrl}" target="_blank" class="btn btn-sm" style="padding:2px 8px; font-size:11px; gap:4px; text-decoration:none; display:inline-flex; align-items:center; background:#f0f9ff; border:1px solid #bae6fd; color:#0369a1;" title="Open access endpoint in new tab">
-                                <svg class="icon-svg" style="width:11px; height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                <span>${escapeHtml(accessUrlText)}</span>
-                            </a>
-                            ` : '<span style="color:var(--pg-text-muted); font-size:11px;">Pending Listener</span>'}
                         </td>
                         <td>${listenersList}</td>
                         <td>${poolsSummary}</td>
                         <td><span class="pill pill-emerald" style="font-weight:700;"><span class="pulse-dot" style="width:6px; height:6px; background:#10b981; border-radius:50%; display:inline-block; margin-right:4px;"></span>ACTIVE</span></td>
                         <td><span style="font-size:11px; color:var(--pg-text-secondary); white-space:nowrap;">${new Date(lb.created_at).toLocaleString()}</span></td>
-                        <td style="text-align:right;">
+                        <td style="text-align:right; white-space:nowrap; min-width:180px;">
                             <div class="table-actions" style="justify-content:flex-end;">
                                 <button class="btn btn-sm btn-outline-primary" title="Live Traffic & Error Metrics" onclick="openLBPage('${escapeHtml(lb.id)}', 'metrics')">
                                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -9549,7 +9548,7 @@ spec:
             } catch (err) {
                 console.error('fetchLoadBalancers error:', err);
                 const tbody = document.getElementById('lbs-table-body');
-                if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load loadbalancers: ${escapeHtml(err.message)}</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color:var(--pg-rose);">Failed to load loadbalancers: ${escapeHtml(err.message)}</td></tr>`;
             }
         }
 
