@@ -688,6 +688,27 @@ func (s *Server) handleRunContainer(w http.ResponseWriter, r *http.Request) {
 	if tenantID != "" {
 		if org, err := s.tenantSvc.GetOrganization(r.Context(), tenantID); err == nil && org != nil {
 			tenantName = org.Name
+			// Enforce container quota if defined
+			if org.MaxContainers > 0 && (claims == nil || claims.Role != protocol.RoleSuperAdmin) {
+				ctrs, _ := s.runtime.ListContainers(r.Context(), true)
+				count := 0
+				for _, c := range ctrs {
+					cOrg := ""
+					if c.Labels != nil {
+						cOrg = c.Labels["procloud.io/organization"]
+					}
+					if cOrg == "" {
+						cOrg = "tnt-default"
+					}
+					if cOrg == tenantID {
+						count++
+					}
+				}
+				if count >= org.MaxContainers {
+					http.Error(w, fmt.Sprintf("organization container quota exceeded: %s has reached its limit of %d containers (current: %d)", org.Name, org.MaxContainers, count), http.StatusForbidden)
+					return
+				}
+			}
 		} else {
 			tenantName = tenantID
 		}
@@ -1112,6 +1133,27 @@ func (s *Server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
 	if tenantID != "" {
 		if org, err := s.tenantSvc.GetOrganization(r.Context(), tenantID); err == nil && org != nil {
 			tenantName = org.Name
+			// Enforce pod quota if defined
+			if org.MaxPods > 0 && (claims == nil || claims.Role != protocol.RoleSuperAdmin) {
+				pods, _ := s.runtime.ListPods(r.Context())
+				count := 0
+				for _, p := range pods {
+					pOrg := ""
+					if p.Labels != nil {
+						pOrg = p.Labels["procloud.io/organization"]
+					}
+					if pOrg == "" {
+						pOrg = "tnt-default"
+					}
+					if pOrg == tenantID {
+						count++
+					}
+				}
+				if count >= org.MaxPods {
+					http.Error(w, fmt.Sprintf("organization pod quota exceeded: %s has reached its limit of %d pods (current: %d)", org.Name, org.MaxPods, count), http.StatusForbidden)
+					return
+				}
+			}
 		} else {
 			tenantName = tenantID
 		}
