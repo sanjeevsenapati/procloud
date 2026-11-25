@@ -331,6 +331,8 @@ func (s *Server) writeRequired(next http.HandlerFunc) http.HandlerFunc {
 func (s *Server) registerRoutes() {
 	// Health & Status (Public)
 	s.mux.HandleFunc("GET /healthz", s.handleHealthz)
+	s.mux.HandleFunc("GET /api/v1/system/version", s.handleGetSystemVersion)
+	s.mux.HandleFunc("GET /api/v1/version", s.handleGetSystemVersion)
 
 	// Auth & User Management (Login and Register are public; me is protected)
 	s.mux.HandleFunc("POST /api/v1/auth/register", s.handleRegister)
@@ -549,6 +551,19 @@ func (s *Server) checkAuth(r *http.Request) *auth.Claims {
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{"status": "ok", "app": "procloud", "version": "1.0.0"})
+}
+
+func (s *Server) handleGetSystemVersion(w http.ResponseWriter, r *http.Request) {
+	podmanVer := "5.6.0"
+	if node, err := s.computeSvc.GetPrimaryNode(r.Context()); err == nil && node != nil && node.PodmanVersion != "" {
+		podmanVer = node.PodmanVersion
+	}
+	respondJSON(w, http.StatusOK, map[string]any{
+		"procloud_version": Version,
+		"agent_version":    "1.0.0",
+		"podman_version":   podmanVer,
+		"status":           "healthy",
+	})
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {

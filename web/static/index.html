@@ -1459,8 +1459,15 @@
             overflow: hidden;
             transition: opacity 0.2s ease;
         }
-        aside.progit-sidebar.collapsed .sidebar-section-title {
+        aside.progit-sidebar.collapsed .sidebar-header {
+            padding: 12px 0;
+            justify-content: center;
+        }
+        aside.progit-sidebar.collapsed .sidebar-header .sidebar-section-title {
             display: none;
+        }
+        aside.progit-sidebar.collapsed .sidebar-pin-btn {
+            margin: 0 auto;
         }
 
         .sidebar-category-header {
@@ -1482,14 +1489,15 @@
             user-select: none;
         }
         aside.progit-sidebar.collapsed .sidebar-category-header {
-            padding: 6px 6px 2px 6px;
-            border-top: 1px solid #f1f5f9;
-            margin-top: 4px;
+            padding: 0;
+            margin: 8px auto 4px auto;
+            width: 28px;
+            height: 1px;
+            background: #e2e8f0;
+            border: none;
         }
         aside.progit-sidebar.collapsed .sidebar-category-header:first-child {
-            border-top: none;
-            margin-top: 0;
-            padding-top: 0;
+            display: none;
         }
         aside.progit-sidebar.collapsed .sidebar-category-header .sidebar-section-title {
             display: none;
@@ -1525,18 +1533,22 @@
             overflow-y: auto;
             overflow-x: hidden;
         }
+        aside.progit-sidebar.collapsed .sidebar-nav {
+            padding: 8px 4px;
+            gap: 2px;
+        }
 
         .sidebar-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-radius: 8px;
             color: var(--pg-text-secondary);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s ease, color 0.15s ease;
+            transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
             text-decoration: none;
             white-space: nowrap;
             position: relative;
@@ -1580,11 +1592,12 @@
             }
         }
         .sidebar-item svg.sidebar-icon {
-            width: 18px;
-            height: 18px;
+            width: 19px;
+            height: 19px;
             stroke-width: 2;
             flex-shrink: 0;
             color: currentColor;
+            transition: transform 0.15s ease, stroke-width 0.15s ease;
         }
         .sidebar-label {
             flex: 1;
@@ -1594,6 +1607,35 @@
         }
         aside.progit-sidebar.collapsed .sidebar-label {
             display: none;
+        }
+
+        /* Highly refined collapsed icon button appearance */
+        aside.progit-sidebar.collapsed .sidebar-item {
+            padding: 8px 0;
+            justify-content: center;
+            gap: 0;
+            width: 48px;
+            height: 44px;
+            margin: 2px auto;
+            border-radius: 10px;
+            position: relative;
+        }
+        aside.progit-sidebar.collapsed .sidebar-item svg.sidebar-icon {
+            width: 21px;
+            height: 21px;
+            stroke-width: 2.1;
+            margin: 0;
+        }
+        aside.progit-sidebar.collapsed .sidebar-item:hover svg.sidebar-icon {
+            transform: scale(1.12);
+        }
+        aside.progit-sidebar.collapsed .sidebar-item.active {
+            background: #eff6ff !important;
+            color: var(--pg-blue-600) !important;
+            box-shadow: 0 0 0 1.5px #bfdbfe !important;
+        }
+        aside.progit-sidebar.collapsed .sidebar-item.active svg.sidebar-icon {
+            stroke-width: 2.3;
         }
 
         .sidebar-badge {
@@ -1639,44 +1681,152 @@
 
         aside.progit-sidebar.collapsed .sidebar-badge {
             position: absolute;
-            top: 4px;
-            right: 6px;
+            top: 3px;
+            right: 3px;
+            min-width: 16px;
+            height: 16px;
             font-size: 9px;
-            padding: 1px 4px;
+            font-weight: 700;
+            line-height: 14px;
+            padding: 0 3px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1.5px solid #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            z-index: 2;
         }
 
-        /* Tooltip for collapsed items */
-        aside.progit-sidebar.collapsed .sidebar-item::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            left: 72px;
-            top: 50%;
-            transform: translateY(-50%);
+        /* Floating, non-clipped Tooltip for Collapsed Sidebar Items */
+        .sidebar-floating-tooltip {
+            position: fixed;
+            display: none;
             background: #0f172a;
             color: #ffffff;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
-            padding: 5px 10px;
-            border-radius: 6px;
+            padding: 6px 12px;
+            border-radius: 7px;
             white-space: nowrap;
             pointer-events: none;
+            z-index: 99999;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+            letter-spacing: 0.2px;
+            transition: opacity 0.12s ease;
             opacity: 0;
-            transition: opacity 0.15s ease;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        aside.progit-sidebar.collapsed .sidebar-item:hover::after {
-            opacity: 1;
+        .sidebar-floating-tooltip::before {
+            content: '';
+            position: absolute;
+            left: -5px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 5px 5px 5px 0;
+            border-style: solid;
+            border-color: transparent #0f172a transparent transparent;
+        }
+
+        /* Platform Versions Section (Below of Left Side Menu) */
+        .sidebar-versions-panel {
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .sidebar-version-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .sidebar-version-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .sidebar-version-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .sidebar-version-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+        .sidebar-version-name {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--pg-text-secondary);
+            font-weight: 600;
+        }
+        .sidebar-version-val {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--pg-text);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        /* Collapsed Versions Panel */
+        aside.progit-sidebar.collapsed .sidebar-versions-panel {
+            padding: 8px 4px;
+            background: transparent;
+            border-top: 1px solid #f1f5f9;
+        }
+        aside.progit-sidebar.collapsed .sidebar-versions-expanded {
+            display: none;
+        }
+        .sidebar-versions-collapsed {
+            display: none;
+        }
+        aside.progit-sidebar.collapsed .sidebar-versions-collapsed {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 0;
+            width: 48px;
+            margin: 0 auto;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all 0.15s ease;
+        }
+        aside.progit-sidebar.collapsed .sidebar-versions-collapsed:hover {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        aside.progit-sidebar.collapsed .sidebar-version-mini-tag {
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            color: var(--pg-blue-600);
+            letter-spacing: -0.3px;
         }
 
         .sidebar-footer {
             padding: 12px 14px;
             border-top: 1px solid #f1f5f9;
-            background: #fafcff;
+            background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+        }
+        aside.progit-sidebar.collapsed .sidebar-footer {
+            padding: 8px 0;
+            justify-content: center;
         }
         .sidebar-footer-info {
             display: flex;
@@ -1701,6 +1851,9 @@
             text-overflow: ellipsis;
         }
         aside.progit-sidebar.collapsed .sidebar-footer-text {
+            display: none;
+        }
+        aside.progit-sidebar.collapsed .sidebar-footer-info {
             display: none;
         }
 
@@ -2182,7 +2335,7 @@
                     <span class="sidebar-badge pill-blue">CI/CD</span>
                 </a>
                 <a class="sidebar-item" onclick="switchTab('images')" data-tab="images" data-tooltip="Images">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
                     <span class="sidebar-label">Images</span>
                     <span class="sidebar-badge" id="tab-badge-images">0</span>
                 </a>
@@ -2197,12 +2350,12 @@
                     <span class="sidebar-badge pill-blue" id="tab-badge-lbs">0</span>
                 </a>
                 <a class="sidebar-item" onclick="switchTab('dns')" data-tab="dns" data-tooltip="DNS Service">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/><line x1="10" y1="6" x2="18" y2="6"/><line x1="10" y1="18" x2="18" y2="18"/></svg>
                     <span class="sidebar-label">DNS Service</span>
                     <span class="sidebar-badge pill-blue" id="tab-badge-dns">0</span>
                 </a>
                 <a class="sidebar-item" onclick="switchTab('networks')" data-tab="networks" data-tooltip="Networks">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M5 16v-4h14v4"/><path d="M12 8v4"/></svg>
                     <span class="sidebar-label">Networks</span>
                     <span class="sidebar-badge" id="tab-badge-networks">0</span>
                 </a>
@@ -2212,7 +2365,7 @@
                     <span class="sidebar-section-title">Storage &amp; Security</span>
                 </div>
                 <a class="sidebar-item" onclick="switchTab('volumes')" data-tab="volumes" data-tooltip="Volumes">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
                     <span class="sidebar-label">Volumes</span>
                     <span class="sidebar-badge" id="tab-badge-volumes">0</span>
                 </a>
@@ -2227,7 +2380,7 @@
                     <span class="sidebar-section-title">System &amp; Operations</span>
                 </div>
                 <a class="sidebar-item" onclick="switchTab('telemetry')" data-tab="telemetry" data-tooltip="SQLite WAL & Jobs">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                     <span class="sidebar-label">SQLite WAL &amp; Jobs</span>
                 </a>
                 <a class="sidebar-item" onclick="switchTab('milestone')" data-tab="milestone" data-tooltip="Milestone 1 (16 Steps)">
@@ -2251,11 +2404,51 @@
                     <span class="sidebar-badge pill-purple" id="tab-badge-users">0</span>
                 </a>
                 <a class="sidebar-item" onclick="switchTab('audit')" data-tab="audit" data-tooltip="Team Activity & Audit">
-                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
                     <span class="sidebar-label">Team &amp; Audit Trail</span>
                     <span class="sidebar-badge pill-blue" id="tab-badge-audit">0</span>
                 </a>
             </nav>
+
+            <!-- Platform Versions Section (Below of Left Side Menu) -->
+            <div class="sidebar-versions-panel" id="sidebar-versions-panel">
+                <div class="sidebar-versions-expanded">
+                    <div class="sidebar-version-header">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span class="sidebar-version-status-dot"></span>
+                            <span style="font-size:10px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; color:var(--pg-text-muted);">Platform Versions</span>
+                        </div>
+                        <span class="pill pill-emerald" style="font-size:9px; padding:1px 5px; font-weight:700;">LIVE</span>
+                    </div>
+                    <div class="sidebar-version-list">
+                        <div class="sidebar-version-row">
+                            <span class="sidebar-version-name">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--pg-blue-600);"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                                <span>ProCloud</span>
+                            </span>
+                            <code class="sidebar-version-val" id="sb-version-procloud">v1.0.0</code>
+                        </div>
+                        <div class="sidebar-version-row">
+                            <span class="sidebar-version-name">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--pg-purple);"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>
+                                <span>Agent</span>
+                            </span>
+                            <code class="sidebar-version-val" id="sb-version-agent">v1.0.0</code>
+                        </div>
+                        <div class="sidebar-version-row">
+                            <span class="sidebar-version-name">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#8b5cf6;"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                <span>Podman</span>
+                            </span>
+                            <code class="sidebar-version-val" id="sb-version-podman">Loading...</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="sidebar-versions-collapsed" id="sb-versions-collapsed-chip" data-tooltip="ProCloud: v1.0.0 • Agent: v1.0.0 • Podman: 5.6.0">
+                    <div class="sidebar-version-status-dot"></div>
+                    <span class="sidebar-version-mini-tag">v1.0</span>
+                </div>
+            </div>
 
             <div class="sidebar-footer">
                 <div class="sidebar-footer-info">
@@ -2268,6 +2461,8 @@
                     </svg>
                 </button>
             </div>
+            <!-- Floating non-clipped Tooltip Anchor -->
+            <div id="sidebar-floating-tooltip" class="sidebar-floating-tooltip"></div>
         </aside>
 
         <!-- Mobile Backdrop -->
@@ -8906,6 +9101,8 @@ spec:
         function toggleSidebar(forceState) {
             const sidebar = document.getElementById('progit-sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
+            const tip = document.getElementById('sidebar-floating-tooltip');
+            if (tip) { tip.style.display = 'none'; tip.style.opacity = '0'; }
             if (!sidebar) return;
 
             if (window.innerWidth < 960) {
@@ -8931,12 +9128,114 @@ spec:
             }
         }
 
-        // Restore sidebar state from localStorage on load
+        // Floating Non-Clipped Sidebar Tooltip Engine
+        function initSidebarTooltips() {
+            let tip = document.getElementById('sidebar-floating-tooltip');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.id = 'sidebar-floating-tooltip';
+                tip.className = 'sidebar-floating-tooltip';
+                document.body.appendChild(tip);
+            }
+
+            const showTip = (targetEl, customText) => {
+                const sb = document.getElementById('progit-sidebar');
+                if (!sb || !sb.classList.contains('collapsed')) return;
+                const text = customText || targetEl.getAttribute('data-tooltip') || targetEl.querySelector('.sidebar-label')?.innerText;
+                if (!text) return;
+                const rect = targetEl.getBoundingClientRect();
+                tip.innerText = text;
+                tip.style.top = `${rect.top + (rect.height / 2) - 14}px`;
+                tip.style.left = `${rect.right + 12}px`;
+                tip.style.display = 'block';
+                requestAnimationFrame(() => {
+                    tip.style.opacity = '1';
+                });
+            };
+
+            const hideTip = () => {
+                tip.style.opacity = '0';
+                tip.style.display = 'none';
+            };
+
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('mouseenter', () => showTip(item));
+                item.addEventListener('mouseleave', hideTip);
+                item.addEventListener('click', hideTip);
+            });
+
+            const chip = document.getElementById('sb-versions-collapsed-chip');
+            if (chip) {
+                chip.addEventListener('mouseenter', () => {
+                    const txt = chip.getAttribute('data-tooltip') || 'ProCloud Platform & Runtime';
+                    showTip(chip, txt);
+                });
+                chip.addEventListener('mouseleave', hideTip);
+            }
+        }
+
+        // Platform & Runtime Versions Loader
+        async function loadPlatformVersions() {
+            try {
+                const res = await authFetch('/api/v1/system/version');
+                if (res.ok) {
+                    const data = await res.json();
+                    const proVer = data.procloud_version ? `v${data.procloud_version.replace(/^v/, '')}` : 'v1.0.0';
+                    const agentVer = data.agent_version ? `v${data.agent_version.replace(/^v/, '')}` : 'v1.0.0';
+                    const podmanVer = data.podman_version || '5.6.0';
+
+                    const pEl = document.getElementById('sb-version-procloud');
+                    if (pEl) pEl.innerText = proVer;
+                    const aEl = document.getElementById('sb-version-agent');
+                    if (aEl) aEl.innerText = agentVer;
+                    const podEl = document.getElementById('sb-version-podman');
+                    if (podEl) podEl.innerText = podmanVer;
+
+                    const chip = document.getElementById('sb-versions-collapsed-chip');
+                    if (chip) {
+                        const tipText = `ProCloud: ${proVer} • Agent: ${agentVer} • Podman: ${podmanVer}`;
+                        chip.setAttribute('data-tooltip', tipText);
+                        chip.title = tipText;
+                    }
+
+                    const nodeStatus = document.getElementById('sidebar-node-status');
+                    if (nodeStatus) nodeStatus.innerText = `Podman ${podmanVer} Ready`;
+                    return;
+                }
+            } catch (e) {
+                console.warn('Failed to fetch /api/v1/system/version:', e);
+            }
+
+            // Fallback: check /api/v1/nodes if /api/v1/system/version is pending
+            try {
+                const nodeRes = await authFetch('/api/v1/nodes');
+                if (nodeRes.ok) {
+                    const nodes = await nodeRes.json();
+                    if (nodes && nodes.length > 0) {
+                        const podmanVer = nodes[0].podman_version || '5.6.0';
+                        const podEl = document.getElementById('sb-version-podman');
+                        if (podEl) podEl.innerText = podmanVer;
+                        const chip = document.getElementById('sb-versions-collapsed-chip');
+                        if (chip) {
+                            const tipText = `ProCloud: v1.0.0 • Agent: v1.0.0 • Podman: ${podmanVer}`;
+                            chip.setAttribute('data-tooltip', tipText);
+                            chip.title = tipText;
+                        }
+                        const nodeStatus = document.getElementById('sidebar-node-status');
+                        if (nodeStatus) nodeStatus.innerText = `Podman ${podmanVer} Ready`;
+                    }
+                }
+            } catch(e) {}
+        }
+
+        // Restore sidebar state from localStorage on load & init
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('procloud_sidebar_collapsed') === 'true' && window.innerWidth >= 960) {
                 const sb = document.getElementById('progit-sidebar');
                 if (sb) sb.classList.add('collapsed');
             }
+            initSidebarTooltips();
+            loadPlatformVersions();
         });
 
         // Global key shortcut '/' for search
@@ -9156,6 +9455,9 @@ spec:
             if (isOrgAdmin()) {
                 loadUserContext();
             }
+
+            loadPlatformVersions();
+            initSidebarTooltips();
 
             refreshCurrentTab();
             if (!pollTimer) {
