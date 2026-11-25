@@ -708,6 +708,62 @@ func (m *MockRuntime) RemoveNetwork(ctx context.Context, name string) error {
 	return nil
 }
 
+func (m *MockRuntime) InspectNetwork(ctx context.Context, nameOrID string) (*NetworkInspect, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var net *NetworkSummary
+	if n, ok := m.Networks[nameOrID]; ok {
+		net = n
+	} else {
+		for _, n := range m.Networks {
+			if n.ID == nameOrID || n.Name == nameOrID {
+				net = n
+				break
+			}
+		}
+	}
+	if net == nil {
+		return nil, fmt.Errorf("network not found: %s", nameOrID)
+	}
+
+	var connected []*NetworkConnectedContainer
+	for _, c := range m.Containers {
+		if c.NetworkName == net.Name || strings.Contains(c.NetworkName, net.Name) {
+			connected = append(connected, &NetworkConnectedContainer{
+				ID:        c.ID,
+				Name:      c.Name,
+				IPAddress: c.IPAddress,
+				Gateway:   c.Gateway,
+				Interface: "eth0",
+			})
+		}
+	}
+
+	var subnets []NetworkSubnetInfo
+	if net.Subnet != "" {
+		subnets = append(subnets, NetworkSubnetInfo{
+			Subnet:  net.Subnet,
+			Gateway: net.Gateway,
+		})
+	}
+
+	return &NetworkInspect{
+		ID:                  net.ID,
+		Name:                net.Name,
+		Driver:              net.Driver,
+		NetworkInterface:    net.NetworkInterface,
+		Created:             time.Now().Format(time.RFC3339),
+		Subnets:             subnets,
+		IPv6Enabled:         net.IPv6,
+		Internal:            net.Internal,
+		DNSEnabled:          net.DNSEnabled,
+		Labels:              net.Labels,
+		ConnectedContainers: connected,
+		Raw:                 fmt.Sprintf(`{"name":"%s","id":"%s","driver":"%s"}`, net.Name, net.ID, net.Driver),
+	}, nil
+}
+
 func (m *MockRuntime) ListVolumes(ctx context.Context) ([]*VolumeSummary, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

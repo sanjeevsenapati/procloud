@@ -389,8 +389,9 @@ func (s *Server) registerRoutes() {
 	// Podman Desktop Features: Runtime Networks & Volumes (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/podman/networks", s.authRequired(s.handleListPodmanNetworks))
+	s.mux.HandleFunc("GET /api/v1/podman/networks/{id...}", s.authRequired(s.handleInspectPodmanNetwork))
 	s.mux.HandleFunc("POST /api/v1/podman/networks", s.writeRequired(s.handleCreatePodmanNetwork))
-	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id}", s.writeRequired(s.handleRemovePodmanNetwork))
+	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id...}", s.writeRequired(s.handleRemovePodmanNetwork))
 
 	s.mux.HandleFunc("GET /api/v1/podman/volumes", s.authRequired(s.handleListPodmanVolumes))
 	s.mux.HandleFunc("GET /api/v1/podman/volumes/{name...}", s.authRequired(s.handleInspectPodmanVolume))
@@ -1509,8 +1510,70 @@ func (s *Server) handleCreatePodmanNetwork(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+func (s *Server) handleInspectPodmanNetwork(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
+	if id == "" {
+		http.Error(w, "network name or ID is required", http.StatusBadRequest)
+		return
+	}
+
+	insp, err := s.runtime.InspectNetwork(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, insp)
+}
+
 func (s *Server) handleRemovePodmanNetwork(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
+	if id == "" {
+		http.Error(w, "network name or ID is required", http.StatusBadRequest)
+		return
+	}
+
+	cascade := r.URL.Query().Get("cascade") == "true" || r.URL.Query().Get("force") == "true"
+
+	// Inspect to check hierarchy dependencies
+	insp, err := s.runtime.InspectNetwork(r.Context(), id)
+	if err == nil && insp != nil && len(insp.ConnectedContainers) > 0 {
+		if !cascade {
+			// Do not allow delete! Return 409 Conflict with dependency hierarchy details
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]any{
+				"error":            fmt.Sprintf("Cannot delete network '%s': %d child component(s) are actively connected. Child components must be removed before deleting this network.", id, len(insp.ConnectedContainers)),
+				"code":             "NETWORK_HAS_DEPENDENCIES",
+				"network":          id,
+				"has_dependencies": true,
+				"dependencies":     insp.ConnectedContainers,
+			})
+			return
+		}
+
+		// Cascade delete: first remove all child containers/pods
+		actor := "anonymous"
+		if claims := s.checkAuth(r); claims != nil {
+			actor = claims.Username
+		}
+		for _, child := range insp.ConnectedContainers {
+			childTarget := child.ID
+			if childTarget == "" {
+				childTarget = child.Name
+			}
+			if childTarget != "" {
+				_ = s.runtime.RemoveContainer(r.Context(), childTarget, true)
+				s.auditSvc.Log(r.Context(), actor, "CONTAINER_DELETE", "Container", childTarget, r.RemoteAddr, fmt.Sprintf("Removed child container %s to satisfy network cascade deletion on %s", child.Name, id))
+			}
+		}
+	}
+
 	if err := s.runtime.RemoveNetwork(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1520,9 +1583,13 @@ func (s *Server) handleRemovePodmanNetwork(w http.ResponseWriter, r *http.Reques
 	if claims := s.checkAuth(r); claims != nil {
 		actor = claims.Username
 	}
-	s.auditSvc.Log(r.Context(), actor, "NETWORK_DELETE", "Network", id, r.RemoteAddr, fmt.Sprintf("Removed network %s", id))
+	s.auditSvc.Log(r.Context(), actor, "NETWORK_DELETE", "Network", id, r.RemoteAddr, fmt.Sprintf("Removed network %s (cascade=%v)", id, cascade))
 
-	respondJSON(w, http.StatusOK, map[string]string{"message": "network removed", "name": id})
+	respondJSON(w, http.StatusOK, map[string]any{
+		"message": "network removed",
+		"name":    id,
+		"cascade": cascade,
+	})
 }
 
 func (s *Server) handleListPodmanVolumes(w http.ResponseWriter, r *http.Request) {

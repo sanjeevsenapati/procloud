@@ -1310,7 +1310,7 @@
         }
 
         /* Per-Container, Per-Pod & Per-LoadBalancer Details Pages */
-        .cd-header-card, .pd-header-card, .lbd-header-card, .imgd-header-card, .vold-header-card {
+        .cd-header-card, .pd-header-card, .lbd-header-card, .imgd-header-card, .vold-header-card, .netd-header-card {
             background: var(--pg-card);
             border: 1px solid var(--pg-border);
             border-radius: 12px;
@@ -1323,7 +1323,7 @@
             flex-wrap: wrap;
             gap: 16px;
         }
-        .cd-subnav, .pd-subnav, .lbd-subnav, .dep-subnav, .imgd-subnav, .vold-subnav {
+        .cd-subnav, .pd-subnav, .lbd-subnav, .dep-subnav, .imgd-subnav, .vold-subnav, .netd-subnav {
             display: flex;
             gap: 6px;
             border-bottom: 1px solid var(--pg-border);
@@ -1331,7 +1331,7 @@
             overflow-x: auto;
             white-space: nowrap;
         }
-        .cd-subnav-tab, .pd-subnav-tab, .lbd-subnav-tab, .dep-subnav-tab, .imgd-subnav-tab, .vold-subnav-tab {
+        .cd-subnav-tab, .pd-subnav-tab, .lbd-subnav-tab, .dep-subnav-tab, .imgd-subnav-tab, .vold-subnav-tab, .netd-subnav-tab {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -1344,21 +1344,21 @@
             transition: all 0.15s ease;
             text-decoration: none;
         }
-        .cd-subnav-tab:hover, .pd-subnav-tab:hover, .lbd-subnav-tab:hover, .dep-subnav-tab:hover, .imgd-subnav-tab:hover, .vold-subnav-tab:hover {
+        .cd-subnav-tab:hover, .pd-subnav-tab:hover, .lbd-subnav-tab:hover, .dep-subnav-tab:hover, .imgd-subnav-tab:hover, .vold-subnav-tab:hover, .netd-subnav-tab:hover {
             color: var(--pg-blue-600);
             background: #f0f6ff;
             border-radius: 6px 6px 0 0;
         }
-        .cd-subnav-tab.active, .pd-subnav-tab.active, .lbd-subnav-tab.active, .dep-subnav-tab.active, .imgd-subnav-tab.active, .vold-subnav-tab.active {
+        .cd-subnav-tab.active, .pd-subnav-tab.active, .lbd-subnav-tab.active, .dep-subnav-tab.active, .imgd-subnav-tab.active, .vold-subnav-tab.active, .netd-subnav-tab.active {
             color: var(--pg-blue-600);
             border-bottom-color: var(--pg-blue-600);
             background: #eff6ff;
             border-radius: 6px 6px 0 0;
         }
-        .cd-subcontent, .pd-subcontent, .lbd-subcontent, .dep-subcontent, .imgd-subcontent, .vold-subcontent {
+        .cd-subcontent, .pd-subcontent, .lbd-subcontent, .dep-subcontent, .imgd-subcontent, .vold-subcontent, .netd-subcontent {
             display: none;
         }
-        .cd-subcontent.active, .pd-subcontent.active, .lbd-subcontent.active, .dep-subcontent.active, .imgd-subcontent.active, .vold-subcontent.active {
+        .cd-subcontent.active, .pd-subcontent.active, .lbd-subcontent.active, .dep-subcontent.active, .imgd-subcontent.active, .vold-subcontent.active, .netd-subcontent.active {
             display: block;
         }
 
@@ -4165,6 +4165,223 @@
             </div>
         </div>
 
+        <!-- 6b. NETWORK DETAILS TAB -->
+        <div id="tab-network-details" class="tab-content">
+            <!-- Header Card -->
+            <div class="netd-header-card cd-header-card">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <button class="btn btn-sm" onclick="switchTab('networks')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                        <span>Back to Networks</span>
+                    </button>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <svg class="icon-svg icon-svg-lg" style="color:var(--pg-blue-600); width:28px; height:28px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <h2 id="netd-title-name" style="font-size:18px; font-weight:800; margin:0; color:var(--pg-text);">network-name</h2>
+                                <span id="netd-driver-pill" class="pill pill-blue">bridge</span>
+                                <span id="netd-iface-pill" class="pill pill-slate">podman0</span>
+                                <span id="netd-airgap-pill" class="pill pill-amber" style="display:none; font-weight:700;">AIR-GAPPED</span>
+                                <span id="netd-ipv6-pill" class="pill pill-cyan" style="display:none; font-weight:700;">IPv6</span>
+                                <span id="netd-dns-pill" class="pill pill-emerald" style="display:none;">DNS ENABLED</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:5px; font-size:12px; color:var(--pg-text-muted); flex-wrap:wrap;">
+                                <span>Subnet: <code id="netd-subnet-badge" style="font-size:11px; color:var(--pg-blue-600); font-weight:700;"></code></span>
+                                <span>•</span>
+                                <span>Gateway: <code id="netd-gateway-badge" style="font-size:11px;"></code></span>
+                                <span>•</span>
+                                <span>ID: <code id="netd-id-badge" style="font-size:11px; color:var(--pg-blue-600);"></code></span>
+                                <span>•</span>
+                                <span>Created: <span id="netd-created-badge"></span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-sm" onclick="copyNetworkSubnet()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        <span>Copy Subnet</span>
+                    </button>
+                    <button class="btn btn-rose btn-sm rbac-write-only" id="netd-btn-del" onclick="deleteCurrentNetwork()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <span>Delete Network</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Network Sub-Navigation Tabs Bar -->
+            <div class="netd-subnav cd-subnav">
+                <div class="netd-subnav-tab cd-subnav-tab active" data-subtab="overview" onclick="switchNetworkSubTab('overview')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Overview &amp; IPAM</span>
+                </div>
+                <div class="netd-subnav-tab cd-subnav-tab" data-subtab="containers" onclick="switchNetworkSubTab('containers')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                    <span>Connected Containers &amp; Hierarchy</span>
+                </div>
+                <div class="netd-subnav-tab cd-subnav-tab" data-subtab="raw" onclick="switchNetworkSubTab('raw')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                    <span>Raw Inspect</span>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 1: OVERVIEW & IPAM -->
+            <div id="netd-tab-overview" class="netd-subcontent cd-subcontent active">
+                <div class="grid-12">
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Subnet CIDR</div>
+                        <div class="stat-number" id="netd-det-subnet" style="font-size:18px; font-family:'JetBrains Mono',monospace; color:var(--pg-blue-600);">-</div>
+                        <div class="stat-hint" id="netd-det-gw-hint">Gateway: -</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Network Driver</div>
+                        <div class="stat-number" id="netd-det-driver" style="font-size:18px;">bridge</div>
+                        <div class="stat-hint" id="netd-det-iface-hint">Interface: podman0</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Hierarchy Endpoints</div>
+                        <div class="stat-number" id="netd-det-endpoints-count" style="font-size:20px; color:var(--pg-purple);">0</div>
+                        <div class="stat-hint" id="netd-det-dep-status">Safe to Delete: Yes</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Routing &amp; Isolation</div>
+                        <div class="stat-number" id="netd-det-isolation" style="font-size:16px; color:var(--pg-emerald);">Standard Bridge</div>
+                        <div class="stat-hint" id="netd-det-dns-hint">Internal DNS: Enabled</div>
+                    </div>
+                </div>
+
+                <div class="grid-12" style="margin-top:20px;">
+                    <!-- Left: IPAM & Interface Specifications -->
+                    <div class="col-7">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    <span>Network Architecture &amp; IPAM Specifications</span>
+                                </div>
+                            </div>
+                            <div style="padding:16px;">
+                                <table class="pg-table" style="font-size:13px;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="width:160px; font-weight:600; color:var(--pg-text-secondary);">Full Network ID</td>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <code id="netd-spec-full-id" style="font-size:12px; word-break:break-all; color:var(--pg-blue-600);">-</code>
+                                                    <button class="btn btn-xs" onclick="copyText(document.getElementById('netd-spec-full-id').innerText, 'Network ID')">Copy</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Host Interface</td>
+                                            <td><code id="netd-spec-interface" style="font-weight:700;">-</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">IPAM Driver</td>
+                                            <td id="netd-spec-ipam">host-local</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">DNS Engine Plugin</td>
+                                            <td id="netd-spec-dns">Netavark RFC 1035 Daemon</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Air-Gapped (Internal)</td>
+                                            <td id="netd-spec-internal">No (Outbound Internet NAT enabled)</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">IPv6 Dual-Stack</td>
+                                            <td id="netd-spec-ipv6">Disabled</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Created Timestamp</td>
+                                            <td id="netd-spec-created">-</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Resource Tags & Labels -->
+                    <div class="col-5">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                                    <span>Resource Tags &amp; Metadata</span>
+                                </div>
+                            </div>
+                            <div style="padding:16px;">
+                                <div id="netd-spec-labels" style="display:flex; flex-wrap:wrap; gap:6px;">
+                                    <span style="color:var(--pg-text-muted); font-size:12px;">No resource tags configured.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 2: CONNECTED CONTAINERS & HIERARCHY -->
+            <div id="netd-tab-containers" class="netd-subcontent cd-subcontent">
+                <!-- Dependency Protection Notice Banner -->
+                <div id="netd-dep-alert-banner" style="margin-bottom: 20px;"></div>
+
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                            <span>Child Hierarchy Components (Containers &amp; Pods)</span>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <span id="netd-containers-count-badge" class="pill pill-blue">0 Containers</span>
+                            <button class="btn btn-sm btn-outline-rose rbac-write-only" id="netd-btn-bulk-delete-children" style="display:none;" onclick="deleteAllChildContainers()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Delete All Child Containers</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="pg-table" style="font-size:13px;">
+                            <thead>
+                                <tr>
+                                    <th>Child Component</th>
+                                    <th>Container ID</th>
+                                    <th>Assigned IP Address</th>
+                                    <th>Gateway</th>
+                                    <th>MAC Address</th>
+                                    <th>Interface</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="netd-containers-tbody">
+                                <tr><td colspan="7" style="text-align:center; padding:24px; color:var(--pg-text-muted);">No child components attached to this network.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 3: RAW INSPECT -->
+            <div id="netd-tab-raw" class="netd-subcontent cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                            <span>Raw Podman Network Inspect JSON</span>
+                        </div>
+                        <button class="btn btn-sm" onclick="copyNetworkRaw()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            <span>Copy JSON</span>
+                        </button>
+                    </div>
+                    <div style="padding:16px;">
+                        <pre id="netd-raw-json" style="background:#0f172a; color:#f8fafc; padding:16px; border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:12px; overflow-x:auto; max-height:550px; line-height:1.5;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 6a. LOAD BALANCERS (LBaaS) TAB -->
         <div id="tab-loadbalancers" class="tab-content">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px;">
@@ -6142,6 +6359,58 @@ spec:
                 <button class="btn btn-primary" id="btn-submit-create-net" onclick="submitCreateNetwork()">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     <span>Create Network</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Network Dependency Protection & Cascade Delete -->
+    <div id="network-dependency-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 640px;">
+            <div class="modal-dialog-header" style="border-bottom: 1px solid #fee2e2; background: #fef2f2; border-radius: 12px 12px 0 0; margin: -24px -24px 20px -24px; padding: 18px 24px;">
+                <div class="modal-dialog-title" style="color: #991b1b; display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center; color: var(--pg-rose); flex-shrink: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-size: 16px; font-weight: 800; color: #991b1b; line-height: 1.2;">Active Child Dependencies Detected</div>
+                        <div style="font-size: 12px; color: #b91c1c; font-weight: 500;">Deletion blocked by hierarchy protection rules</div>
+                    </div>
+                </div>
+                <div class="modal-dialog-close" onclick="closeModal('network-dependency-modal')">&times;</div>
+            </div>
+
+            <div style="font-size: 13px; color: var(--pg-text-secondary); margin-bottom: 14px; line-height: 1.5;">
+                Network <strong id="net-dep-network-name" style="color: var(--pg-text); font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">-</strong> cannot be deleted directly because the following child components are currently attached to it:
+            </div>
+
+            <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--pg-border); border-radius: 8px; margin-bottom: 16px;">
+                <table class="pg-table" style="font-size: 12px; margin: 0;">
+                    <thead style="background: #f8fafc;">
+                        <tr>
+                            <th>Child Component</th>
+                            <th>Container ID</th>
+                            <th>Assigned IP</th>
+                            <th>MAC Address</th>
+                        </tr>
+                    </thead>
+                    <tbody id="net-dep-containers-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="background: #fff1f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; font-size: 12px; color: #991b1b; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div style="line-height: 1.4;">
+                    <strong>Hierarchy Protection Rule:</strong> To prevent orphaned container interfaces and cluster disruption, child containers must be removed before deleting this network. Would you like ProCloud to delete all child components and proceed with network deletion?
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <button class="btn" onclick="closeModal('network-dependency-modal')">Cancel (Keep Network)</button>
+                <button class="btn btn-rose" id="btn-cascade-delete-network" onclick="confirmCascadeDeleteNetwork()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Delete Child Components &amp; Delete Network</span>
                 </button>
             </div>
         </div>
@@ -8710,6 +8979,7 @@ spec:
                 'pod-details': 'pods',
                 'image-details': 'images',
                 'volume-details': 'volumes',
+                'network-details': 'networks',
                 'loadbalancer-details': 'loadbalancers',
                 'dns-details': 'dns'
             };
@@ -8739,7 +9009,7 @@ spec:
             }
 
             // Do not call refreshCurrentTab() for detail views to prevent recursive re-inspection
-            if (tabName !== 'container-details' && tabName !== 'pod-details' && tabName !== 'image-details' && tabName !== 'volume-details' && tabName !== 'loadbalancer-details' && tabName !== 'dns-details') {
+            if (tabName !== 'container-details' && tabName !== 'pod-details' && tabName !== 'image-details' && tabName !== 'volume-details' && tabName !== 'network-details' && tabName !== 'loadbalancer-details' && tabName !== 'dns-details') {
                 refreshCurrentTab();
             }
         }
@@ -10522,7 +10792,7 @@ spec:
                     <td>
                         <div>
                             <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
-                                <strong>${escapeHtml(n.name)}</strong>
+                                <a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openNetworkDetails('${escapeHtml(n.name)}')" title="View Network Details"><strong>${escapeHtml(n.name)}</strong></a>
                                 ${badgeHtml}
                             </div>
                             ${renderTagBadges(n.labels)}
@@ -10535,6 +10805,10 @@ spec:
                     <td>${escapeHtml(n.gateway || 'Auto')}</td>
                     <td style="text-align:right;">
                         <div class="table-actions" style="justify-content:flex-end;">
+                            <button class="btn btn-sm btn-outline-primary" title="View Network Details" onclick="openNetworkDetails('${escapeHtml(n.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Details</span>
+                            </button>
                             ${canWrite() ? `
                             <button class="btn btn-sm btn-outline-rose" title="Delete Network" onclick="removeNetwork('${escapeHtml(n.name)}')">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -14004,19 +14278,117 @@ spec:
             }
         }
 
-        function removeNetwork(name) {
+        let networkPendingDelete = null;
+
+        async function removeNetwork(name) {
+            if (!name) return;
+            networkPendingDelete = name;
+
+            try {
+                // Inspect network to check child component dependencies
+                const res = await authFetch(`/api/v1/podman/networks/${encodeURIComponent(name)}`);
+                if (res.ok) {
+                    const net = await res.json();
+                    const deps = net.connected_containers || [];
+                    if (deps.length > 0) {
+                        // Hierarchy dependency detected: Do NOT allow direct delete!
+                        // Prompt user to delete child components first or cascade delete.
+                        showNetworkDependencyModal(name, deps);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Network dependency pre-check error, proceeding to standard confirmation:', e);
+            }
+
+            // No active dependencies detected: standard confirmation dialog
             promptConfirmAction({
                 action: 'delete',
                 itemType: 'Network',
                 name: name,
                 id: name,
-                warning: 'Any containers attached to this Netavark network will lose bridge connectivity.',
+                warning: 'This network will be removed. All route and bridge configurations will be pruned.',
                 onConfirm: async () => {
-                    await authFetch(`/api/v1/podman/networks/${name}`, { method: 'DELETE' });
-                    showToast(`Network '${name}' deleted`, 'success');
-                    fetchNetworks();
+                    try {
+                        const delRes = await authFetch(`/api/v1/podman/networks/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                        if (delRes.status === 409) {
+                            const data = await delRes.json();
+                            showNetworkDependencyModal(name, data.dependencies || []);
+                            return;
+                        }
+                        if (!delRes.ok) {
+                            showToast('Failed to delete network: ' + await delRes.text(), 'error');
+                            return;
+                        }
+                        showToast(`Network '${name}' deleted successfully`, 'success');
+                        if (document.getElementById('tab-network-details')?.classList.contains('active')) {
+                            switchTab('networks');
+                        }
+                        fetchNetworks();
+                    } catch (err) {
+                        showToast('Error deleting network: ' + err.message, 'error');
+                    }
                 }
             });
+        }
+
+        function showNetworkDependencyModal(name, deps) {
+            networkPendingDelete = name;
+            const nameEl = document.getElementById('net-dep-network-name');
+            if (nameEl) nameEl.innerText = name;
+            const tbody = document.getElementById('net-dep-containers-tbody');
+            if (tbody) {
+                if (deps && deps.length > 0) {
+                    tbody.innerHTML = deps.map(c => `
+                        <tr>
+                            <td style="font-weight:700; color:var(--pg-text);">
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <svg class="icon-svg" style="color:var(--pg-rose); width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    <span>${escapeHtml(c.name || c.id)}</span>
+                                </div>
+                            </td>
+                            <td><code style="font-size:11px; color:var(--pg-blue-600);">${escapeHtml((c.id || '').substring(0, 12))}</code></td>
+                            <td><code style="font-size:11px; color:var(--pg-emerald);">${escapeHtml(c.ip_address || '-')}</code></td>
+                            <td><code style="font-size:11px; color:var(--pg-text-muted);">${escapeHtml(c.mac_address || '-')}</code></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:var(--pg-text-muted);">Active child components detected on network.</td></tr>';
+                }
+            }
+            openModal('network-dependency-modal');
+        }
+
+        async function confirmCascadeDeleteNetwork() {
+            if (!networkPendingDelete) return;
+            const name = networkPendingDelete;
+            const btn = document.getElementById('btn-cascade-delete-network');
+            const oldHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting Child Components & Network...';
+            }
+            try {
+                const res = await authFetch(`/api/v1/podman/networks/${encodeURIComponent(name)}?cascade=true`, { method: 'DELETE' });
+                if (!res.ok) {
+                    showToast('Cascade delete failed: ' + await res.text(), 'error');
+                    return;
+                }
+                closeModal('network-dependency-modal');
+                showToast(`Network '${name}' and all child components removed successfully`, 'success');
+                if (document.getElementById('tab-network-details')?.classList.contains('active')) {
+                    switchTab('networks');
+                }
+                fetchNetworks();
+                fetchContainers();
+            } catch (e) {
+                showToast('Error removing network and child components: ' + e.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                }
+            }
         }
 
         // -------------------------------------------------------------
@@ -15964,6 +16336,266 @@ spec:
                 }
             } catch (e) {
                 showToast('Error deleting volume: ' + e.message, 'error');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Network Details Controller & Hierarchy Management
+        // -------------------------------------------------------------
+        let currentNetworkDetails = null;
+        let currentNetworkDetailsSubTab = 'overview';
+
+        async function openNetworkDetails(nameOrId) {
+            try {
+                switchTab('network-details');
+                // Set loading state in UI
+                document.getElementById('netd-title-name').innerText = nameOrId;
+                document.getElementById('netd-driver-pill').innerText = 'Loading...';
+                document.getElementById('netd-iface-pill').innerText = '-';
+                document.getElementById('netd-subnet-badge').innerText = '...';
+                document.getElementById('netd-gateway-badge').innerText = '...';
+                document.getElementById('netd-id-badge').innerText = '...';
+                document.getElementById('netd-created-badge').innerText = '...';
+                document.getElementById('netd-airgap-pill').style.display = 'none';
+                document.getElementById('netd-ipv6-pill').style.display = 'none';
+                document.getElementById('netd-dns-pill').style.display = 'none';
+
+                const res = await authFetch(`/api/v1/podman/networks/${encodeURIComponent(nameOrId)}`);
+                if (!res.ok) {
+                    showToast('Failed to inspect network: ' + await res.text(), 'error');
+                    return;
+                }
+                const data = await res.json();
+                currentNetworkDetails = data;
+                renderNetworkDetails(data);
+                switchNetworkSubTab(currentNetworkDetailsSubTab || 'overview');
+            } catch (e) {
+                showToast('Error opening network details: ' + e.message, 'error');
+            }
+        }
+
+        function renderNetworkDetails(net) {
+            if (!net) return;
+            const name = net.name || 'network';
+            document.getElementById('netd-title-name').innerText = name;
+            document.getElementById('netd-driver-pill').innerText = net.driver || 'bridge';
+            document.getElementById('netd-iface-pill').innerText = net.network_interface || 'podman0';
+
+            // Status Pills
+            const airgapPill = document.getElementById('netd-airgap-pill');
+            if (airgapPill) airgapPill.style.display = net.internal ? 'inline-block' : 'none';
+
+            const ipv6Pill = document.getElementById('netd-ipv6-pill');
+            if (ipv6Pill) ipv6Pill.style.display = net.ipv6_enabled ? 'inline-block' : 'none';
+
+            const dnsPill = document.getElementById('netd-dns-pill');
+            if (dnsPill) dnsPill.style.display = net.dns_enabled ? 'inline-block' : 'none';
+
+            // Subnet & Gateway
+            let subnetStr = '-';
+            let gatewayStr = '-';
+            if (net.subnets && net.subnets.length > 0) {
+                subnetStr = net.subnets.map(s => s.subnet).filter(Boolean).join(', ');
+                gatewayStr = net.subnets.map(s => s.gateway).filter(Boolean).join(', ');
+            }
+            document.getElementById('netd-subnet-badge').innerText = subnetStr || 'None';
+            document.getElementById('netd-gateway-badge').innerText = gatewayStr || 'None';
+
+            const shortId = (net.id || '').substring(0, 12);
+            const idBadge = document.getElementById('netd-id-badge');
+            idBadge.innerText = shortId || '-';
+            idBadge.title = net.id || '';
+
+            const createdStr = net.created ? new Date(net.created).toLocaleString() : 'n/a';
+            document.getElementById('netd-created-badge').innerText = createdStr;
+
+            // Stat Cards
+            document.getElementById('netd-det-subnet').innerText = subnetStr || 'None';
+            document.getElementById('netd-det-gw-hint').innerText = `Gateway: ${gatewayStr || 'None'}`;
+            document.getElementById('netd-det-driver').innerText = net.driver || 'bridge';
+            document.getElementById('netd-det-iface-hint').innerText = `Interface: ${net.network_interface || 'default'}`;
+
+            const containers = net.connected_containers || [];
+            const depCount = containers.length;
+            document.getElementById('netd-det-endpoints-count').innerText = depCount;
+            const depHint = document.getElementById('netd-det-dep-status');
+            if (depCount > 0) {
+                depHint.innerText = `⚠️ Protected: ${depCount} Active Dependencies`;
+                depHint.style.color = 'var(--pg-rose)';
+                depHint.style.fontWeight = '700';
+            } else {
+                depHint.innerText = 'Safe to Delete: Yes';
+                depHint.style.color = 'var(--pg-emerald)';
+                depHint.style.fontWeight = 'normal';
+            }
+
+            const isolEl = document.getElementById('netd-det-isolation');
+            if (net.internal) {
+                isolEl.innerText = 'Air-Gapped (Isolated)';
+                isolEl.style.color = 'var(--pg-amber)';
+            } else {
+                isolEl.innerText = `${(net.driver || 'bridge').toUpperCase()} Routing`;
+                isolEl.style.color = 'var(--pg-emerald)';
+            }
+            document.getElementById('netd-det-dns-hint').innerText = `Internal DNS: ${net.dns_enabled ? 'Enabled' : 'Disabled'}`;
+
+            // Architecture & IPAM Spec Table
+            document.getElementById('netd-spec-full-id').innerText = net.id || '-';
+            document.getElementById('netd-spec-interface').innerText = net.network_interface || 'podman0';
+            document.getElementById('netd-spec-ipam').innerText = (net.ipam_options && net.ipam_options.driver) ? net.ipam_options.driver : 'host-local (CIDR allocated)';
+            document.getElementById('netd-spec-dns').innerText = net.dns_enabled ? 'Netavark RFC 1035 Daemon (A/AAAA Records)' : 'Disabled';
+            document.getElementById('netd-spec-internal').innerText = net.internal ? 'Yes (Air-Gapped, No Outbound NAT/Gateway)' : 'No (Outbound Internet NAT enabled)';
+            document.getElementById('netd-spec-ipv6').innerText = net.ipv6_enabled ? 'Dual-Stack IPv4 / IPv6 Active' : 'Disabled (IPv4 Single Stack)';
+            document.getElementById('netd-spec-created').innerText = createdStr;
+
+            // Resource Tags & Labels
+            const labelsContainer = document.getElementById('netd-spec-labels');
+            const labels = net.labels || {};
+            const labelKeys = Object.keys(labels);
+            if (labelKeys.length === 0) {
+                labelsContainer.innerHTML = '<span style="color:var(--pg-text-muted); font-size:12px;">No resource tags configured.</span>';
+            } else {
+                labelsContainer.innerHTML = labelKeys.map(k => `
+                    <div style="background:#f1f5f9; border:1px solid var(--pg-border); border-radius:6px; padding:3px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                        <span style="font-weight:700; color:var(--pg-text-secondary);">${escapeHtml(k)}:</span>
+                        <span style="color:var(--pg-text); word-break:break-all;">${escapeHtml(labels[k])}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Connected Containers & Hierarchy Subtab
+            document.getElementById('netd-containers-count-badge').innerText = `${depCount} Component${depCount === 1 ? '' : 's'}`;
+            const bulkDelBtn = document.getElementById('netd-btn-bulk-delete-children');
+            if (bulkDelBtn) bulkDelBtn.style.display = depCount > 0 ? 'inline-flex' : 'none';
+
+            // Banner
+            const alertBanner = document.getElementById('netd-dep-alert-banner');
+            if (depCount > 0) {
+                alertBanner.innerHTML = `
+                    <div style="background:#fff1f2; border:1px solid #fecaca; border-radius:8px; padding:12px 16px; display:flex; align-items:center; gap:12px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--pg-rose); flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:13px; color:#991b1b;">⚠️ Active Child Dependencies Detected (${depCount})</div>
+                            <div style="font-size:12px; color:#b91c1c;">Under ProCloud hierarchy rules, this network cannot be deleted while child components are connected. Delete or disconnect all child components before removing this network, or use cascade deletion.</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                alertBanner.innerHTML = `
+                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px 16px; display:flex; align-items:center; gap:12px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--pg-emerald); flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:13px; color:#166534;">✅ Safe for Deletion</div>
+                            <div style="font-size:12px; color:#15803d;">No child containers or pods are connected to this network. Deletion will proceed without interruption.</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Containers Tbody
+            const tbody = document.getElementById('netd-containers-tbody');
+            if (depCount === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--pg-text-muted);">No child components attached to this network.</td></tr>';
+            } else {
+                tbody.innerHTML = containers.map(c => {
+                    const shortCId = (c.id || '').substring(0, 12);
+                    return `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <svg class="icon-svg" style="color:var(--pg-blue-600);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/></svg>
+                                <a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openContainerDetails('${escapeHtml(c.id)}')">${escapeHtml(c.name || shortCId)}</a>
+                            </div>
+                        </td>
+                        <td><code style="font-size:11px; color:var(--pg-blue-600);">${escapeHtml(shortCId)}</code></td>
+                        <td><code style="font-size:11px; font-weight:700; color:var(--pg-emerald);">${escapeHtml(c.ip_address || '-')}</code></td>
+                        <td><code style="font-size:11px;">${escapeHtml(c.gateway || '-')}</code></td>
+                        <td><code style="font-size:11px; color:var(--pg-text-muted);">${escapeHtml(c.mac_address || '-')}</code></td>
+                        <td><span class="pill pill-slate" style="font-size:11px;">${escapeHtml(c.interface || 'eth0')}</span></td>
+                        <td style="text-align:right;">
+                            <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                <button class="btn btn-xs btn-outline-primary" onclick="openContainerDetails('${escapeHtml(c.id)}')">Inspect</button>
+                                <button class="btn btn-xs btn-outline-rose rbac-write-only" onclick="deleteChildContainer('${escapeHtml(c.id)}', '${escapeHtml(c.name)}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            }
+
+            // Raw JSON
+            const rawStr = net.raw || JSON.stringify(net, null, 2);
+            document.getElementById('netd-raw-json').innerText = rawStr;
+        }
+
+        function switchNetworkSubTab(subTab) {
+            currentNetworkDetailsSubTab = subTab;
+            document.querySelectorAll('.netd-subnav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.netd-subcontent').forEach(c => c.classList.remove('active'));
+
+            const tabEl = document.querySelector(`.netd-subnav-tab[data-subtab="${subTab}"]`);
+            if (tabEl) tabEl.classList.add('active');
+
+            const contentEl = document.getElementById(`netd-tab-${subTab}`);
+            if (contentEl) contentEl.classList.add('active');
+        }
+
+        function copyNetworkSubnet() {
+            if (!currentNetworkDetails) return;
+            let subnetStr = '';
+            if (currentNetworkDetails.subnets && currentNetworkDetails.subnets.length > 0) {
+                subnetStr = currentNetworkDetails.subnets.map(s => s.subnet).filter(Boolean).join(', ');
+            }
+            if (!subnetStr) subnetStr = document.getElementById('netd-subnet-badge')?.innerText || '';
+            copyText(subnetStr, 'Network Subnet CIDR');
+        }
+
+        function copyNetworkRaw() {
+            const raw = document.getElementById('netd-raw-json')?.innerText;
+            if (!raw) return;
+            copyText(raw, 'Raw Network JSON');
+        }
+
+        function deleteCurrentNetwork() {
+            if (!currentNetworkDetails || !currentNetworkDetails.name) return;
+            removeNetwork(currentNetworkDetails.name);
+        }
+
+        async function deleteChildContainer(id, name) {
+            if (!confirm(`Are you sure you want to delete child container '${name || id}'?`)) return;
+            try {
+                const res = await authFetch(`/api/v1/containers/${encodeURIComponent(id)}?force=true`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast(`Child container '${name || id}' deleted`, 'success');
+                    if (currentNetworkDetails) {
+                        openNetworkDetails(currentNetworkDetails.name);
+                    }
+                    fetchContainers();
+                } else {
+                    showToast('Failed to delete container: ' + await res.text(), 'error');
+                }
+            } catch (e) {
+                showToast('Error deleting container: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteAllChildContainers() {
+            if (!currentNetworkDetails || !currentNetworkDetails.connected_containers || currentNetworkDetails.connected_containers.length === 0) return;
+            const count = currentNetworkDetails.connected_containers.length;
+            if (!confirm(`Are you sure you want to delete all ${count} child containers attached to network '${currentNetworkDetails.name}'?`)) return;
+
+            try {
+                for (const child of currentNetworkDetails.connected_containers) {
+                    const target = child.id || child.name;
+                    if (target) {
+                        await authFetch(`/api/v1/containers/${encodeURIComponent(target)}?force=true`, { method: 'DELETE' });
+                    }
+                }
+                showToast(`All child containers removed from network '${currentNetworkDetails.name}'`, 'success');
+                openNetworkDetails(currentNetworkDetails.name);
+                fetchContainers();
+            } catch (e) {
+                showToast('Error deleting child containers: ' + e.message, 'error');
             }
         }
 

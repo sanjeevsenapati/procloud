@@ -53,6 +53,7 @@ type ContainerRuntime interface {
 
 	// Networks & Volumes
 	ListNetworks(ctx context.Context) ([]*NetworkSummary, error)
+	InspectNetwork(ctx context.Context, nameOrID string) (*NetworkInspect, error)
 	CreateNetwork(ctx context.Context, name, subnet, gateway string) error
 	CreateNetworkWithOptions(ctx context.Context, opts NetworkCreateOptions) error
 	RemoveNetwork(ctx context.Context, name string) error
@@ -311,6 +312,37 @@ type NetworkSummary struct {
 	DNSEnabled       bool              `json:"dns_enabled"`
 	NetworkInterface string            `json:"network_interface,omitempty"`
 	Labels           map[string]string `json:"labels,omitempty"`
+}
+
+type NetworkConnectedContainer struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	IPAddress  string `json:"ip_address"`
+	Gateway    string `json:"gateway"`
+	MACAddress string `json:"mac_address"`
+	Interface  string `json:"interface"`
+}
+
+type NetworkSubnetInfo struct {
+	Subnet  string `json:"subnet"`
+	Gateway string `json:"gateway"`
+}
+
+type NetworkInspect struct {
+	ID                  string                       `json:"id"`
+	Name                string                       `json:"name"`
+	Driver              string                       `json:"driver"`
+	NetworkInterface    string                       `json:"network_interface"`
+	Created             string                       `json:"created"`
+	Subnets             []NetworkSubnetInfo          `json:"subnets"`
+	IPv6Enabled         bool                         `json:"ipv6_enabled"`
+	Internal            bool                         `json:"internal"`
+	DNSEnabled          bool                         `json:"dns_enabled"`
+	IPAMOptions         map[string]string            `json:"ipam_options,omitempty"`
+	Options             map[string]string            `json:"options,omitempty"`
+	Labels              map[string]string            `json:"labels,omitempty"`
+	ConnectedContainers []*NetworkConnectedContainer `json:"connected_containers"`
+	Raw                 string                       `json:"raw,omitempty"`
 }
 
 // PodmanCLI implements ContainerRuntime by executing the podman command.
@@ -1649,6 +1681,111 @@ func (p *PodmanCLI) CreateNetwork(ctx context.Context, name, subnet, gateway str
 func (p *PodmanCLI) RemoveNetwork(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, p.binPath, "network", "rm", "-f", name)
 	return cmd.Run()
+}
+
+func (p *PodmanCLI) InspectNetwork(ctx context.Context, nameOrID string) (*NetworkInspect, error) {
+	cmd := exec.CommandContext(ctx, p.binPath, "network", "inspect", nameOrID)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("podman network inspect failed: %w", err)
+	}
+
+	type rawCtr struct {
+		Name       string `json:"name"`
+		Interfaces map[string]struct {
+			Subnets []struct {
+				IPNet   string `json:"ipnet"`
+				Gateway string `json:"gateway"`
+			} `json:"subnets"`
+			MACAddress string `json:"mac_address"`
+		} `json:"interfaces"`
+	}
+
+	type rawNet struct {
+		Name             string            `json:"name"`
+		ID               string            `json:"id"`
+		Driver           string            `json:"driver"`
+		NetworkInterface string            `json:"network_interface"`
+		Created          string            `json:"created"`
+		Subnets          []struct {
+			Subnet  string `json:"subnet"`
+			Gateway string `json:"gateway"`
+		} `json:"subnets"`
+		IPv6Enabled bool              `json:"ipv6_enabled"`
+		Internal    bool              `json:"internal"`
+		DNSEnabled  bool              `json:"dns_enabled"`
+		IPAMOptions map[string]string `json:"ipam_options"`
+		Options     map[string]string `json:"options"`
+		Labels      map[string]string `json:"labels"`
+		Containers  map[string]rawCtr `json:"containers"`
+	}
+
+	var raw rawNet
+	trimmed := bytes.TrimSpace(out)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var slice []rawNet
+		if err := json.Unmarshal(out, &slice); err != nil {
+			return nil, err
+		}
+		if len(slice) == 0 {
+			return nil, fmt.Errorf("network not found: %s", nameOrID)
+		}
+		raw = slice[0]
+	} else {
+		if err := json.Unmarshal(out, &raw); err != nil {
+			return nil, err
+		}
+	}
+
+	insp := &NetworkInspect{
+		ID:                  raw.ID,
+		Name:                raw.Name,
+		Driver:              raw.Driver,
+		NetworkInterface:    raw.NetworkInterface,
+		Created:             raw.Created,
+		IPv6Enabled:         raw.IPv6Enabled,
+		Internal:            raw.Internal,
+		DNSEnabled:          raw.DNSEnabled,
+		IPAMOptions:         raw.IPAMOptions,
+		Options:             raw.Options,
+		Labels:              raw.Labels,
+		ConnectedContainers: make([]*NetworkConnectedContainer, 0),
+		Raw:                 string(out),
+	}
+
+	for _, s := range raw.Subnets {
+		insp.Subnets = append(insp.Subnets, NetworkSubnetInfo{
+			Subnet:  s.Subnet,
+			Gateway: s.Gateway,
+		})
+	}
+
+	for cid, c := range raw.Containers {
+		var ip, gw, mac, iface string
+		for ifName, ifData := range c.Interfaces {
+			iface = ifName
+			mac = ifData.MACAddress
+			if len(ifData.Subnets) > 0 {
+				ip = ifData.Subnets[0].IPNet
+				gw = ifData.Subnets[0].Gateway
+			}
+			break
+		}
+		shortID := cid
+		if len(shortID) > 12 {
+			shortID = shortID[:12]
+		}
+		insp.ConnectedContainers = append(insp.ConnectedContainers, &NetworkConnectedContainer{
+			ID:         shortID,
+			Name:       c.Name,
+			IPAddress:  ip,
+			Gateway:    gw,
+			MACAddress: mac,
+			Interface:  iface,
+		})
+	}
+
+	return insp, nil
 }
 
 // -------------------------------------------------------------
