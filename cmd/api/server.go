@@ -379,6 +379,7 @@ func (s *Server) registerRoutes() {
 	// Podman Desktop Features: Image Management (Protected)
 	// -------------------------------------------------------------
 	s.mux.HandleFunc("GET /api/v1/images", s.authRequired(s.handleListImages))
+	s.mux.HandleFunc("GET /api/v1/images/{id...}", s.authRequired(s.handleInspectImage))
 	s.mux.HandleFunc("POST /api/v1/images/pull", s.writeRequired(s.handlePullImage))
 	s.mux.HandleFunc("POST /api/v1/images/build", s.writeRequired(s.handleBuildImage))
 	s.mux.HandleFunc("POST /api/v1/images/bulk-delete", s.writeRequired(s.handleBulkRemoveImages))
@@ -392,6 +393,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("DELETE /api/v1/podman/networks/{id}", s.writeRequired(s.handleRemovePodmanNetwork))
 
 	s.mux.HandleFunc("GET /api/v1/podman/volumes", s.authRequired(s.handleListPodmanVolumes))
+	s.mux.HandleFunc("GET /api/v1/podman/volumes/{name...}", s.authRequired(s.handleInspectPodmanVolume))
 	s.mux.HandleFunc("POST /api/v1/podman/volumes", s.writeRequired(s.handleCreatePodmanVolume))
 	s.mux.HandleFunc("DELETE /api/v1/podman/volumes/{id}", s.writeRequired(s.handleRemovePodmanVolume))
 
@@ -1321,6 +1323,24 @@ func (s *Server) handleListImages(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, images)
 }
 
+func (s *Server) handleInspectImage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
+	if id == "" {
+		http.Error(w, "image ID or repository tag is required", http.StatusBadRequest)
+		return
+	}
+
+	inspect, err := s.runtime.InspectImage(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, inspect)
+}
+
 func (s *Server) handlePullImage(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Image string `json:"image"`
@@ -1512,6 +1532,24 @@ func (s *Server) handleListPodmanVolumes(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	respondJSON(w, http.StatusOK, vols)
+}
+
+func (s *Server) handleInspectPodmanVolume(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		name = r.URL.Query().Get("name")
+	}
+	if name == "" {
+		http.Error(w, "volume name is required", http.StatusBadRequest)
+		return
+	}
+
+	inspect, err := s.runtime.InspectVolume(r.Context(), name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	respondJSON(w, http.StatusOK, inspect)
 }
 
 func (s *Server) handleCreatePodmanVolume(w http.ResponseWriter, r *http.Request) {

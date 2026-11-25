@@ -140,6 +140,51 @@ func (m *MockRuntime) RemoveImage(ctx context.Context, idOrTag string, force boo
 	return nil
 }
 
+func (m *MockRuntime) InspectImage(ctx context.Context, idOrName string) (*ImageInspect, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for k, img := range m.Images {
+		repoTag := fmt.Sprintf("%s:%s", img.Repository, img.Tag)
+		if k == idOrName || img.ID == idOrName || img.Repository == idOrName || repoTag == idOrName {
+			return &ImageInspect{
+				ID:            img.ID,
+				Digest:        fmt.Sprintf("sha256:%s%s", img.ID, img.ID),
+				RepoTags:      []string{repoTag},
+				RepoDigests:   []string{fmt.Sprintf("%s@sha256:%s", img.Repository, img.ID)},
+				Created:       img.Created,
+				SizeFormatted: img.Size,
+				Architecture:  "arm64",
+				OS:            "linux",
+				Author:        "ProCloud Maintainer",
+				Config: ImageConfig{
+					Cmd:        []string{"/bin/sh"},
+					Entrypoint: []string{"/entrypoint.sh"},
+					Env:        []string{"PATH=/usr/local/bin:/usr/bin:/bin", "NODE_ENV=production"},
+					WorkingDir: "/app",
+					User:       "1000",
+					Labels: map[string]string{
+						"procloud.io/layer": "base",
+					},
+				},
+				History: []*ImageHistoryLayer{
+					{
+						ID:        img.ID,
+						Created:   img.Created,
+						CreatedBy: "CMD [\"/bin/sh\"]",
+						Size:      1024 * 1024 * 10,
+					},
+				},
+				Labels: map[string]string{
+					"maintainer": "procloud",
+				},
+				Raw: fmt.Sprintf(`{"Id": "%s", "RepoTags": ["%s"], "Size": "%s"}`, img.ID, repoTag, img.Size),
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("image not found: %s", idOrName)
+}
+
 // -------------------------------------------------------------
 // Containers
 // -------------------------------------------------------------
@@ -698,6 +743,45 @@ func (m *MockRuntime) RemoveVolume(ctx context.Context, name string) error {
 	defer m.mu.Unlock()
 	delete(m.Volumes, name)
 	return nil
+}
+
+func (m *MockRuntime) InspectVolume(ctx context.Context, name string) (*VolumeInspect, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	vol, ok := m.Volumes[name]
+	if !ok {
+		return nil, fmt.Errorf("volume not found: %s", name)
+	}
+
+	var containers []*ContainerSummary
+	for _, c := range m.Containers {
+		for _, mnt := range c.Mounts {
+			if mnt.Source == name || strings.Contains(mnt.Source, name) {
+				containers = append(containers, &ContainerSummary{
+					ID:     c.ID,
+					Names:  []string{c.Name},
+					Image:  c.Image,
+					State:  c.Status,
+					Status: c.Status,
+				})
+			}
+		}
+	}
+
+	return &VolumeInspect{
+		Name:             vol.Name,
+		Driver:           vol.Driver,
+		Scope:            vol.Scope,
+		Mountpoint:       vol.Mountpoint,
+		CreatedAt:        time.Now().Format(time.RFC3339),
+		Labels:           vol.Labels,
+		Options:          map[string]string{},
+		Anonymous:        false,
+		MountCount:       len(containers),
+		UsedByContainers: containers,
+		Raw:              fmt.Sprintf(`{"Name": "%s", "Driver": "%s", "Mountpoint": "%s"}`, vol.Name, vol.Driver, vol.Mountpoint),
+	}, nil
 }
 
 func (m *MockRuntime) WriteQuadletUnit(ctx context.Context, unitName, content string) (string, error) {

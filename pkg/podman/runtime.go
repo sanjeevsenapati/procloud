@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +20,7 @@ type ContainerRuntime interface {
 
 	// Images
 	ListImages(ctx context.Context) ([]*ImageSummary, error)
+	InspectImage(ctx context.Context, idOrName string) (*ImageInspect, error)
 	BuildImage(ctx context.Context, contextDir, containerfilePath, tag string) (string, error)
 	PullImage(ctx context.Context, image string) error
 	RemoveImage(ctx context.Context, idOrTag string, force bool) error
@@ -56,6 +58,7 @@ type ContainerRuntime interface {
 	RemoveNetwork(ctx context.Context, name string) error
 
 	ListVolumes(ctx context.Context) ([]*VolumeSummary, error)
+	InspectVolume(ctx context.Context, name string) (*VolumeInspect, error)
 	CreateVolume(ctx context.Context, name string) (string, error)
 	CreateVolumeWithOptions(ctx context.Context, name string, labels map[string]string) (string, error)
 	RemoveVolume(ctx context.Context, name string) error
@@ -233,6 +236,45 @@ type ImageSummary struct {
 	Created    string `json:"created"`
 }
 
+type ImageHistoryLayer struct {
+	ID        string   `json:"id"`
+	Created   string   `json:"created"`
+	CreatedBy string   `json:"created_by"`
+	Size      int64    `json:"size"`
+	Comment   string   `json:"comment,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+}
+
+type ImageConfig struct {
+	ExposedPorts []string          `json:"exposed_ports,omitempty"`
+	Env          []string          `json:"env,omitempty"`
+	Cmd          []string          `json:"cmd,omitempty"`
+	Entrypoint   []string          `json:"entrypoint,omitempty"`
+	WorkingDir   string            `json:"working_dir,omitempty"`
+	User         string            `json:"user,omitempty"`
+	StopSignal   string            `json:"stop_signal,omitempty"`
+	Labels       map[string]string `json:"labels,omitempty"`
+}
+
+type ImageInspect struct {
+	ID            string               `json:"id"`
+	Digest        string               `json:"digest"`
+	RepoTags      []string             `json:"repo_tags"`
+	RepoDigests   []string             `json:"repo_digests"`
+	Created       string               `json:"created"`
+	Size          int64                `json:"size"`
+	SizeFormatted string               `json:"size_formatted"`
+	Architecture  string               `json:"architecture"`
+	OS            string               `json:"os"`
+	Author        string               `json:"author,omitempty"`
+	Comment       string               `json:"comment,omitempty"`
+	Config        ImageConfig          `json:"config"`
+	GraphDriver   string               `json:"graph_driver,omitempty"`
+	History       []*ImageHistoryLayer `json:"history,omitempty"`
+	Labels        map[string]string    `json:"labels,omitempty"`
+	Raw           string               `json:"raw,omitempty"`
+}
+
 type VolumeSummary struct {
 	Name       string            `json:"name"`
 	Driver     string            `json:"driver"`
@@ -240,6 +282,22 @@ type VolumeSummary struct {
 	Mountpoint string            `json:"mountpoint"`
 	Size       string            `json:"size,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"`
+}
+
+type VolumeInspect struct {
+	Name             string               `json:"name"`
+	Driver           string               `json:"driver"`
+	Scope            string               `json:"scope"`
+	Mountpoint       string               `json:"mountpoint"`
+	CreatedAt        string               `json:"created_at"`
+	Labels           map[string]string    `json:"labels,omitempty"`
+	Options          map[string]string    `json:"options,omitempty"`
+	Anonymous        bool                 `json:"anonymous,omitempty"`
+	MountCount       int                  `json:"mount_count,omitempty"`
+	UID              int                  `json:"uid,omitempty"`
+	GID              int                  `json:"gid,omitempty"`
+	UsedByContainers []*ContainerSummary  `json:"used_by_containers,omitempty"`
+	Raw              string               `json:"raw,omitempty"`
 }
 
 type NetworkSummary struct {
@@ -410,6 +468,123 @@ func (p *PodmanCLI) RemoveImage(ctx context.Context, idOrTag string, force bool)
 	args = append(args, idOrTag)
 	cmd := exec.CommandContext(ctx, p.binPath, args...)
 	return cmd.Run()
+}
+
+func (p *PodmanCLI) InspectImage(ctx context.Context, idOrName string) (*ImageInspect, error) {
+	cmd := exec.CommandContext(ctx, p.binPath, "image", "inspect", idOrName)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("podman image inspect failed: %w", err)
+	}
+
+	type rawInspect struct {
+		ID          string      `json:"Id"`
+		Digest      string      `json:"Digest"`
+		RepoTags    []string    `json:"RepoTags"`
+		RepoDigests []string    `json:"RepoDigests"`
+		Created     string      `json:"Created"`
+		Size        int64       `json:"Size"`
+		Arch        string      `json:"Architecture"`
+		OS          string      `json:"Os"`
+		Author      string      `json:"Author"`
+		Comment     string      `json:"Comment"`
+		GraphDriver struct {
+			Name string `json:"Name"`
+		} `json:"GraphDriver"`
+		Labels map[string]string `json:"Labels"`
+		Config struct {
+			ExposedPorts map[string]any    `json:"ExposedPorts"`
+			Env          []string          `json:"Env"`
+			Cmd          []string          `json:"Cmd"`
+			Entrypoint   []string          `json:"Entrypoint"`
+			WorkingDir   string            `json:"WorkingDir"`
+			User         string            `json:"User"`
+			StopSignal   string            `json:"StopSignal"`
+			Labels       map[string]string `json:"Labels"`
+		} `json:"Config"`
+	}
+
+	var raw rawInspect
+	trimmed := bytes.TrimSpace(out)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var slice []rawInspect
+		if err := json.Unmarshal(out, &slice); err != nil {
+			return nil, err
+		}
+		if len(slice) == 0 {
+			return nil, fmt.Errorf("image not found: %s", idOrName)
+		}
+		raw = slice[0]
+	} else {
+		if err := json.Unmarshal(out, &raw); err != nil {
+			return nil, err
+		}
+	}
+
+	var exposedPorts []string
+	for p := range raw.Config.ExposedPorts {
+		exposedPorts = append(exposedPorts, p)
+	}
+	sort.Strings(exposedPorts)
+
+	labels := raw.Labels
+	if len(labels) == 0 && len(raw.Config.Labels) > 0 {
+		labels = raw.Config.Labels
+	}
+
+	insp := &ImageInspect{
+		ID:            raw.ID,
+		Digest:        raw.Digest,
+		RepoTags:      raw.RepoTags,
+		RepoDigests:   raw.RepoDigests,
+		Created:       raw.Created,
+		Size:          raw.Size,
+		SizeFormatted: fmt.Sprintf("%.1f MB", float64(raw.Size)/(1024*1024)),
+		Architecture:  raw.Arch,
+		OS:            raw.OS,
+		Author:        raw.Author,
+		Comment:       raw.Comment,
+		GraphDriver:   raw.GraphDriver.Name,
+		Labels:        labels,
+		Config: ImageConfig{
+			ExposedPorts: exposedPorts,
+			Env:          raw.Config.Env,
+			Cmd:          raw.Config.Cmd,
+			Entrypoint:   raw.Config.Entrypoint,
+			WorkingDir:   raw.Config.WorkingDir,
+			User:         raw.Config.User,
+			StopSignal:   raw.Config.StopSignal,
+			Labels:       raw.Config.Labels,
+		},
+		Raw: string(out),
+	}
+
+	// Fetch history layers
+	histCmd := exec.CommandContext(ctx, p.binPath, "history", "--format", "json", idOrName)
+	if histOut, err := histCmd.Output(); err == nil {
+		var layers []struct {
+			ID        string   `json:"id"`
+			Created   string   `json:"created"`
+			CreatedBy string   `json:"CreatedBy"`
+			Size      int64    `json:"size"`
+			Comment   string   `json:"comment"`
+			Tags      []string `json:"tags"`
+		}
+		if err := json.Unmarshal(histOut, &layers); err == nil {
+			for _, l := range layers {
+				insp.History = append(insp.History, &ImageHistoryLayer{
+					ID:        l.ID,
+					Created:   l.Created,
+					CreatedBy: l.CreatedBy,
+					Size:      l.Size,
+					Comment:   l.Comment,
+					Tags:      l.Tags,
+				})
+			}
+		}
+	}
+
+	return insp, nil
 }
 
 // -------------------------------------------------------------
@@ -1242,6 +1417,104 @@ func (p *PodmanCLI) CreateVolume(ctx context.Context, name string) (string, erro
 func (p *PodmanCLI) RemoveVolume(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, p.binPath, "volume", "rm", "-f", name)
 	return cmd.Run()
+}
+
+func (p *PodmanCLI) InspectVolume(ctx context.Context, name string) (*VolumeInspect, error) {
+	cmd := exec.CommandContext(ctx, p.binPath, "volume", "inspect", name)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("podman volume inspect failed: %w", err)
+	}
+
+	type rawVol struct {
+		Name       string            `json:"Name"`
+		Driver     string            `json:"Driver"`
+		Scope      string            `json:"Scope"`
+		Mountpoint string            `json:"Mountpoint"`
+		CreatedAt  string            `json:"CreatedAt"`
+		Labels     map[string]string `json:"Labels"`
+		Options    map[string]string `json:"Options"`
+		Anonymous  bool              `json:"Anonymous"`
+		MountCount int               `json:"MountCount"`
+		UID        int               `json:"UID"`
+		GID        int               `json:"GID"`
+	}
+
+	var raw rawVol
+	trimmed := bytes.TrimSpace(out)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var slice []rawVol
+		if err := json.Unmarshal(out, &slice); err != nil {
+			return nil, err
+		}
+		if len(slice) == 0 {
+			return nil, fmt.Errorf("volume not found: %s", name)
+		}
+		raw = slice[0]
+	} else {
+		if err := json.Unmarshal(out, &raw); err != nil {
+			return nil, err
+		}
+	}
+
+	vol := &VolumeInspect{
+		Name:       raw.Name,
+		Driver:     raw.Driver,
+		Scope:      raw.Scope,
+		Mountpoint: raw.Mountpoint,
+		CreatedAt:  raw.CreatedAt,
+		Labels:     raw.Labels,
+		Options:    raw.Options,
+		Anonymous:  raw.Anonymous,
+		MountCount: raw.MountCount,
+		UID:        raw.UID,
+		GID:        raw.GID,
+		Raw:        string(out),
+	}
+
+	// Fetch containers mounting this volume
+	ctrCmd := exec.CommandContext(ctx, p.binPath, "ps", "-a", "--filter", "volume="+name, "--format", "json")
+	if ctrOut, err := ctrCmd.Output(); err == nil {
+		var rawCtrs []struct {
+			Id      string            `json:"Id"`
+			Names   []string          `json:"Names"`
+			Image   string            `json:"Image"`
+			State   string            `json:"State"`
+			Status  string            `json:"Status"`
+			Created int64             `json:"Created"`
+			Pod     string            `json:"Pod"`
+			Labels  map[string]string `json:"Labels"`
+			Ports   []struct {
+				HostPort      int `json:"hostPort"`
+				ContainerPort int `json:"containerPort"`
+			} `json:"Ports"`
+		}
+		if err := json.Unmarshal(ctrOut, &rawCtrs); err == nil {
+			for _, c := range rawCtrs {
+				var ports []string
+				for _, port := range c.Ports {
+					ports = append(ports, fmt.Sprintf("%d:%d", port.HostPort, port.ContainerPort))
+				}
+				idShort := c.Id
+				if len(idShort) > 12 {
+					idShort = idShort[:12]
+				}
+				vol.UsedByContainers = append(vol.UsedByContainers, &ContainerSummary{
+					ID:      idShort,
+					Names:   c.Names,
+					Image:   c.Image,
+					State:   c.State,
+					Status:  c.Status,
+					Ports:   ports,
+					Created: time.Unix(c.Created, 0).Format(time.RFC3339),
+					Pod:     c.Pod,
+					Labels:  c.Labels,
+				})
+			}
+		}
+	}
+
+	return vol, nil
 }
 
 // -------------------------------------------------------------

@@ -1310,7 +1310,7 @@
         }
 
         /* Per-Container, Per-Pod & Per-LoadBalancer Details Pages */
-        .cd-header-card, .pd-header-card, .lbd-header-card {
+        .cd-header-card, .pd-header-card, .lbd-header-card, .imgd-header-card, .vold-header-card {
             background: var(--pg-card);
             border: 1px solid var(--pg-border);
             border-radius: 12px;
@@ -1323,7 +1323,7 @@
             flex-wrap: wrap;
             gap: 16px;
         }
-        .cd-subnav, .pd-subnav, .lbd-subnav, .dep-subnav {
+        .cd-subnav, .pd-subnav, .lbd-subnav, .dep-subnav, .imgd-subnav, .vold-subnav {
             display: flex;
             gap: 6px;
             border-bottom: 1px solid var(--pg-border);
@@ -1331,7 +1331,7 @@
             overflow-x: auto;
             white-space: nowrap;
         }
-        .cd-subnav-tab, .pd-subnav-tab, .lbd-subnav-tab, .dep-subnav-tab {
+        .cd-subnav-tab, .pd-subnav-tab, .lbd-subnav-tab, .dep-subnav-tab, .imgd-subnav-tab, .vold-subnav-tab {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -1344,21 +1344,21 @@
             transition: all 0.15s ease;
             text-decoration: none;
         }
-        .cd-subnav-tab:hover, .pd-subnav-tab:hover, .lbd-subnav-tab:hover, .dep-subnav-tab:hover {
+        .cd-subnav-tab:hover, .pd-subnav-tab:hover, .lbd-subnav-tab:hover, .dep-subnav-tab:hover, .imgd-subnav-tab:hover, .vold-subnav-tab:hover {
             color: var(--pg-blue-600);
             background: #f0f6ff;
             border-radius: 6px 6px 0 0;
         }
-        .cd-subnav-tab.active, .pd-subnav-tab.active, .lbd-subnav-tab.active, .dep-subnav-tab.active {
+        .cd-subnav-tab.active, .pd-subnav-tab.active, .lbd-subnav-tab.active, .dep-subnav-tab.active, .imgd-subnav-tab.active, .vold-subnav-tab.active {
             color: var(--pg-blue-600);
             border-bottom-color: var(--pg-blue-600);
             background: #eff6ff;
             border-radius: 6px 6px 0 0;
         }
-        .cd-subcontent, .pd-subcontent, .lbd-subcontent, .dep-subcontent {
+        .cd-subcontent, .pd-subcontent, .lbd-subcontent, .dep-subcontent, .imgd-subcontent, .vold-subcontent {
             display: none;
         }
-        .cd-subcontent.active, .pd-subcontent.active, .lbd-subcontent.active, .dep-subcontent.active {
+        .cd-subcontent.active, .pd-subcontent.active, .lbd-subcontent.active, .dep-subcontent.active, .imgd-subcontent.active, .vold-subcontent.active {
             display: block;
         }
 
@@ -3610,6 +3610,261 @@
             </div>
         </div>
 
+        <!-- 4b. IMAGE DETAILS TAB -->
+        <div id="tab-image-details" class="tab-content">
+            <!-- Header Card -->
+            <div class="imgd-header-card cd-header-card">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <button class="btn btn-sm" onclick="switchTab('images')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                        <span>Back to Images</span>
+                    </button>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <svg class="icon-svg icon-svg-lg" style="color:var(--pg-blue-600); width:28px; height:28px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <h2 id="imgd-title-name" style="font-size:18px; font-weight:800; margin:0; color:var(--pg-text);">image-repo</h2>
+                                <span id="imgd-id-pill" class="pill pill-blue"></span>
+                                <span id="imgd-arch-pill" class="pill pill-purple"></span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:5px; font-size:12px; color:var(--pg-text-muted); flex-wrap:wrap;">
+                                <span>Digest: <code id="imgd-digest-badge" style="font-size:11px; color:var(--pg-blue-600);"></code></span>
+                                <span>•</span>
+                                <span>Size: <strong id="imgd-size-badge" style="color:var(--pg-text);"></strong></span>
+                                <span>•</span>
+                                <span>Created: <span id="imgd-created-badge"></span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-emerald btn-sm rbac-write-only" id="imgd-btn-run" onclick="quickRunCurrentImg()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <span>Run Container</span>
+                    </button>
+                    <button class="btn btn-primary btn-sm rbac-write-only" id="imgd-btn-pull" onclick="pullCurrentImage()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Pull Latest</span>
+                    </button>
+                    <button class="btn btn-rose btn-sm rbac-write-only" id="imgd-btn-del" onclick="deleteCurrentImage()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <span>Delete Image</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Image Sub-Navigation Tabs Bar -->
+            <div class="imgd-subnav cd-subnav">
+                <div class="imgd-subnav-tab cd-subnav-tab active" data-subtab="overview" onclick="switchImageSubTab('overview')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Overview &amp; Specs</span>
+                </div>
+                <div class="imgd-subnav-tab cd-subnav-tab" data-subtab="history" onclick="switchImageSubTab('history')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+                    <span>History &amp; Layers</span>
+                </div>
+                <div class="imgd-subnav-tab cd-subnav-tab" data-subtab="config" onclick="switchImageSubTab('config')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    <span>Config &amp; Environment</span>
+                </div>
+                <div class="imgd-subnav-tab cd-subnav-tab" data-subtab="raw" onclick="switchImageSubTab('raw')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                    <span>Raw Inspect</span>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 1: OVERVIEW & SPECS -->
+            <div id="imgd-tab-overview" class="imgd-subcontent cd-subcontent active">
+                <div class="grid-12">
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Virtual Image Size</div>
+                        <div class="stat-number" id="imgd-det-size" style="font-size:20px;">0 MB</div>
+                        <div class="stat-hint" id="imgd-det-bytes">0 bytes</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Architecture &amp; OS</div>
+                        <div class="stat-number" id="imgd-det-arch" style="font-size:18px; font-family:'JetBrains Mono',monospace;">linux / arm64</div>
+                        <div class="stat-hint" id="imgd-det-os">Driver: overlay</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Exposed Ports</div>
+                        <div class="stat-number" id="imgd-det-ports" style="font-size:18px; font-family:'JetBrains Mono',monospace;">None</div>
+                        <div class="stat-hint" id="imgd-det-stop-signal">Stop Signal: SIGTERM</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Maintainer / Author</div>
+                        <div class="stat-number" id="imgd-det-author" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ProCloud</div>
+                        <div class="stat-hint" id="imgd-det-user">User: root</div>
+                    </div>
+                </div>
+
+                <div class="grid-12" style="margin-top:20px;">
+                    <!-- Left: Metadata & Spec List -->
+                    <div class="col-7">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    <span>Image Specification &amp; Identifiers</span>
+                                </div>
+                            </div>
+                            <div style="padding:16px;">
+                                <table class="pg-table" style="font-size:13px;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="width:140px; font-weight:600; color:var(--pg-text-secondary);">Image Full ID</td>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <code id="imgd-spec-full-id" style="font-size:12px; word-break:break-all; color:var(--pg-blue-600);">-</code>
+                                                    <button class="btn btn-xs" onclick="copyText(document.getElementById('imgd-spec-full-id').innerText, 'Image ID')">Copy</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Digest Hash</td>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <code id="imgd-spec-digest" style="font-size:12px; word-break:break-all; color:var(--pg-text-muted);">-</code>
+                                                    <button class="btn btn-xs" onclick="copyText(document.getElementById('imgd-spec-digest').innerText, 'Digest')">Copy</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Repository Tags</td>
+                                            <td id="imgd-spec-repotags">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Created Timestamp</td>
+                                            <td id="imgd-spec-created">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Default Working Dir</td>
+                                            <td><code id="imgd-spec-workdir">/</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Graph Storage Driver</td>
+                                            <td id="imgd-spec-driver">overlay</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Tags & Labels -->
+                    <div class="col-5">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                                    <span>Resource Tags &amp; Metadata Labels</span>
+                                </div>
+                            </div>
+                            <div style="padding:16px;">
+                                <div id="imgd-spec-labels" style="display:flex; flex-wrap:wrap; gap:6px;">
+                                    <span style="color:var(--pg-text-muted); font-size:12px;">No metadata labels found.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 2: HISTORY & LAYERS -->
+            <div id="imgd-tab-history" class="imgd-subcontent cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+                            <span>OCI Image Layer History</span>
+                        </div>
+                        <span id="imgd-history-count" class="pill pill-blue">0 Layers</span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="pg-table" style="font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th style="width:120px;">Layer ID</th>
+                                    <th style="width:100px;">Size</th>
+                                    <th style="width:170px;">Created</th>
+                                    <th>Build Command / Instruction</th>
+                                    <th style="width:140px;">Comment</th>
+                                </tr>
+                            </thead>
+                            <tbody id="imgd-history-tbody">
+                                <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--pg-text-muted);">No history layers available.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 3: CONFIG & ENVIRONMENT -->
+            <div id="imgd-tab-config" class="imgd-subcontent cd-subcontent">
+                <div class="grid-12">
+                    <div class="col-6">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                                    <span>Entrypoint &amp; Command</span>
+                                </div>
+                            </div>
+                            <div style="padding:16px;">
+                                <div style="margin-bottom:12px;">
+                                    <div style="font-size:12px; font-weight:700; color:var(--pg-text-secondary); margin-bottom:4px;">ENTRYPOINT:</div>
+                                    <pre id="imgd-cfg-entrypoint" style="background:#f8fafc; border:1px solid var(--pg-border); border-radius:6px; padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:12px; margin:0; overflow-x:auto;">[]</pre>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; font-weight:700; color:var(--pg-text-secondary); margin-bottom:4px;">CMD:</div>
+                                    <pre id="imgd-cfg-cmd" style="background:#f8fafc; border:1px solid var(--pg-border); border-radius:6px; padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:12px; margin:0; overflow-x:auto;">[]</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                                    <span>Environment Variables</span>
+                                </div>
+                                <span id="imgd-cfg-env-count" class="pill pill-blue">0 Envs</span>
+                            </div>
+                            <div style="padding:12px; max-height:360px; overflow-y:auto;">
+                                <table class="pg-table" style="font-size:12px;">
+                                    <tbody id="imgd-cfg-env-tbody">
+                                        <tr><td style="text-align:center; color:var(--pg-text-muted);">No environment variables defined.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 4: RAW INSPECT -->
+            <div id="imgd-tab-raw" class="imgd-subcontent cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                            <span>Raw Podman Image Inspect JSON</span>
+                        </div>
+                        <button class="btn btn-sm" onclick="copyImageRaw()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            <span>Copy JSON</span>
+                        </button>
+                    </div>
+                    <div style="padding:16px;">
+                        <pre id="imgd-raw-json" style="background:#0f172a; color:#f8fafc; padding:16px; border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:12px; overflow-x:auto; max-height:550px; line-height:1.5;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 5. VOLUMES TAB -->
         <div id="tab-volumes" class="tab-content">
             <div class="pg-box">
@@ -3654,6 +3909,198 @@
                             <tr><td colspan="4" style="text-align:center;">Loading volumes...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5b. VOLUME DETAILS TAB -->
+        <div id="tab-volume-details" class="tab-content">
+            <!-- Header Card -->
+            <div class="vold-header-card cd-header-card">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <button class="btn btn-sm" onclick="switchTab('volumes')">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                        <span>Back to Volumes</span>
+                    </button>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <svg class="icon-svg icon-svg-lg" style="color:var(--pg-blue-600); width:28px; height:28px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <h2 id="vold-title-name" style="font-size:18px; font-weight:800; margin:0; color:var(--pg-text);">volume-name</h2>
+                                <span id="vold-driver-pill" class="pill pill-blue">local</span>
+                                <span id="vold-scope-pill" class="pill pill-purple">local</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:5px; font-size:12px; color:var(--pg-text-muted); flex-wrap:wrap;">
+                                <span>Mountpoint: <code id="vold-mountpoint-badge" style="font-size:11px; color:var(--pg-blue-600); background:rgba(37,99,235,0.06); padding:2px 6px; border-radius:4px;"></code></span>
+                                <span>•</span>
+                                <span>Created: <span id="vold-created-badge"></span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-sm" onclick="copyVolumeMountpoint()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        <span>Copy Mountpoint</span>
+                    </button>
+                    <button class="btn btn-rose btn-sm rbac-write-only" id="vold-btn-del" onclick="deleteCurrentVolume()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <span>Delete Volume</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Volume Sub-Navigation Tabs Bar -->
+            <div class="vold-subnav cd-subnav">
+                <div class="vold-subnav-tab cd-subnav-tab active" data-subtab="overview" onclick="switchVolumeSubTab('overview')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Overview &amp; Storage</span>
+                </div>
+                <div class="vold-subnav-tab cd-subnav-tab" data-subtab="containers" onclick="switchVolumeSubTab('containers')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                    <span>Containers Using Volume</span>
+                </div>
+                <div class="vold-subnav-tab cd-subnav-tab" data-subtab="raw" onclick="switchVolumeSubTab('raw')">
+                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                    <span>Raw Inspect</span>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 1: OVERVIEW & STORAGE -->
+            <div id="vold-tab-overview" class="vold-subcontent cd-subcontent active">
+                <div class="grid-12">
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Driver Plugin</div>
+                        <div class="stat-number" id="vold-det-driver" style="font-size:20px;">local</div>
+                        <div class="stat-hint" id="vold-det-scope">Scope: local</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Containers Attached</div>
+                        <div class="stat-number" id="vold-det-containers-count" style="font-size:20px; color:var(--pg-blue-600);">0</div>
+                        <div class="stat-hint" id="vold-det-mounts">Active Mounts: 0</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Volume Type</div>
+                        <div class="stat-number" id="vold-det-type" style="font-size:18px;">Named</div>
+                        <div class="stat-hint" id="vold-det-uidgid">UID: 1000 • GID: 1000</div>
+                    </div>
+                    <div class="pg-stat-card col-3">
+                        <div class="stat-label">Mountpoint Availability</div>
+                        <div class="stat-number" id="vold-det-status" style="font-size:18px; color:var(--pg-emerald);">Mounted</div>
+                        <div class="stat-hint" id="vold-det-created">Created: just now</div>
+                    </div>
+                </div>
+
+                <div class="grid-12" style="margin-top:20px;">
+                    <!-- Left: Storage Specs -->
+                    <div class="col-7">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    <span>Storage Mountpoint &amp; Metadata</span>
+                                </div>
+                            </div>
+                            <div style="padding:16px;">
+                                <table class="pg-table" style="font-size:13px;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="width:140px; font-weight:600; color:var(--pg-text-secondary);">Volume Name</td>
+                                            <td><code id="vold-spec-name" style="font-size:13px; font-weight:700; color:var(--pg-text);">-</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Host Storage Path</td>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <code id="vold-spec-mountpoint" style="font-size:12px; word-break:break-all; color:var(--pg-blue-600);">-</code>
+                                                    <button class="btn btn-xs" onclick="copyText(document.getElementById('vold-spec-mountpoint').innerText, 'Storage Path')">Copy</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Driver &amp; Scope</td>
+                                            <td><span id="vold-spec-driver-scope">local / local</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Created Timestamp</td>
+                                            <td id="vold-spec-created">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-weight:600; color:var(--pg-text-secondary);">Driver Options</td>
+                                            <td id="vold-spec-options"><span style="color:var(--pg-text-muted);">None (Default host directory)</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Resource Tags & Labels -->
+                    <div class="col-5">
+                        <div class="pg-box">
+                            <div class="pg-box-header">
+                                <div class="pg-box-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                                    <span>Resource Tags &amp; Labels</span>
+                                </div>
+                            </div>
+                            <div style="padding:16px;">
+                                <div id="vold-spec-labels" style="display:flex; flex-wrap:wrap; gap:6px;">
+                                    <span style="color:var(--pg-text-muted); font-size:12px;">No resource tags configured.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 2: CONTAINERS USING VOLUME -->
+            <div id="vold-tab-containers" class="vold-subcontent cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-4.2a3 3 0 0 0-3.36 0l-6 4.2A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.26 2.4l6 4.2a3 3 0 0 0 3.36 0l6-4.2A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="m4.5 9 8.5 5 8.5-5"/><path d="M13 14v8.5"/></svg>
+                            <span>Containers Mounting this Volume</span>
+                        </div>
+                        <span id="vold-containers-count-badge" class="pill pill-blue">0 Containers</span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="pg-table" style="font-size:13px;">
+                            <thead>
+                                <tr>
+                                    <th>Container Name</th>
+                                    <th>State</th>
+                                    <th>Image</th>
+                                    <th>Port Bindings</th>
+                                    <th>Created</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vold-containers-tbody">
+                                <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--pg-text-muted);">No containers currently mount this volume.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TAB 3: RAW INSPECT -->
+            <div id="vold-tab-raw" class="vold-subcontent cd-subcontent">
+                <div class="pg-box">
+                    <div class="pg-box-header">
+                        <div class="pg-box-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+                            <span>Raw Podman Volume Inspect JSON</span>
+                        </div>
+                        <button class="btn btn-sm" onclick="copyVolumeRaw()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            <span>Copy JSON</span>
+                        </button>
+                    </div>
+                    <div style="padding:16px;">
+                        <pre id="vold-raw-json" style="background:#0f172a; color:#f8fafc; padding:16px; border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:12px; overflow-x:auto; max-height:550px; line-height:1.5;"></pre>
+                    </div>
                 </div>
             </div>
         </div>
@@ -8261,6 +8708,8 @@ spec:
             const parentTabMap = {
                 'container-details': 'containers',
                 'pod-details': 'pods',
+                'image-details': 'images',
+                'volume-details': 'volumes',
                 'loadbalancer-details': 'loadbalancers',
                 'dns-details': 'dns'
             };
@@ -8289,8 +8738,8 @@ spec:
                 if (backdrop) backdrop.classList.remove('active');
             }
 
-            // Do not call refreshCurrentTab() for container-details, pod-details, loadbalancer-details or dns-details to prevent recursive re-inspection
-            if (tabName !== 'container-details' && tabName !== 'pod-details' && tabName !== 'loadbalancer-details' && tabName !== 'dns-details') {
+            // Do not call refreshCurrentTab() for detail views to prevent recursive re-inspection
+            if (tabName !== 'container-details' && tabName !== 'pod-details' && tabName !== 'image-details' && tabName !== 'volume-details' && tabName !== 'loadbalancer-details' && tabName !== 'dns-details') {
                 refreshCurrentTab();
             }
         }
@@ -9824,13 +10273,17 @@ spec:
                     <td style="text-align:center; padding-left:12px; padding-right:6px;">
                         <input type="checkbox" class="img-row-select" onchange="toggleImageSelection('${escapeHtml(key)}', this.checked)" ${isSelected ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:var(--pg-blue-600);">
                     </td>
-                    <td><strong>${escapeHtml(img.repository)}</strong></td>
+                    <td><a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openImageDetails('${escapeHtml(img.id || repoTag)}')" title="View Image Details"><strong>${escapeHtml(img.repository)}</strong></a></td>
                     <td>${tagDisplay}</td>
                     <td><code style="color:var(--pg-blue-600);">${escapeHtml(img.id)}</code></td>
                     <td>${escapeHtml(img.size)}</td>
                     <td>${img.created ? new Date(img.created).toLocaleDateString() : 'n/a'}</td>
                     <td>
                         <div class="table-actions">
+                            <button class="btn btn-sm btn-outline-primary" title="View Image Details" onclick="openImageDetails('${escapeHtml(img.id || repoTag)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Details</span>
+                            </button>
                             ${canWrite() ? `
                             ${!isDangling ? `
                             <button class="btn btn-sm btn-outline-emerald" title="Run Container from Image" onclick="quickRunImage('${escapeHtml(repoTag)}')">
@@ -9933,7 +10386,7 @@ spec:
                         <div style="display: flex; flex-direction: column; gap: 2px;">
                             <div style="display: flex; align-items: center; gap: 8px; max-width: 100%;">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--pg-blue-600); flex-shrink: 0;"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>
-                                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--pg-text-primary);" title="${escapeHtml(v.name)}">${escapeHtml(displayVolName)}</span>
+                                <a href="javascript:void(0)" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--pg-blue-600); text-decoration: none;" onclick="openVolumeDetails('${escapeHtml(v.name)}')" title="View Volume Details">${escapeHtml(displayVolName)}</a>
                                 ${isLongHex ? `<button class="btn btn-xs" style="padding: 1px 5px; font-size: 10px; flex-shrink: 0;" title="Copy full volume name" onclick="copyText('${escapeHtml(v.name)}', 'Volume Name')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>` : ''}
                             </div>
                             ${renderTagBadges(v.labels)}
@@ -9950,6 +10403,10 @@ spec:
                     </td>
                     <td style="text-align: right;">
                         <div class="table-actions" style="justify-content: flex-end;">
+                            <button class="btn btn-sm btn-outline-primary" title="View Details" onclick="openVolumeDetails('${escapeHtml(v.name)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Details</span>
+                            </button>
                             ${canWrite() ? `
                             <button class="btn btn-sm btn-outline-rose" title="Delete Volume" onclick="removeVolume('${escapeHtml(v.name)}')">
                                 <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -15128,6 +15585,386 @@ spec:
         function copyPdRaw() {
             const raw = document.getElementById('pd-raw-content').innerText;
             navigator.clipboard.writeText(raw).then(() => showToast('Raw pod JSON copied!', 'info'));
+        }
+
+        // -------------------------------------------------------------
+        // Image Details Controller
+        // -------------------------------------------------------------
+        let currentImageDetails = null;
+        let currentImageDetailsSubTab = 'overview';
+
+        async function openImageDetails(idOrRepo) {
+            try {
+                switchTab('image-details');
+                // Loading state
+                document.getElementById('imgd-title-name').innerText = idOrRepo;
+                document.getElementById('imgd-id-pill').innerText = 'Loading...';
+                document.getElementById('imgd-arch-pill').innerText = '-';
+                document.getElementById('imgd-digest-badge').innerText = '-';
+                document.getElementById('imgd-size-badge').innerText = '-';
+                document.getElementById('imgd-created-badge').innerText = '-';
+
+                const res = await authFetch(`/api/v1/images/${encodeURIComponent(idOrRepo)}`);
+                if (!res.ok) {
+                    showToast('Failed to inspect image: ' + await res.text(), 'error');
+                    return;
+                }
+                const data = await res.json();
+                currentImageDetails = data;
+                renderImageDetails(data);
+                switchImageSubTab('overview');
+            } catch (e) {
+                showToast('Error opening image details: ' + e.message, 'error');
+            }
+        }
+
+        function renderImageDetails(img) {
+            if (!img) return;
+            const repoTag = (img.repo_tags && img.repo_tags.length > 0) ? img.repo_tags[0] : (img.id ? img.id.substring(0, 12) : 'image');
+            document.getElementById('imgd-title-name').innerText = repoTag;
+
+            const shortId = (img.id || '').replace(/^sha256:/, '').substring(0, 12);
+            document.getElementById('imgd-id-pill').innerText = shortId || 'id: n/a';
+
+            const arch = `${img.os || 'linux'}/${img.architecture || 'amd64'}`;
+            document.getElementById('imgd-arch-pill').innerText = arch;
+
+            const digest = (img.digest || (img.repo_digests && img.repo_digests[0]) || '-');
+            const shortDigest = digest.length > 25 ? `${digest.substring(0, 15)}…${digest.slice(-8)}` : digest;
+            const digestBadge = document.getElementById('imgd-digest-badge');
+            digestBadge.innerText = shortDigest;
+            digestBadge.title = digest;
+
+            const sizeText = img.size_formatted || (img.size ? `${(img.size / (1024 * 1024)).toFixed(1)} MB` : '0 MB');
+            document.getElementById('imgd-size-badge').innerText = sizeText;
+            document.getElementById('imgd-created-badge').innerText = img.created ? new Date(img.created).toLocaleString() : 'n/a';
+
+            // Stat Cards
+            document.getElementById('imgd-det-size').innerText = sizeText;
+            document.getElementById('imgd-det-bytes').innerText = (img.size || 0).toLocaleString() + ' bytes';
+            document.getElementById('imgd-det-arch').innerText = arch;
+            document.getElementById('imgd-det-os').innerText = `Storage Driver: ${img.graph_driver || 'overlay'}`;
+
+            const ports = (img.config && img.config.exposed_ports && img.config.exposed_ports.length > 0)
+                ? img.config.exposed_ports.join(', ')
+                : 'None';
+            document.getElementById('imgd-det-ports').innerText = ports;
+            document.getElementById('imgd-det-stop-signal').innerText = `Stop Signal: ${(img.config && img.config.stop_signal) || 'SIGTERM'}`;
+
+            const author = img.author || (img.labels && (img.labels['maintainer'] || img.labels['org.opencontainers.image.authors'])) || 'ProCloud';
+            document.getElementById('imgd-det-author').innerText = author;
+            document.getElementById('imgd-det-user').innerText = `Default User: ${(img.config && img.config.user) || 'root'}`;
+
+            // Spec Table
+            document.getElementById('imgd-spec-full-id').innerText = img.id || '-';
+            document.getElementById('imgd-spec-digest').innerText = digest;
+            const repoTagsContainer = document.getElementById('imgd-spec-repotags');
+            if (img.repo_tags && img.repo_tags.length > 0) {
+                repoTagsContainer.innerHTML = img.repo_tags.map(t => `<span class="pill pill-blue" style="margin-right:4px;">${escapeHtml(t)}</span>`).join('');
+            } else {
+                repoTagsContainer.innerHTML = '<span class="pill pill-slate">untagged</span>';
+            }
+            document.getElementById('imgd-spec-created').innerText = img.created ? new Date(img.created).toLocaleString() : '-';
+            document.getElementById('imgd-spec-workdir').innerText = (img.config && img.config.working_dir) || '/';
+            document.getElementById('imgd-spec-driver').innerText = img.graph_driver || 'overlay';
+
+            // Spec Labels & Resource Tags
+            const labelsContainer = document.getElementById('imgd-spec-labels');
+            const allLabels = Object.assign({}, img.labels || {}, (img.config && img.config.labels) || {});
+            const labelKeys = Object.keys(allLabels);
+            if (labelKeys.length === 0) {
+                labelsContainer.innerHTML = '<span style="color:var(--pg-text-muted); font-size:12px;">No metadata labels found.</span>';
+            } else {
+                labelsContainer.innerHTML = labelKeys.map(k => `
+                    <div style="background:#f1f5f9; border:1px solid var(--pg-border); border-radius:6px; padding:3px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                        <span style="font-weight:700; color:var(--pg-text-secondary);">${escapeHtml(k)}:</span>
+                        <span style="color:var(--pg-text); word-break:break-all;">${escapeHtml(allLabels[k])}</span>
+                    </div>
+                `).join('');
+            }
+
+            // History / Layers
+            const historyTbody = document.getElementById('imgd-history-tbody');
+            const layers = img.history || [];
+            document.getElementById('imgd-history-count').innerText = `${layers.length} Layer${layers.length === 1 ? '' : 's'}`;
+            if (layers.length === 0) {
+                historyTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--pg-text-muted);">No history layers available.</td></tr>';
+            } else {
+                historyTbody.innerHTML = layers.map((layer, idx) => {
+                    const lId = (layer.id || '').replace(/^sha256:/, '');
+                    const shortLayerId = lId ? (lId.startsWith('<missing>') ? '<missing>' : lId.substring(0, 12)) : '-';
+                    const layerSize = layer.size > 0 ? (layer.size > 1024 * 1024 ? `${(layer.size / (1024 * 1024)).toFixed(1)} MB` : `${(layer.size / 1024).toFixed(1)} KB`) : '0 B';
+                    const layerCreated = layer.created ? new Date(layer.created).toLocaleString() : '-';
+                    const cmdText = layer.created_by || layer.comment || '-';
+                    return `
+                    <tr>
+                        <td style="font-weight:700; color:var(--pg-text-muted);">${idx + 1}</td>
+                        <td><code style="font-size:11px; color:var(--pg-blue-600);">${escapeHtml(shortLayerId)}</code></td>
+                        <td><span class="pill pill-slate" style="font-size:11px;">${escapeHtml(layerSize)}</span></td>
+                        <td style="color:var(--pg-text-secondary); font-size:11px;">${escapeHtml(layerCreated)}</td>
+                        <td style="font-family:'JetBrains Mono',monospace; font-size:11px; word-break:break-all; max-width:400px;">${escapeHtml(cmdText)}</td>
+                        <td style="color:var(--pg-text-muted); font-size:11px;">${escapeHtml(layer.comment || '-')}</td>
+                    </tr>
+                    `;
+                }).join('');
+            }
+
+            // Config & Environment
+            const entrypoint = (img.config && img.config.entrypoint && img.config.entrypoint.length > 0) ? JSON.stringify(img.config.entrypoint, null, 2) : '[]';
+            document.getElementById('imgd-cfg-entrypoint').innerText = entrypoint;
+            const cmd = (img.config && img.config.cmd && img.config.cmd.length > 0) ? JSON.stringify(img.config.cmd, null, 2) : '[]';
+            document.getElementById('imgd-cfg-cmd').innerText = cmd;
+
+            const envList = (img.config && img.config.env) || [];
+            document.getElementById('imgd-cfg-env-count').innerText = `${envList.length} Envs`;
+            const envTbody = document.getElementById('imgd-cfg-env-tbody');
+            if (envList.length === 0) {
+                envTbody.innerHTML = '<tr><td style="text-align:center; color:var(--pg-text-muted);">No environment variables defined.</td></tr>';
+            } else {
+                envTbody.innerHTML = envList.map(e => {
+                    const eqIdx = e.indexOf('=');
+                    const k = eqIdx !== -1 ? e.substring(0, eqIdx) : e;
+                    const v = eqIdx !== -1 ? e.substring(eqIdx + 1) : '';
+                    return `
+                    <tr>
+                        <td style="font-weight:700; width:35%; font-family:'JetBrains Mono',monospace; color:var(--pg-text); word-break:break-all;">${escapeHtml(k)}</td>
+                        <td style="font-family:'JetBrains Mono',monospace; color:var(--pg-blue-600); word-break:break-all;">${escapeHtml(v)}</td>
+                    </tr>
+                    `;
+                }).join('');
+            }
+
+            // Raw JSON
+            const raw = img.raw || JSON.stringify(img, null, 2);
+            document.getElementById('imgd-raw-json').innerText = raw;
+        }
+
+        function switchImageSubTab(subTab) {
+            currentImageDetailsSubTab = subTab;
+            document.querySelectorAll('.imgd-subnav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.imgd-subcontent').forEach(c => c.classList.remove('active'));
+
+            const tabEl = document.querySelector(`.imgd-subnav-tab[data-subtab="${subTab}"]`);
+            if (tabEl) tabEl.classList.add('active');
+
+            const contentEl = document.getElementById(`imgd-tab-${subTab}`);
+            if (contentEl) contentEl.classList.add('active');
+        }
+
+        function copyImageRaw() {
+            const raw = document.getElementById('imgd-raw-json').innerText;
+            if (!raw) return;
+            copyText(raw, 'Raw Image JSON');
+        }
+
+        function quickRunCurrentImg() {
+            if (!currentImageDetails) return;
+            const target = (currentImageDetails.repo_tags && currentImageDetails.repo_tags[0]) || currentImageDetails.id;
+            quickRunImage(target);
+        }
+
+        async function pullCurrentImage() {
+            if (!currentImageDetails) return;
+            const target = (currentImageDetails.repo_tags && currentImageDetails.repo_tags[0]) || currentImageDetails.id;
+            try {
+                showToast(`Pulling '${target}'...`, 'info');
+                const res = await authFetch('/api/v1/images/pull', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: target })
+                });
+                if (res.ok) {
+                    showToast(`Successfully refreshed '${target}'`, 'success');
+                    openImageDetails(target);
+                } else {
+                    showToast('Pull failed: ' + await res.text(), 'error');
+                }
+            } catch (e) {
+                showToast('Error pulling image: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteCurrentImage() {
+            if (!currentImageDetails) return;
+            const target = (currentImageDetails.repo_tags && currentImageDetails.repo_tags[0]) || currentImageDetails.id;
+            if (!confirm(`Are you sure you want to permanently delete image '${target}'?`)) return;
+            try {
+                const res = await authFetch(`/api/v1/images/${encodeURIComponent(target)}?force=true`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast(`Image '${target}' deleted`, 'success');
+                    switchTab('images');
+                    fetchImages();
+                } else {
+                    showToast('Failed to delete image: ' + await res.text(), 'error');
+                }
+            } catch (e) {
+                showToast('Error deleting image: ' + e.message, 'error');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Volume Details Controller
+        // -------------------------------------------------------------
+        let currentVolumeDetails = null;
+        let currentVolumeDetailsSubTab = 'overview';
+
+        async function openVolumeDetails(name) {
+            try {
+                switchTab('volume-details');
+                // Loading state
+                document.getElementById('vold-title-name').innerText = name;
+                document.getElementById('vold-driver-pill').innerText = 'local';
+                document.getElementById('vold-scope-pill').innerText = 'local';
+                document.getElementById('vold-mountpoint-badge').innerText = 'Loading...';
+                document.getElementById('vold-created-badge').innerText = '-';
+
+                const res = await authFetch(`/api/v1/podman/volumes/${encodeURIComponent(name)}`);
+                if (!res.ok) {
+                    showToast('Failed to inspect volume: ' + await res.text(), 'error');
+                    return;
+                }
+                const data = await res.json();
+                currentVolumeDetails = data;
+                renderVolumeDetails(data);
+                switchVolumeSubTab('overview');
+            } catch (e) {
+                showToast('Error opening volume details: ' + e.message, 'error');
+            }
+        }
+
+        function renderVolumeDetails(v) {
+            if (!v) return;
+            const name = v.name || 'volume';
+            document.getElementById('vold-title-name').innerText = name;
+            document.getElementById('vold-driver-pill').innerText = v.driver || 'local';
+            document.getElementById('vold-scope-pill').innerText = v.scope || 'local';
+
+            const mount = v.mountpoint || '-';
+            const shortMount = mount.length > 40 ? `${mount.substring(0, 15)}…${mount.slice(-20)}` : mount;
+            const mountBadge = document.getElementById('vold-mountpoint-badge');
+            mountBadge.innerText = shortMount;
+            mountBadge.title = mount;
+
+            document.getElementById('vold-created-badge').innerText = v.created_at ? new Date(v.created_at).toLocaleString() : 'n/a';
+
+            // Stat Cards
+            document.getElementById('vold-det-driver').innerText = v.driver || 'local';
+            document.getElementById('vold-det-scope').innerText = `Scope: ${v.scope || 'local'}`;
+
+            const ctrs = v.used_by_containers || [];
+            document.getElementById('vold-det-containers-count').innerText = ctrs.length;
+            document.getElementById('vold-det-mounts').innerText = `Active Mounts: ${v.mount_count || ctrs.length}`;
+
+            document.getElementById('vold-det-type').innerText = v.anonymous ? 'Anonymous' : 'Named';
+            document.getElementById('vold-det-uidgid').innerText = `UID: ${v.uid || 1000} • GID: ${v.gid || 1000}`;
+
+            document.getElementById('vold-det-status').innerText = 'Mounted';
+            document.getElementById('vold-det-created').innerText = `Created: ${v.created_at ? new Date(v.created_at).toLocaleDateString() : 'n/a'}`;
+
+            // Spec Table
+            document.getElementById('vold-spec-name').innerText = name;
+            document.getElementById('vold-spec-mountpoint').innerText = mount;
+            document.getElementById('vold-spec-driver-scope').innerText = `${v.driver || 'local'} / ${v.scope || 'local'}`;
+            document.getElementById('vold-spec-created').innerText = v.created_at ? new Date(v.created_at).toLocaleString() : '-';
+
+            const opts = v.options || {};
+            const optKeys = Object.keys(opts);
+            const optsEl = document.getElementById('vold-spec-options');
+            if (optKeys.length === 0) {
+                optsEl.innerHTML = '<span style="color:var(--pg-text-muted);">None (Default host directory storage)</span>';
+            } else {
+                optsEl.innerHTML = optKeys.map(k => `<code>${escapeHtml(k)}=${escapeHtml(opts[k])}</code>`).join(' ');
+            }
+
+            // Labels & Resource Tags
+            const labelsContainer = document.getElementById('vold-spec-labels');
+            const labels = v.labels || {};
+            const labelKeys = Object.keys(labels);
+            if (labelKeys.length === 0) {
+                labelsContainer.innerHTML = '<span style="color:var(--pg-text-muted); font-size:12px;">No resource tags configured.</span>';
+            } else {
+                labelsContainer.innerHTML = labelKeys.map(k => `
+                    <div style="background:#f1f5f9; border:1px solid var(--pg-border); border-radius:6px; padding:3px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                        <span style="font-weight:700; color:var(--pg-text-secondary);">${escapeHtml(k)}:</span>
+                        <span style="color:var(--pg-text); word-break:break-all;">${escapeHtml(labels[k])}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Containers Mounting This Volume
+            document.getElementById('vold-containers-count-badge').innerText = `${ctrs.length} Container${ctrs.length === 1 ? '' : 's'}`;
+            const ctrTbody = document.getElementById('vold-containers-tbody');
+            if (ctrs.length === 0) {
+                ctrTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--pg-text-muted);">No containers currently mount this volume.</td></tr>';
+            } else {
+                ctrTbody.innerHTML = ctrs.map(c => {
+                    const cName = (c.names && c.names.length > 0) ? c.names[0].replace(/^\//, '') : c.id;
+                    const isRunning = (c.state || c.status || '').toLowerCase().includes('running') || (c.state || c.status || '').toLowerCase().includes('up');
+                    const portsStr = (c.ports && c.ports.length > 0) ? c.ports.join(', ') : 'None';
+                    return `
+                    <tr>
+                        <td>
+                            <a href="javascript:void(0)" style="color:var(--pg-blue-600); font-weight:700; text-decoration:none;" onclick="openContainerDetails('${escapeHtml(c.id)}')">${escapeHtml(cName)}</a>
+                        </td>
+                        <td><span class="pill pill-${isRunning ? 'running' : 'stopped'}">${escapeHtml(c.state || c.status || 'unknown')}</span></td>
+                        <td><code style="font-size:11px; color:var(--pg-blue-600);">${escapeHtml(c.image || '-')}</code></td>
+                        <td><code style="font-size:11px;">${escapeHtml(portsStr)}</code></td>
+                        <td style="color:var(--pg-text-secondary); font-size:12px;">${c.created ? new Date(c.created).toLocaleDateString() : '-'}</td>
+                        <td style="text-align:right;">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openContainerDetails('${escapeHtml(c.id)}')">
+                                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Inspect Container</span>
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            }
+
+            // Raw JSON
+            const raw = v.raw || JSON.stringify(v, null, 2);
+            document.getElementById('vold-raw-json').innerText = raw;
+        }
+
+        function switchVolumeSubTab(subTab) {
+            currentVolumeDetailsSubTab = subTab;
+            document.querySelectorAll('.vold-subnav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.vold-subcontent').forEach(c => c.classList.remove('active'));
+
+            const tabEl = document.querySelector(`.vold-subnav-tab[data-subtab="${subTab}"]`);
+            if (tabEl) tabEl.classList.add('active');
+
+            const contentEl = document.getElementById(`vold-tab-${subTab}`);
+            if (contentEl) contentEl.classList.add('active');
+        }
+
+        function copyVolumeMountpoint() {
+            if (!currentVolumeDetails || !currentVolumeDetails.mountpoint) return;
+            copyText(currentVolumeDetails.mountpoint, 'Volume Mountpoint Path');
+        }
+
+        function copyVolumeRaw() {
+            const raw = document.getElementById('vold-raw-json').innerText;
+            if (!raw) return;
+            copyText(raw, 'Raw Volume JSON');
+        }
+
+        async function deleteCurrentVolume() {
+            if (!currentVolumeDetails || !currentVolumeDetails.name) return;
+            const name = currentVolumeDetails.name;
+            if (!confirm(`Are you sure you want to permanently delete volume '${name}'?`)) return;
+            try {
+                const res = await authFetch(`/api/v1/podman/volumes/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast(`Volume '${name}' deleted`, 'success');
+                    switchTab('volumes');
+                    fetchVolumes();
+                } else {
+                    showToast('Failed to delete volume: ' + await res.text(), 'error');
+                }
+            } catch (e) {
+                showToast('Error deleting volume: ' + e.message, 'error');
+            }
         }
 
         // -------------------------------------------------------------
